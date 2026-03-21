@@ -16,9 +16,9 @@ from typing import Dict
 
 
 SCENARIO_SIGMAS = {
-    "favorable":    1.5,
-    "neutro":       0.0,
-    "desfavorable": -1.5,
+    "favorable":    1.5,   # +1.5σ  ≈ 87th percentile under normality
+    "neutro":       0.0,   # mean scenario
+    "desfavorable": -1.5,  # -1.5σ  ≈ 13th percentile under normality
 }
 
 

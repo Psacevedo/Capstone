@@ -717,6 +717,12 @@ document.addEventListener("DOMContentLoaded", init);
 // MÓDULO PORTAFOLIOS
 // ============================================================
 
+// ---- Helpers específicos del módulo ----
+function fmtUSD(n) {
+  if (n == null) return "—";
+  return "$" + Math.round(n).toLocaleString("en-US");
+}
+
 // ---- Estado del módulo portafolios ----
 const PF = {
   activeNav: "nuevo",        // "nuevo" | "benchmark" | "simulate"
@@ -1028,18 +1034,29 @@ function renderPfResult(r, capital, maxLossPct) {
         puedes retirar tu inversión en cualquier momento.
       </p>
       <button class="btn-secondary" style="border-color:var(--red);color:var(--red)"
-              onclick="simulateWithdrawal(${capital}, ${maxLossPct})">
+              id="btn-withdrawal"
+              data-capital="${capital}"
+              data-maxloss="${maxLossPct}">
         Simular escenario de retiro
       </button>
     </div>`;
 
   document.getElementById("pf-result").innerHTML = html;
+  // Attach event listener for withdrawal button (avoids inline onclick with interpolated values)
+  const withdrawBtn = document.getElementById("btn-withdrawal");
+  if (withdrawBtn) {
+    withdrawBtn.addEventListener("click", () => {
+      const cap  = parseFloat(withdrawBtn.dataset.capital);
+      const loss = parseFloat(withdrawBtn.dataset.maxloss);
+      simulateWithdrawal(cap, loss);
+    });
+  }
   renderScenarioChart(r.scenario_timeseries);
   renderRecommendations();
 }
 
 function renderScenarioChart(ts) {
-  if (!ts || !ts.months) return;
+  if (!ts || !ts.months || typeof Plotly === "undefined") return;
   const traces = [
     { x: ts.months.map(m => `Mes ${m}`), y: ts.favorable, name: "Favorable", line: { color: "#3fb950" }, mode: "lines" },
     { x: ts.months.map(m => `Mes ${m}`), y: ts.neutro,    name: "Neutro",    line: { color: "#0078bf" }, mode: "lines" },
@@ -1072,8 +1089,8 @@ function renderRecommendations() {
         </div>
         <div id="rec-status-${rec.id}">
           ${rec.status === "pendiente"
-            ? `<button class="accept-btn" onclick="respondRec(${rec.id}, true)">✓ Aceptar</button>
-               <button class="reject-btn"  onclick="respondRec(${rec.id}, false)">✗ Rechazar</button>`
+            ? `<button class="accept-btn" data-rec="${rec.id}" data-action="accept">✓ Aceptar</button>
+               <button class="reject-btn"  data-rec="${rec.id}" data-action="reject">✗ Rechazar</button>`
             : `<span class="rec-status ${rec.status}">${rec.status}</span>`}
         </div>
       </div>
@@ -1083,6 +1100,15 @@ function renderRecommendations() {
         ).join("")}${rec.items.length > 5 ? `<span>+${rec.items.length - 5} más</span>` : ""}
       </div>
     </div>`).join("");
+
+  // Attach event listeners to recommendation buttons
+  el.querySelectorAll("[data-rec]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id     = parseInt(btn.dataset.rec, 10);
+      const accept = btn.dataset.action === "accept";
+      respondRec(id, accept);
+    });
+  });
 }
 
 function respondRec(id, accept) {
@@ -1350,6 +1376,7 @@ function renderSimResult(r, capital) {
 }
 
 function renderSimChart(r, capital) {
+  if (typeof Plotly === "undefined") return;
   const xLabels = r.periods.map(p => `Semana ${p}`);
   const traces = [
     {

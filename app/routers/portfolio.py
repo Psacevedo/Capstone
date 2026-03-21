@@ -37,6 +37,10 @@ _CACHE_5M = "public, max-age=300"
 
 COMMISSION_RATE = 0.01      # 1% anual sobre el capital total
 RISK_FREE_RATE  = 0.05      # tasa libre de riesgo (referencia EE.UU.)
+
+# Épica 3: separación calibración / validación.
+# 8 años de calibración permiten capturar varios ciclos de mercado (2008, 2020, etc.)
+# y 2 años de validación ofrecen suficiente data out-of-sample para evaluar el modelo.
 CALIBRATION_YEARS = 8
 VALIDATION_YEARS  = 2
 

@@ -57,19 +57,15 @@ def compute_markowitz_portfolio(
     ann_returns = daily_returns.mean(axis=0) * 252
     ann_cov = np.cov(daily_returns.T) * 252
 
-    def neg_sharpe(w: np.ndarray) -> float:
-        ret = float(np.dot(w, ann_returns))
-        vol = float(np.sqrt(w @ ann_cov @ w))
-        if vol < 1e-10:
-            return 1e10
-        return -(ret - risk_free_rate) / vol
+    def _objective(w: np.ndarray) -> float:
+        return _neg_sharpe(w, ann_returns, ann_cov, risk_free_rate)
 
     x0 = np.ones(n) / n
     bounds = [(0.0, 1.0)] * n
     constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
 
     result = minimize(
-        neg_sharpe, x0, method="SLSQP",
+        _objective, x0, method="SLSQP",
         bounds=bounds, constraints=constraints,
         options={"ftol": 1e-9, "maxiter": 1000},
     )
@@ -99,15 +95,15 @@ def minimum_variance_portfolio(
 
     ann_cov = np.cov(daily_returns.T) * 252
 
-    def portfolio_variance(w: np.ndarray) -> float:
-        return float(w @ ann_cov @ w)
+    def _objective(w: np.ndarray) -> float:
+        return _portfolio_variance(w, ann_cov)
 
     x0 = np.ones(n) / n
     bounds = [(0.0, 1.0)] * n
     constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
 
     result = minimize(
-        portfolio_variance, x0, method="SLSQP",
+        _objective, x0, method="SLSQP",
         bounds=bounds, constraints=constraints,
         options={"ftol": 1e-9, "maxiter": 1000},
     )
@@ -121,6 +117,20 @@ def minimum_variance_portfolio(
 # ============================================================
 # Helpers
 # ============================================================
+
+def _neg_sharpe(w: np.ndarray, ann_returns: np.ndarray, ann_cov: np.ndarray, risk_free_rate: float) -> float:
+    """Negative Sharpe ratio (objective to minimise)."""
+    ret = float(np.dot(w, ann_returns))
+    vol = float(np.sqrt(w @ ann_cov @ w))
+    if vol < 1e-10:
+        return 1e10
+    return -(ret - risk_free_rate) / vol
+
+
+def _portfolio_variance(w: np.ndarray, ann_cov: np.ndarray) -> float:
+    """Portfolio variance (objective to minimise for min-variance portfolio)."""
+    return float(w @ ann_cov @ w)
+
 
 def _portfolio_stats(
     weights: np.ndarray,
