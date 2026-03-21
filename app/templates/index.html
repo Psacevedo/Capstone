@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>P4 FinPUC — Acciones</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+  <style>
+    /* ====================================================
+       Variables y reset
+    ==================================================== */
+    :root {
+      --azul:       #003865;
+      --azul-claro: #0078bf;
+      --azul-hover: #0090e0;
+      --dorado:     #c49b25;
+      --bg:         #0d1117;
+      --bg-card:    #161b22;
+      --bg-hover:   #1c2230;
+      --border:     #30363d;
+      --text:       #e6edf3;
+      --text-muted: #8b949e;
+      --green:      #3fb950;
+      --red:        #f85149;
+      --sidebar-w:  252px;
+      --topbar-h:   52px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ====================================================
+       Sidebar
+    ==================================================== */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #sidebar-header h1 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--azul-claro);
+      letter-spacing: 0.4px;
+    }
+
+    #sidebar-header p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Módulos tabs */
+    #module-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .module-tab {
+      flex: 1;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      position: relative;
+    }
+
+    .module-tab.active {
+      color: var(--azul-claro);
+      border-bottom-color: var(--azul-claro);
+    }
+
+    .module-tab.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .tab-soon {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      font-size: 8px;
+      background: var(--border);
+      color: var(--text-muted);
+      padding: 1px 4px;
+      border-radius: 3px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Sector label */
+    #sector-label {
+      padding: 12px 16px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      flex-shrink: 0;
+    }
+
+    #sector-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 0 8px;
+    }
+
+    #sector-list::-webkit-scrollbar { width: 4px; }
+    #sector-list::-webkit-scrollbar-track { background: transparent; }
+    #sector-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .sector-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: background 0.12s, color 0.12s;
+      border-left: 2px solid transparent;
+    }
+
+    .sector-item:hover { background: var(--bg-hover); color: var(--text); }
+
+    .sector-item.active {
+      background: rgba(0,120,191,0.12);
+      color: var(--azul-claro);
+      border-left-color: var(--azul-claro);
+    }
+
+    .sector-badge {
+      background: var(--border);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .sector-item.active .sector-badge {
+      background: rgba(0,120,191,0.25);
+      color: var(--azul-claro);
+    }
+
+    /* ====================================================
+       Panel principal
+    ==================================================== */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #topbar {
+      height: var(--topbar-h);
+      min-height: var(--topbar-h);
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .nav-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    #topbar-sep {
+      color: var(--border);
+      font-size: 14px;
+      margin: 0 2px;
+    }
+
+    #breadcrumb-current {
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #topbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #search-global {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      width: 180px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #search-global::placeholder { color: var(--text-muted); }
+    #search-global:focus { border-color: var(--azul-claro); }
+
+    #search-results {
+      position: absolute;
+      top: calc(var(--topbar-h) + 2px);
+      right: 16px;
+      width: 260px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      z-index: 200;
+      max-height: 320px;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      display: none;
+    }
+
+    .sr-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .sr-item:last-child { border-bottom: none; }
+    .sr-item:hover { background: var(--bg-hover); }
+    .sr-item-name { color: var(--text-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    #content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    #content::-webkit-scrollbar { width: 6px; }
+    #content::-webkit-scrollbar-track { background: transparent; }
+    #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ====================================================
+       Loading
+    ==================================================== */
+    #loading-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      gap: 12px;
+    }
+
+    #loading-screen h2 {
+      color: var(--azul-claro);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    #loading-pct {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -1px;
+      min-height: 44px;
+    }
+
+    #loading-msg {
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      max-width: 360px;
+    }
+
+    #loading-bar-wrap {
+      width: 340px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #loading-bar {
+      height: 100%;
+      background: var(--azul-claro);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+
+    /* ====================================================
+       Skeleton loaders
+    ==================================================== */
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position: 600px 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
+      background-size: 1200px 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+    }
+
+    .skeleton-line { height: 14px; margin-bottom: 10px; }
+    .skeleton-line.w80 { width: 80%; }
+    .skeleton-line.w60 { width: 60%; }
+    .skeleton-line.w40 { width: 40%; }
+
+    .skeleton-card {
+      height: 80px;
+      border-radius: 8px;
+    }
+
+    .skeleton-chart {
+      height: 300px;
+      border-radius: 8px;
+    }
+
+    .skeleton-header {
+      height: 32px;
+      width: 200px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    /* ====================================================
+       Paginación
+    ==================================================== */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0 4px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .page-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+      white-space: nowrap;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      background: var(--bg-hover);
+      border-color: var(--text-muted);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .page-current {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      padding: 0 4px;
+    }
+
+    .page-info {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .results-badge {
+      display: inline-block;
+      background: var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 10px;
+      margin-left: 8px;
+    }
+
+    /* ====================================================
+       Vista inicial / bienvenida
+    ==================================================== */
+    .welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .welcome-icon {
+      font-size: 48px;
+      opacity: 0.3;
+    }
+
+    .welcome h3 {
+      font-size: 18px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .welcome p {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 300px;
+      line-height: 1.6;
+      opacity: 0.7;
+    }
+
+    /* ====================================================
+       Tabla de acciones
+    ==================================================== */
+    .section-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .section-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    #table-search {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 5px;
+      width: 200px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #table-search::placeholder { color: var(--text-muted); }
+    #table-search:focus { border-color: var(--azul-claro); }
+
+    .stocks-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .stocks-table thead th {
+      text-align: left;
+      padding: 9px 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .stocks-table thead th.sortable {
+      cursor: pointer;
+    }
+
+    .stocks-table thead th.sortable:hover { color: var(--text); }
+
+    .stocks-table thead th.num { text-align: right; }
+
+    .sort-icon {
+      display: inline-block;
+      margin-left: 4px;
+      opacity: 0.35;
+      font-size: 10px;
+    }
+
+    th.sort-asc  { color: var(--azul-claro); }
+    th.sort-desc { color: var(--azul-claro); }
+    th.sort-asc .sort-icon::after  { content: "▲"; opacity: 1; color: var(--azul-claro); }
+    th.sort-desc .sort-icon::after { content: "▼"; opacity: 1; color: var(--azul-claro); }
+    th:not(.sort-asc):not(.sort-desc) .sort-icon::after { content: "⇅"; }
+
+    .stocks-table tbody tr {
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    .stocks-table tbody tr:hover { background: var(--bg-hover); }
+
+    .stocks-table td {
+      padding: 9px 12px;
+      white-space: nowrap;
+    }
+
+    .stocks-table td.num { text-align: right; }
+
+    .ticker-badge {
+      display: inline-block;
+      background: var(--azul);
+      color: #fff;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .val-pos { color: var(--green); }
+    .val-neg { color: var(--red); }
+    .val-na  { color: var(--text-muted); }
+
+    .empty-row td {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 24px;
+      cursor: default;
+    }
+    .empty-row:hover { background: transparent !important; }
+
+    /* ====================================================
+       Detalle de acción
+    ==================================================== */
+    .stock-header {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .stock-header h2 {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .stock-header .stock-name {
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    .stock-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .stock-meta .resolution-badge {
+      display: inline-block;
+      margin-left: 8px;
+      background: var(--border);
+      color: var(--text-muted);
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: border-color 0.15s;
+    }
+
+    .stat-card:hover { border-color: var(--text-muted); }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Charts */
+    .chart-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    .chart-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Descripción colapsable */
+    .summary-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+
+    .summary-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .summary-text {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .summary-text.expanded { display: block; }
+
+    .summary-toggle {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--azul-claro);
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .summary-toggle:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- Pantalla de carga -->
+<div id="loading-screen">
+  <h2>P4 FinPUC</h2>
+  <div id="loading-pct"></div>
+  <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+  <div id="loading-msg">Iniciando base de datos...</div>
+</div>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <h1>P4 FinPUC</h1>
+    <p>Mercado de acciones S&amp;P 500</p>
+  </div>
+
+  <div id="module-tabs">
+    <div class="module-tab active" id="tab-acciones">Acciones</div>
+    <div class="module-tab disabled" id="tab-portafolios">
+      Portafolios
+      <span class="tab-soon">pronto</span>
+    </div>
+  </div>
+
+  <div id="sector-label">Sectores</div>
+  <div id="sector-list"><!-- generado por JS --></div>
+</nav>
+
+<!-- Panel principal -->
+<div id="main">
+  <div id="topbar">
+    <button class="nav-btn" id="btn-home" onclick="goHome()" style="display:none">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.495v3.505a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5z"/></svg>
+      Inicio
+    </button>
+    <button class="nav-btn" id="btn-sector" onclick="goSector()" style="display:none">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg>
+      <span id="btn-sector-label">Sector</span>
+    </button>
+    <span id="topbar-sep" style="display:none">›</span>
+    <span id="breadcrumb-current">Selecciona un sector</span>
+
+    <div id="topbar-right">
+      <input type="text" id="search-global" placeholder="Buscar ticker o empresa..." autocomplete="off"
+             oninput="onGlobalSearch(this.value)" onblur="hideSearchResults()" />
+      <div id="search-results"></div>
+    </div>
+  </div>
+
+  <div id="content">
+    <div class="welcome">
+      <div class="welcome-icon">📈</div>
+      <h3>Bienvenido al módulo Acciones</h3>
+      <p>Selecciona un sector en el panel izquierdo para explorar las acciones disponibles.</p>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

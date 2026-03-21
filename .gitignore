@@ -1,0 +1,32 @@
+# ── Datos (nunca subir al repositorio) ──────────────────────────────────────
+../Data/
+data/
+*.csv
+*.db
+*.sqlite
+stocks_info.txt
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+.docker/
+
+# ── Editors / OS ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
