@@ -7,7 +7,7 @@ services:
       - "8080:8000"
     volumes:
       # Datos históricos (solo lectura dentro del contenedor)
-      - ../Data/Historical_Stocks:/data/Historical_Stocks:ro
+      - ./Data/Historical_Stocks:/data/Historical_Stocks:ro
       # Volumen nombrado para la DB SQLite (persiste entre reinicios)
       - webapp_cache:/data
     environment:
