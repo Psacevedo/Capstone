@@ -112,6 +112,254 @@
       letter-spacing: 0.3px;
     }
 
+    /* ====================================================
+       Módulo Portafolios — Sidebar nav
+    ==================================================== */
+    #portfolio-nav { flex:1; overflow-y:auto; padding:8px 0; display:none; }
+
+    .portfolio-nav-label {
+      padding: 12px 16px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .portfolio-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-left: 2px solid transparent;
+      transition: background .12s, color .12s;
+    }
+    .portfolio-nav-item:hover { background:var(--bg-hover); color:var(--text); }
+    .portfolio-nav-item.active {
+      background:rgba(0,120,191,.12);
+      color:var(--azul-claro);
+      border-left-color:var(--azul-claro);
+    }
+
+    /* ====================================================
+       Módulo Portafolios — Contenido
+    ==================================================== */
+    .pf-section { padding:24px; max-width:960px; overflow-y:auto; }
+
+    /* Tarjeta formulario */
+    .pf-card {
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:20px 24px;
+      margin-bottom:20px;
+    }
+    .pf-card-title {
+      font-size:14px; font-weight:700; margin-bottom:16px; color:var(--text);
+    }
+
+    /* Formulario */
+    .form-row { display:flex; gap:16px; flex-wrap:wrap; }
+    .form-group { flex:1; min-width:180px; margin-bottom:16px; }
+    .form-label {
+      display:block; font-size:11px; font-weight:700; color:var(--text-muted);
+      text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px;
+    }
+    .form-input {
+      width:100%; padding:8px 12px; background:var(--bg);
+      border:1px solid var(--border); color:var(--text);
+      border-radius:5px; font-size:14px;
+    }
+    .form-input:focus { outline:none; border-color:var(--azul-claro); }
+    .form-select {
+      width:100%; padding:8px 12px; background:var(--bg);
+      border:1px solid var(--border); color:var(--text);
+      border-radius:5px; font-size:14px; cursor:pointer;
+    }
+
+    /* Slider de riesgo */
+    .risk-row { display:flex; align-items:center; gap:12px; }
+    .risk-slider { flex:1; accent-color:var(--azul-claro); cursor:pointer; }
+    .risk-badge {
+      font-size:12px; font-weight:700; padding:3px 10px;
+      border-radius:12px; white-space:nowrap;
+    }
+    .risk-badge.conservador { background:rgba(63,185,80,.15); color:var(--green); }
+    .risk-badge.moderado    { background:rgba(196,155,37,.15); color:var(--dorado); }
+    .risk-badge.agresivo    { background:rgba(248,81,73,.15);  color:var(--red); }
+
+    /* Botones */
+    .btn-primary {
+      background:var(--azul-claro); color:#fff; border:none;
+      padding:10px 24px; border-radius:6px; font-size:14px;
+      font-weight:600; cursor:pointer; transition:background .15s;
+    }
+    .btn-primary:hover { background:var(--azul-hover); }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-secondary {
+      background:transparent; color:var(--text-muted);
+      border:1px solid var(--border); padding:8px 18px;
+      border-radius:6px; font-size:13px; cursor:pointer;
+    }
+    .btn-secondary:hover { border-color:var(--azul-claro); color:var(--azul-claro); }
+
+    /* Métricas */
+    .metrics-grid {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+      gap:12px; margin-bottom:20px;
+    }
+    .metric-card {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:6px; padding:12px;
+    }
+    .metric-label { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
+    .metric-value { font-size:18px; font-weight:700; }
+
+    /* Escenarios */
+    .scenario-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
+      margin-bottom:20px;
+    }
+    .scenario-card {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:8px; padding:16px;
+    }
+    .scenario-card.favorable    { border-top:3px solid var(--green); }
+    .scenario-card.neutro       { border-top:3px solid var(--azul-claro); }
+    .scenario-card.desfavorable { border-top:3px solid var(--red); }
+    .scenario-label {
+      font-size:11px; font-weight:700; text-transform:uppercase;
+      letter-spacing:.5px; margin-bottom:8px; color:var(--text-muted);
+    }
+    .scenario-ret { font-size:20px; font-weight:700; margin-bottom:4px; }
+    .scenario-cap { font-size:12px; color:var(--text-muted); }
+
+    /* Tabla portafolio */
+    .pf-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .pf-table th {
+      padding:8px 12px; text-align:left; font-size:11px; font-weight:700;
+      color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;
+      border-bottom:1px solid var(--border);
+    }
+    .pf-table td { padding:8px 12px; border-bottom:1px solid var(--border); }
+    .pf-table tr:last-child td { border-bottom:none; }
+    .weight-bar {
+      display:inline-block; height:5px; background:var(--azul-claro);
+      border-radius:3px; vertical-align:middle; margin-right:6px;
+    }
+
+    /* Recomendaciones */
+    .rec-card {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:8px; padding:16px; margin-bottom:12px;
+    }
+    .accept-btn {
+      background:rgba(63,185,80,.15); color:var(--green);
+      border:1px solid var(--green); padding:4px 12px;
+      border-radius:4px; font-size:12px; cursor:pointer; margin-right:4px;
+    }
+    .reject-btn {
+      background:rgba(248,81,73,.15); color:var(--red);
+      border:1px solid var(--red); padding:4px 12px;
+      border-radius:4px; font-size:12px; cursor:pointer;
+    }
+    .accept-btn:hover { background:rgba(63,185,80,.3); }
+    .reject-btn:hover { background:rgba(248,81,73,.3); }
+    .rec-status {
+      display:inline-block; font-size:11px; font-weight:700; padding:2px 8px;
+      border-radius:10px;
+    }
+    .rec-status.aceptada { background:rgba(63,185,80,.15); color:var(--green); }
+    .rec-status.rechazada { background:rgba(248,81,73,.15); color:var(--red); }
+
+    /* Sección título */
+    .pf-section-title {
+      font-size:13px; font-weight:700; margin-bottom:12px; color:var(--text);
+      padding-bottom:6px; border-bottom:1px solid var(--border);
+    }
+
+    /* Charts */
+    .chart-wrap {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:8px; padding:16px; margin-bottom:20px;
+    }
+
+    /* Validación */
+    .validation-pill {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(0,120,191,.1); border:1px solid rgba(0,120,191,.3);
+      border-radius:20px; padding:4px 12px; font-size:12px;
+      color:var(--azul-claro); margin-bottom:16px;
+    }
+
+    /* ====================================================
+       Selector de modelo de recomendación
+    ==================================================== */
+    .model-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .model-card {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      position: relative;
+    }
+    .model-card:hover { border-color: var(--azul-claro); background: var(--bg-hover); }
+    .model-card.active {
+      border-color: var(--azul-claro);
+      background: rgba(0,120,191,.08);
+    }
+    .model-card-check {
+      position: absolute; top: 10px; right: 10px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--azul-claro);
+      display: none; align-items: center; justify-content: center;
+      font-size: 10px; color: #fff;
+    }
+    .model-card.active .model-card-check { display: flex; }
+    .model-card-icon { font-size: 22px; margin-bottom: 8px; }
+    .model-card-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .model-card-sub { font-size: 11px; color: var(--azul-claro); margin-bottom: 8px; font-weight: 600; }
+    .model-card-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+
+    /* Banner de modelo en resultados */
+    .model-result-banner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-radius: 6px; margin-bottom: 16px;
+      background: rgba(0,120,191,.07); border: 1px solid rgba(0,120,191,.2);
+      font-size: 13px;
+    }
+    .model-result-banner .model-badge {
+      background: var(--azul-claro); color: #fff;
+      font-size: 11px; font-weight: 700; padding: 2px 10px;
+      border-radius: 10px; white-space: nowrap;
+    }
+
+    /* Indicador de compatibilidad con perfil de riesgo */
+    .risk-compat {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px; border-radius: 20px; font-size: 12px;
+      font-weight: 600; margin-bottom: 12px;
+    }
+    .risk-compat.compatible {
+      background: rgba(63,185,80,.12);
+      border: 1px solid rgba(63,185,80,.35);
+      color: var(--green);
+    }
+    .risk-compat.incompatible {
+      background: rgba(248,81,73,.12);
+      border: 1px solid rgba(248,81,73,.35);
+      color: var(--red);
+    }
+
     /* Sector label */
     #sector-label {
       padding: 12px 16px 6px;
@@ -739,15 +987,28 @@
   </div>
 
   <div id="module-tabs">
-    <div class="module-tab active" id="tab-acciones">Acciones</div>
-    <div class="module-tab disabled" id="tab-portafolios">
+    <div class="module-tab active" id="tab-acciones" onclick="switchModule('acciones')">Acciones</div>
+    <div class="module-tab" id="tab-portafolios" onclick="switchModule('portafolios')">
       Portafolios
-      <span class="tab-soon">pronto</span>
     </div>
   </div>
 
   <div id="sector-label">Sectores</div>
   <div id="sector-list"><!-- generado por JS --></div>
+
+  <!-- Portafolios nav (oculto al inicio) -->
+  <div id="portfolio-nav">
+    <div class="portfolio-nav-label">Portafolios</div>
+    <div class="portfolio-nav-item active" id="pnav-nuevo" onclick="pfNavGo('nuevo')">
+      Nuevo Portafolio
+    </div>
+    <div class="portfolio-nav-item" id="pnav-benchmark" onclick="pfNavGo('benchmark')">
+      Benchmark Simple
+    </div>
+    <div class="portfolio-nav-item" id="pnav-simulate" onclick="pfNavGo('simulate')">
+      Simulación
+    </div>
+  </div>
 </nav>
 
 <!-- Panel principal -->
@@ -773,7 +1034,7 @@
 
   <div id="content">
     <div class="welcome">
-      <div class="welcome-icon">📈</div>
+      <div class="welcome-icon"></div>
       <h3>Bienvenido al módulo Acciones</h3>
       <p>Selecciona un sector en el panel izquierdo para explorar las acciones disponibles.</p>
     </div>

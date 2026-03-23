@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.gzip import GZipMiddleware
 
 from .db import build_db_if_needed
-from .routers import sectors, stocks
+from .routers import sectors, stocks, portfolio
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +42,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 # Routers
 app.include_router(sectors.router)
 app.include_router(stocks.router)
+app.include_router(portfolio.router)
 
 
 @app.on_event("startup")

@@ -106,7 +106,7 @@ function goHome() {
   setNavState("home");
   showContent(`
     <div class="welcome">
-      <div class="welcome-icon">📈</div>
+      <div class="welcome-icon"></div>
       <h3>Bienvenido al módulo Acciones</h3>
       <p>Selecciona un sector en el panel izquierdo para explorar las acciones disponibles.</p>
     </div>
@@ -667,9 +667,12 @@ function buildDividendChart(chart) {
 // Helpers
 // ============================================================
 
-async function apiFetch(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`API ${res.status}: ${url}`);
+async function apiFetch(url, options) {
+  const res = options ? await fetch(url, options) : await fetch(url);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `API ${res.status}: ${url}`);
+  }
   return res.json();
 }
 
@@ -709,3 +712,789 @@ function sleep(ms) {
 // Arranque
 // ============================================================
 document.addEventListener("DOMContentLoaded", init);
+
+// ============================================================
+// MÓDULO PORTAFOLIOS
+// ============================================================
+
+// ---- Helpers específicos del módulo ----
+function fmtUSD(n) {
+  if (n == null) return "—";
+  return "$" + Math.round(n).toLocaleString("en-US");
+}
+
+// ---- Estado del módulo portafolios ----
+const PF = {
+  activeNav: "nuevo",        // "nuevo" | "benchmark" | "simulate"
+  currentModule: "acciones", // "acciones" | "portafolios"
+  lastResult: null,          // última respuesta de /api/portfolio/optimize
+  lastBenchmark: null,       // última respuesta de /api/portfolio/benchmark
+  lastSimulation: null,      // última respuesta de /api/portfolio/simulate
+  recommendations: [],       // [{id, date, status, items}]
+  selectedModel: "simple",   // "simple" | "markowitz" | "propio"
+};
+
+// ---- Definición de los tres modelos de recomendación ----
+const MODEL_DEFS = {
+  simple: {
+    name: "Modelo Simple",
+    sub: "Selección por mayor retorno histórico",
+    icon: "",
+    desc: "Selecciona las acciones con mayor CAGR histórico distribuidas en pesos iguales. Caso base de referencia.",
+    apiMethod: "benchmark",
+  },
+  markowitz: {
+    name: "Modelo Markowitz",
+    sub: "Maximización de retorno ajustado al riesgo",
+    icon: "",
+    desc: "Frontera eficiente que maximiza el ratio de Sharpe según tu perfil de riesgo.",
+    apiMethod: "markowitz",
+  },
+  propio: {
+    name: "Mínima Varianza",
+    sub: "Metodología Propia — Mínimo riesgo absoluto",
+    icon: "",
+    desc: "Portafolio de mínima varianza en la frontera eficiente, priorizando la estabilidad del capital sobre el retorno.",
+    apiMethod: "markowitz",
+    forcedMaxLoss: 0.10,
+  },
+};
+
+function selectModel(modelId) {
+  PF.selectedModel = modelId;
+  ["simple", "markowitz", "propio"].forEach(id => {
+    document.getElementById("mc-" + id)?.classList.toggle("active", id === modelId);
+  });
+}
+
+// ---- Cambio de módulo (Acciones / Portafolios) ----
+function switchModule(mod) {
+  PF.currentModule = mod;
+  const tabA = document.getElementById("tab-acciones");
+  const tabP = document.getElementById("tab-portafolios");
+  const sectorLabel = document.getElementById("sector-label");
+  const sectorList  = document.getElementById("sector-list");
+  const portNav     = document.getElementById("portfolio-nav");
+
+  if (mod === "portafolios") {
+    tabA.classList.remove("active");
+    tabP.classList.add("active");
+    sectorLabel.style.display = "none";
+    sectorList.style.display  = "none";
+    portNav.style.display     = "block";
+    pfNavGo(PF.activeNav);
+  } else {
+    tabP.classList.remove("active");
+    tabA.classList.add("active");
+    sectorLabel.style.display = "";
+    sectorList.style.display  = "";
+    portNav.style.display     = "none";
+    // Restore acciones home
+    State.currentSector = null;
+    State.currentTicker = null;
+    renderWelcome();
+    updateNav();
+  }
+}
+
+// ---- Nav lateral del módulo portafolios ----
+function pfNavGo(section) {
+  PF.activeNav = section;
+  ["nuevo","benchmark","simulate"].forEach(id => {
+    document.getElementById("pnav-" + id)?.classList.remove("active");
+  });
+  document.getElementById("pnav-" + section)?.classList.add("active");
+
+  switch (section) {
+    case "nuevo":     renderPfForm();      break;
+    case "benchmark": renderBenchmark();   break;
+    case "simulate":  renderSimulation();  break;
+  }
+}
+
+// ============================================================
+// FORMULARIO DE PERFILAMIENTO
+// ============================================================
+function renderPfForm() {
+  const riskLabel = (v) => {
+    if (v <= 0.15) return ["conservador","#3fb950"];
+    if (v <= 0.35) return ["moderado","#c49b25"];
+    return ["agresivo","#f85149"];
+  };
+
+  const m = PF.selectedModel || "simple";
+  const contentEl = document.getElementById("content");
+  contentEl.innerHTML = `
+    <div class="pf-section">
+
+      <!-- Selector de modelo de recomendación -->
+      <div class="pf-card">
+        <div class="pf-card-title">Modelo de Recomendación</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+          Elige el modelo de optimización para construir tu portafolio personalizado.
+        </p>
+        <div class="model-selector">
+          <div class="model-card ${m === 'simple' ? 'active' : ''}" id="mc-simple" onclick="selectModel('simple')">
+            <div class="model-card-check">✓</div>
+            <div class="model-card-icon"></div>
+            <div class="model-card-name">Modelo Simple</div>
+            <div class="model-card-sub">Selección por mayor retorno histórico</div>
+            <div class="model-card-desc">Acciones con mayor CAGR histórico distribuidas en pesos iguales. Caso base de referencia.</div>
+          </div>
+          <div class="model-card ${m === 'markowitz' ? 'active' : ''}" id="mc-markowitz" onclick="selectModel('markowitz')">
+            <div class="model-card-check">✓</div>
+            <div class="model-card-icon"></div>
+            <div class="model-card-name">Modelo Markowitz</div>
+            <div class="model-card-sub">Maximización de retorno ajustado al riesgo</div>
+            <div class="model-card-desc">Frontera eficiente que maximiza el ratio de Sharpe según tu perfil de riesgo.</div>
+          </div>
+          <div class="model-card ${m === 'propio' ? 'active' : ''}" id="mc-propio" onclick="selectModel('propio')">
+            <div class="model-card-check">✓</div>
+            <div class="model-card-icon"></div>
+            <div class="model-card-name">Mínima Varianza</div>
+            <div class="model-card-sub">Metodología Propia — Mínimo riesgo absoluto</div>
+            <div class="model-card-desc">Portafolio de mínima varianza en la frontera eficiente, priorizando la estabilidad del capital sobre el retorno.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Perfil de riesgo -->
+      <div class="pf-card">
+        <div class="pf-card-title">Definir Perfil de Riesgo</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+          Define tu tolerancia máxima de pérdida para recibir un portafolio
+          adaptado a tu perfil de inversión.
+        </p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Capital inicial (USD)</label>
+            <input id="pf-capital" class="form-input" type="number" min="1000" step="1000" value="100000" placeholder="100000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Número de acciones</label>
+            <input id="pf-nstocks" class="form-input" type="number" min="3" max="20" value="10">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            Pérdida máxima tolerable:
+            <strong id="pf-loss-pct-val">20%</strong>
+          </label>
+          <div class="risk-row">
+            <input id="pf-loss-pct" class="risk-slider" type="range" min="5" max="80" value="20"
+                   oninput="onRiskSlider(this.value)" style="width:100%">
+            <span id="pf-risk-badge" class="risk-badge moderado">moderado</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px">
+            <span>5% — Conservador</span><span>80% — Agresivo</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-primary" id="pf-submit-btn" onclick="submitPortfolioForm()">
+            Generar portafolio
+          </button>
+          <span id="pf-loading" style="font-size:13px;color:var(--text-muted);display:none">
+            Optimizando...
+          </span>
+        </div>
+      </div>
+
+      <div id="pf-result"></div>
+    </div>`;
+}
+
+function onRiskSlider(val) {
+  const v = parseInt(val) / 100;
+  document.getElementById("pf-loss-pct-val").textContent = val + "%";
+  const badge = document.getElementById("pf-risk-badge");
+  if (v <= 0.15) { badge.textContent = "conservador"; badge.className = "risk-badge conservador"; }
+  else if (v <= 0.35) { badge.textContent = "moderado"; badge.className = "risk-badge moderado"; }
+  else { badge.textContent = "agresivo"; badge.className = "risk-badge agresivo"; }
+}
+
+async function submitPortfolioForm() {
+  const capital    = parseFloat(document.getElementById("pf-capital").value) || 100000;
+  const nstocks    = parseInt(document.getElementById("pf-nstocks").value)   || 10;
+  const maxLossPct = parseInt(document.getElementById("pf-loss-pct").value) / 100;
+
+  const modelDef   = MODEL_DEFS[PF.selectedModel] || MODEL_DEFS.simple;
+  const apiMaxLoss = modelDef.forcedMaxLoss ?? maxLossPct;
+
+  const btn     = document.getElementById("pf-submit-btn");
+  const loading = document.getElementById("pf-loading");
+  btn.disabled  = true;
+  loading.style.display = "inline";
+
+  try {
+    const result = await apiFetch("/api/portfolio/optimize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        initial_capital: capital,
+        max_loss_pct:    apiMaxLoss,
+        n_stocks:        nstocks,
+        method:          modelDef.apiMethod,
+      }),
+    });
+    PF.lastResult = result;
+    // Generate a pending recommendation
+    PF.recommendations = [{
+      id: Date.now(),
+      date: new Date().toLocaleDateString("es-CL"),
+      status: "pendiente",
+      items: result.portfolio,
+      metrics: result.metrics,
+    }];
+    renderPfResult(result, capital, maxLossPct);
+  } catch (e) {
+    document.getElementById("pf-result").innerHTML =
+      `<div class="pf-card" style="color:var(--red)">Error: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    loading.style.display = "none";
+  }
+}
+
+// ============================================================
+// RESULTADOS DEL PORTAFOLIO
+// ============================================================
+function renderPfResult(r, capital, maxLossPct) {
+  const riskColors = { conservador: "var(--green)", moderado: "var(--dorado)", agresivo: "var(--red)" };
+  const riskColor  = riskColors[r.risk_level] || "var(--azul-claro)";
+
+  // Scenario returns for year 3 (display)
+  const sc = r.scenarios;
+  const yr = "3";
+
+  // Modelo seleccionado
+  const modelDef = MODEL_DEFS[PF.selectedModel] || MODEL_DEFS.simple;
+
+  // Indicador de compatibilidad con el perfil de riesgo del cliente
+  // Verifica si el escenario desfavorable anual cabe dentro de la tolerancia del cliente
+  const worstAnnual = r.scenarios.desfavorable.annual_return_pct / 100;
+  const isCompatible = worstAnnual >= -maxLossPct;
+  const compatHtml = `
+    <div class="risk-compat ${isCompatible ? "compatible" : "incompatible"}">
+      ${isCompatible ? "Compatible con tu perfil de riesgo" : "Puede superar tu tolerancia de pérdida"}
+      <span style="font-size:11px;font-weight:400;margin-left:6px;opacity:.85">
+        Escenario desfavorable: ${r.scenarios.desfavorable.annual_return_pct}%/año &nbsp;·&nbsp; Tolerancia: −${(maxLossPct * 100).toFixed(0)}%
+      </span>
+    </div>`;
+
+  const validHtml = r.validation
+    ? `<div class="validation-pill">
+         Validación (${r.validation.period}):
+         retorno portafolio = <strong style="margin-left:4px">${r.validation.total_return_pct > 0 ? "+" : ""}${r.validation.total_return_pct}%</strong>
+         (anualizado: ${r.validation.annualized_return_pct > 0 ? "+" : ""}${r.validation.annualized_return_pct}%)
+       </div>`
+    : "";
+
+  const html = `
+    <!-- Banner del modelo seleccionado -->
+    <div class="model-result-banner">
+      <span style="font-size:22px">${modelDef.icon}</span>
+      <div>
+        <span class="model-badge">${modelDef.name}</span>
+        <span style="color:var(--text-muted);margin-left:8px;font-size:12px">${modelDef.sub}</span>
+      </div>
+    </div>
+
+    <!-- Perfil de riesgo y compatibilidad -->
+    <div class="pf-card">
+      <div class="pf-card-title">Perfil de riesgo detectado</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <span style="font-size:28px;font-weight:800;color:${riskColor}">${r.risk_level.toUpperCase()}</span>
+        <div>
+          <div style="font-size:13px;color:var(--text-muted)">Pérdida máxima tolerada: <strong>${(r.max_loss_pct * 100).toFixed(0)}%</strong></div>
+          <div style="font-size:13px;color:var(--text-muted)">Capital inicial: <strong>${fmtUSD(capital)}</strong></div>
+          <div style="font-size:13px;color:var(--text-muted)">Método: <strong>${r.metrics.method}</strong> | Comisión: <strong>${r.commission_rate_pct}% anual</strong></div>
+        </div>
+      </div>
+      ${compatHtml}
+      ${validHtml}
+      <div style="font-size:11px;color:var(--text-muted)">
+        Calibración: ${r.data_split.calibration_start} → ${r.data_split.calibration_end} &nbsp;|&nbsp;
+        Validación: ${r.data_split.validation_start} → ${r.data_split.validation_end}
+      </div>
+    </div>
+
+    <!-- Métricas -->
+    <div class="pf-section-title">Métricas del portafolio optimizado</div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Retorno esperado</div>
+        <div class="metric-value" style="color:${r.metrics.expected_return_pct >= 0 ? 'var(--green)' : 'var(--red)'}">
+          ${r.metrics.expected_return_pct > 0 ? "+" : ""}${r.metrics.expected_return_pct}%
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Volatilidad anual</div>
+        <div class="metric-value">${r.metrics.volatility_pct}%</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Ratio Sharpe</div>
+        <div class="metric-value">${r.metrics.sharpe_ratio}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Capital año 3 (neutro)</div>
+        <div class="metric-value">${fmtUSD(sc.neutro.capital_by_year[yr])}</div>
+      </div>
+    </div>
+
+    <!-- Escenarios (Épica 1) -->
+    <div class="pf-section-title">Escenarios de retorno estimado (5 años)</div>
+    <div class="scenario-grid">
+      <div class="scenario-card favorable">
+        <div class="scenario-label">Favorable</div>
+        <div class="scenario-ret" style="color:var(--green)">
+          ${sc.favorable.annual_return_pct > 0 ? "+" : ""}${sc.favorable.annual_return_pct}%/año
+        </div>
+        <div class="scenario-cap">Año 5: ${fmtUSD(sc.favorable.capital_by_year["5"])}</div>
+        <div class="scenario-cap">Retorno total: ${sc.favorable.total_return_pct > 0 ? "+" : ""}${sc.favorable.total_return_pct}%</div>
+      </div>
+      <div class="scenario-card neutro">
+        <div class="scenario-label">Neutro</div>
+        <div class="scenario-ret" style="color:var(--azul-claro)">
+          ${sc.neutro.annual_return_pct > 0 ? "+" : ""}${sc.neutro.annual_return_pct}%/año
+        </div>
+        <div class="scenario-cap">Año 5: ${fmtUSD(sc.neutro.capital_by_year["5"])}</div>
+        <div class="scenario-cap">Retorno total: ${sc.neutro.total_return_pct > 0 ? "+" : ""}${sc.neutro.total_return_pct}%</div>
+      </div>
+      <div class="scenario-card desfavorable">
+        <div class="scenario-label">Desfavorable</div>
+        <div class="scenario-ret" style="color:var(--red)">
+          ${sc.desfavorable.annual_return_pct > 0 ? "+" : ""}${sc.desfavorable.annual_return_pct}%/año
+        </div>
+        <div class="scenario-cap">Año 5: ${fmtUSD(sc.desfavorable.capital_by_year["5"])}</div>
+        <div class="scenario-cap">Retorno total: ${sc.desfavorable.total_return_pct > 0 ? "+" : ""}${sc.desfavorable.total_return_pct}%</div>
+      </div>
+    </div>
+
+    <!-- Gráfico de escenarios -->
+    <div class="chart-wrap">
+      <div class="pf-section-title" style="border:none;padding:0;margin-bottom:8px">Proyección de capital por escenario</div>
+      <div id="pf-scenario-chart" style="height:280px"></div>
+    </div>
+
+    <!-- Posiciones del portafolio -->
+    <div class="pf-section-title">Composición del portafolio (${r.portfolio.length} acciones)</div>
+    <div class="pf-card" style="padding:0;overflow:hidden">
+      <table class="pf-table">
+        <thead>
+          <tr>
+            <th>Ticker</th><th>Empresa</th><th>Sector</th>
+            <th style="text-align:right">Peso</th>
+            <th style="text-align:right">CAGR hist.</th>
+            <th style="text-align:right">Volatilidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${r.portfolio.map(p => `
+            <tr>
+              <td><strong>${p.ticker}</strong></td>
+              <td style="color:var(--text-muted)">${p.short_name || "—"}</td>
+              <td style="color:var(--text-muted);font-size:12px">${p.sector || "—"}</td>
+              <td style="text-align:right">
+                <span class="weight-bar" style="width:${Math.round(p.weight*120)}px"></span>
+                ${(p.weight*100).toFixed(1)}%
+              </td>
+              <td style="text-align:right;color:${(p.cagr_pct||0)>=0?'var(--green)':'var(--red)'}">
+                ${p.cagr_pct != null ? (p.cagr_pct > 0 ? "+" : "") + p.cagr_pct + "%" : "—"}
+              </td>
+              <td style="text-align:right">${p.volatility_pct != null ? p.volatility_pct + "%" : "—"}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Recomendación de rebalanceo (Épica 2) -->
+    <div class="pf-section-title" style="margin-top:24px">Recomendación de portafolio inicial</div>
+    <div id="pf-recs"></div>
+
+    <!-- Botón retiro (Épica 1) -->
+    <div class="pf-card" style="background:rgba(248,81,73,.05);border-color:rgba(248,81,73,.3)">
+      <div class="pf-card-title" style="color:var(--red)">Derecho a retiro</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+        Si las pérdidas de tu portafolio superan tu tolerancia máxima (${(maxLossPct*100).toFixed(0)}%),
+        puedes retirar tu inversión en cualquier momento.
+      </p>
+      <button class="btn-secondary" style="border-color:var(--red);color:var(--red)"
+              id="btn-withdrawal"
+              data-capital="${capital}"
+              data-maxloss="${maxLossPct}">
+        Simular escenario de retiro
+      </button>
+    </div>`;
+
+  document.getElementById("pf-result").innerHTML = html;
+  // Attach event listener for withdrawal button (avoids inline onclick with interpolated values)
+  const withdrawBtn = document.getElementById("btn-withdrawal");
+  if (withdrawBtn) {
+    withdrawBtn.addEventListener("click", () => {
+      const cap  = parseFloat(withdrawBtn.dataset.capital);
+      const loss = parseFloat(withdrawBtn.dataset.maxloss);
+      simulateWithdrawal(cap, loss);
+    });
+  }
+  renderScenarioChart(r.scenario_timeseries);
+  renderRecommendations();
+}
+
+function renderScenarioChart(ts) {
+  if (!ts || !ts.months || typeof Plotly === "undefined") return;
+  const traces = [
+    { x: ts.months.map(m => `Mes ${m}`), y: ts.favorable, name: "Favorable", line: { color: "#3fb950" }, mode: "lines" },
+    { x: ts.months.map(m => `Mes ${m}`), y: ts.neutro,    name: "Neutro",    line: { color: "#0078bf" }, mode: "lines" },
+    { x: ts.months.map(m => `Mes ${m}`), y: ts.desfavorable, name: "Desfavorable", line: { color: "#f85149", dash: "dot" }, mode: "lines" },
+  ];
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 10, r: 20, b: 50, l: 80 },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Capital (USD)", tickformat: ",.0f" },
+    legend: { orientation: "h", y: -0.2 },
+    showlegend: true,
+  };
+  Plotly.newPlot("pf-scenario-chart", traces, layout, PLOTLY_CONFIG);
+}
+
+// ---- Recomendaciones de rebalanceo (Épica 2) ----
+function renderRecommendations() {
+  const el = document.getElementById("pf-recs");
+  if (!el) return;
+  if (!PF.recommendations.length) {
+    el.innerHTML = `<div class="pf-card" style="color:var(--text-muted);font-size:13px">No hay recomendaciones pendientes.</div>`;
+    return;
+  }
+  el.innerHTML = PF.recommendations.map(rec => `
+    <div class="rec-card" id="rec-${rec.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <strong>Propuesta de portafolio</strong>
+          <span style="font-size:12px;color:var(--text-muted);margin-left:8px">${rec.date}</span>
+        </div>
+        <div id="rec-status-${rec.id}">
+          ${rec.status === "pendiente"
+            ? `<button class="accept-btn" data-rec="${rec.id}" data-action="accept">✓ Aceptar</button>
+               <button class="reject-btn"  data-rec="${rec.id}" data-action="reject">✗ Rechazar</button>`
+            : `<span class="rec-status ${rec.status}">${rec.status}</span>`}
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted)">
+        ${rec.items.slice(0, 5).map(p =>
+          `<span style="margin-right:12px"><strong>${p.ticker}</strong> ${(p.weight*100).toFixed(1)}%</span>`
+        ).join("")}${rec.items.length > 5 ? `<span>+${rec.items.length - 5} más</span>` : ""}
+      </div>
+    </div>`).join("");
+
+  // Attach event listeners to recommendation buttons
+  el.querySelectorAll("[data-rec]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id     = parseInt(btn.dataset.rec, 10);
+      const accept = btn.dataset.action === "accept";
+      respondRec(id, accept);
+    });
+  });
+}
+
+function respondRec(id, accept) {
+  const rec = PF.recommendations.find(r => r.id === id);
+  if (!rec) return;
+  rec.status = accept ? "aceptada" : "rechazada";
+  const statusEl = document.getElementById("rec-status-" + id);
+  if (statusEl) {
+    statusEl.innerHTML = `<span class="rec-status ${rec.status}">${rec.status}</span>`;
+  }
+  // Visual feedback
+  const card = document.getElementById("rec-" + id);
+  if (card) {
+    card.style.borderColor = accept ? "var(--green)" : "var(--red)";
+    const msg = accept
+      ? "✓ Recomendación aceptada — portafolio actualizado según propuesta."
+      : "✗ Recomendación rechazada — el portafolio anterior se mantiene.";
+    card.insertAdjacentHTML("beforeend",
+      `<div style="margin-top:8px;font-size:12px;color:${accept?'var(--green)':'var(--red)'}">${msg}</div>`);
+  }
+}
+
+function simulateWithdrawal(capital, maxLoss) {
+  if (!PF.lastResult) return;
+  const r = PF.lastResult;
+  pfNavGo("simulate");
+  // Pre-fill simulation with current portfolio parameters
+  setTimeout(() => {
+    const el = document.getElementById("sim-capital");
+    if (el) { el.value = capital; }
+    const lossEl = document.getElementById("sim-loss-pct");
+    if (lossEl) { lossEl.value = Math.round(maxLoss * 100); onSimLossSlider(lossEl.value); }
+    const retEl = document.getElementById("sim-exp-ret");
+    if (retEl) retEl.value = r.metrics.expected_return_pct;
+    const volEl = document.getElementById("sim-vol");
+    if (volEl) volEl.value = r.metrics.volatility_pct;
+    submitSimulation();
+  }, 100);
+}
+
+// ============================================================
+// BENCHMARK SIMPLE (Épica 3)
+// ============================================================
+async function renderBenchmark() {
+  const contentEl = document.getElementById("content");
+  contentEl.innerHTML = `<div class="pf-section">
+    <div class="pf-card">
+      <div class="pf-card-title">Benchmark Simple — Top CAGR</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+        Selección de las N acciones con mayor CAGR histórico con pesos iguales.
+        Sirve como caso base de comparación frente al modelo de Markowitz.
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Número de acciones</label>
+          <input id="bm-n" class="form-input" type="number" min="3" max="30" value="10">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="fetchBenchmark()">Calcular benchmark</button>
+    </div>
+    <div id="bm-result"></div>
+  </div>`;
+}
+
+async function fetchBenchmark() {
+  const n = parseInt(document.getElementById("bm-n").value) || 10;
+  try {
+    const r = await apiFetch(`/api/portfolio/benchmark?n=${n}`);
+    PF.lastBenchmark = r;
+    renderBenchmarkResult(r);
+  } catch (e) {
+    document.getElementById("bm-result").innerHTML =
+      `<div class="pf-card" style="color:var(--red)">Error: ${e.message}</div>`;
+  }
+}
+
+function renderBenchmarkResult(r) {
+  const html = `
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Retorno esperado</div>
+        <div class="metric-value" style="color:var(--green)">
+          ${r.metrics.expected_return_pct > 0 ? "+" : ""}${r.metrics.expected_return_pct}%
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Volatilidad</div>
+        <div class="metric-value">${r.metrics.volatility_pct}%</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Método</div>
+        <div class="metric-value" style="font-size:13px">Top CAGR</div>
+      </div>
+    </div>
+    <div class="pf-card" style="padding:0;overflow:hidden">
+      <table class="pf-table">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Ticker</th><th>Empresa</th><th>Sector</th>
+            <th style="text-align:right">Peso</th>
+            <th style="text-align:right">CAGR hist.</th>
+            <th style="text-align:right">Volatilidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${r.portfolio.map((p, i) => `
+            <tr>
+              <td style="color:var(--text-muted)">#${i+1}</td>
+              <td><strong>${p.ticker}</strong></td>
+              <td style="color:var(--text-muted)">${p.short_name || "—"}</td>
+              <td style="color:var(--text-muted);font-size:12px">${p.sector || "—"}</td>
+              <td style="text-align:right">${(p.weight*100).toFixed(1)}%</td>
+              <td style="text-align:right;color:var(--green)">${p.cagr_pct != null ? "+" + p.cagr_pct + "%" : "—"}</td>
+              <td style="text-align:right">${p.volatility_pct != null ? p.volatility_pct + "%" : "—"}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  document.getElementById("bm-result").innerHTML = html;
+}
+
+// ============================================================
+// SIMULACIÓN MONTE CARLO (Épica 3)
+// ============================================================
+function renderSimulation() {
+  const prefill = PF.lastResult ? PF.lastResult.metrics : null;
+  const capital  = prefill ? 100000 : 100000;
+  const expRet   = prefill ? prefill.expected_return_pct : 10;
+  const vol      = prefill ? prefill.volatility_pct : 20;
+
+  const contentEl = document.getElementById("content");
+  contentEl.innerHTML = `
+    <div class="pf-section">
+      <div class="pf-card">
+        <div class="pf-card-title">Simulación de Comportamiento del Cliente</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+          Simula probabilísticamente cómo evoluciona el capital considerando recomendaciones
+          periódicas de rebalanceo, probabilidad de aceptación y retiro ante pérdidas extremas.
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Capital inicial (USD)</label>
+            <input id="sim-capital" class="form-input" type="number" value="${capital}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Retorno esperado anual (%)</label>
+            <input id="sim-exp-ret" class="form-input" type="number" step="0.1" value="${expRet}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Volatilidad anual (%)</label>
+            <input id="sim-vol" class="form-input" type="number" step="0.1" value="${vol}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Horizonte (años)</label>
+            <input id="sim-years" class="form-input" type="number" min="1" max="10" value="3">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Simulaciones</label>
+            <input id="sim-n" class="form-input" type="number" min="100" max="2000" step="100" value="500">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pérdida máx. tolerable: <strong id="sim-loss-pct-val">20%</strong></label>
+            <input id="sim-loss-pct" class="risk-slider" type="range" min="5" max="80" value="20"
+                   oninput="onSimLossSlider(this.value)">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-primary" id="sim-btn" onclick="submitSimulation()">Ejecutar simulación</button>
+          <span id="sim-loading" style="font-size:13px;color:var(--text-muted);display:none">Simulando...</span>
+        </div>
+      </div>
+      <div id="sim-result"></div>
+    </div>`;
+}
+
+function onSimLossSlider(v) {
+  const el = document.getElementById("sim-loss-pct-val");
+  if (el) el.textContent = v + "%";
+}
+
+async function submitSimulation() {
+  const capital  = parseFloat(document.getElementById("sim-capital")?.value)  || 100000;
+  const expRet   = parseFloat(document.getElementById("sim-exp-ret")?.value)   || 10;
+  const vol      = parseFloat(document.getElementById("sim-vol")?.value)       || 20;
+  const years    = parseInt(document.getElementById("sim-years")?.value)       || 3;
+  const nsim     = parseInt(document.getElementById("sim-n")?.value)           || 500;
+  const maxLoss  = parseInt(document.getElementById("sim-loss-pct")?.value)    || 20;
+
+  const btn     = document.getElementById("sim-btn");
+  const loading = document.getElementById("sim-loading");
+  if (btn)     btn.disabled = true;
+  if (loading) loading.style.display = "inline";
+
+  try {
+    const result = await apiFetch("/api/portfolio/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        initial_capital: capital,
+        expected_return: expRet / 100,
+        volatility:      vol / 100,
+        max_loss_pct:    maxLoss / 100,
+        years:           years,
+        n_simulations:   nsim,
+      }),
+    });
+    PF.lastSimulation = result;
+    renderSimResult(result, capital);
+  } catch (e) {
+    document.getElementById("sim-result").innerHTML =
+      `<div class="pf-card" style="color:var(--red)">Error: ${e.message}</div>`;
+  } finally {
+    if (btn)     btn.disabled = false;
+    if (loading) loading.style.display = "none";
+  }
+}
+
+function renderSimResult(r, capital) {
+  const html = `
+    <!-- Métricas clave -->
+    <div class="pf-section-title">Resultados de la simulación (${r.total_recommendations} recomendaciones emitidas)</div>
+    <div class="metrics-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+      <div class="metric-card">
+        <div class="metric-label">Capital final promedio</div>
+        <div class="metric-value" style="color:${r.final_capital_mean >= capital ? 'var(--green)' : 'var(--red)'}">
+          ${fmtUSD(r.final_capital_mean)}
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Capital P10</div>
+        <div class="metric-value">${fmtUSD(r.final_capital_p10)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Capital P90</div>
+        <div class="metric-value">${fmtUSD(r.final_capital_p90)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Comisiones cobradas</div>
+        <div class="metric-value">${fmtUSD(r.total_commissions_mean)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Tasa de retiro</div>
+        <div class="metric-value" style="color:${r.withdrawal_rate>30?'var(--red)':'var(--text)'}">
+          ${r.withdrawal_rate}%
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Recs. aceptadas (prom.)</div>
+        <div class="metric-value">${r.accepted_recommendations_mean}</div>
+      </div>
+    </div>
+
+    <!-- Gráfico de trayectorias -->
+    <div class="chart-wrap">
+      <div class="pf-section-title" style="border:none;padding:0;margin-bottom:8px">
+        Distribución de capital — Media ± P10/P90
+      </div>
+      <div id="sim-chart" style="height:300px"></div>
+    </div>`;
+
+  document.getElementById("sim-result").innerHTML = html;
+  renderSimChart(r, capital);
+}
+
+function renderSimChart(r, capital) {
+  if (typeof Plotly === "undefined") return;
+  const xLabels = r.periods.map(p => `Semana ${p}`);
+  const traces = [
+    {
+      x: xLabels, y: r.capital_p90, name: "P90",
+      fill: "tonexty", fillcolor: "rgba(63,185,80,0.12)",
+      line: { color: "rgba(63,185,80,0.4)", width: 1 }, mode: "lines",
+    },
+    {
+      x: xLabels, y: r.capital_mean, name: "Media",
+      line: { color: "#0078bf", width: 2 }, mode: "lines",
+    },
+    {
+      x: xLabels, y: r.capital_p10, name: "P10",
+      fill: "tonexty", fillcolor: "rgba(248,81,73,0.08)",
+      line: { color: "rgba(248,81,73,0.4)", width: 1 }, mode: "lines",
+    },
+    {
+      x: xLabels, y: Array(xLabels.length).fill(capital), name: "Capital inicial",
+      line: { color: "#c49b25", width: 1, dash: "dot" }, mode: "lines",
+    },
+  ];
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 10, r: 20, b: 50, l: 80 },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Capital (USD)", tickformat: ",.0f" },
+    legend: { orientation: "h", y: -0.2 },
+    showlegend: true,
+  };
+  Plotly.newPlot("sim-chart", traces, layout, PLOTLY_CONFIG);
+}
+
+
+
