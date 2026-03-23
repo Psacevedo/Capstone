@@ -106,7 +106,7 @@ function goHome() {
   setNavState("home");
   showContent(`
     <div class="welcome">
-      <div class="welcome-icon">📈</div>
+      <div class="welcome-icon"></div>
       <h3>Bienvenido al módulo Acciones</h3>
       <p>Selecciona un sector en el panel izquierdo para explorar las acciones disponibles.</p>
     </div>
@@ -739,21 +739,21 @@ const MODEL_DEFS = {
   simple: {
     name: "Modelo Simple",
     sub: "Selección por mayor retorno histórico",
-    icon: "📊",
+    icon: "",
     desc: "Selecciona las acciones con mayor CAGR histórico distribuidas en pesos iguales. Caso base de referencia.",
     apiMethod: "benchmark",
   },
   markowitz: {
     name: "Modelo Markowitz",
     sub: "Maximización de retorno ajustado al riesgo",
-    icon: "⚡",
+    icon: "",
     desc: "Frontera eficiente que maximiza el ratio de Sharpe según tu perfil de riesgo.",
     apiMethod: "markowitz",
   },
   propio: {
     name: "Mínima Varianza",
     sub: "Metodología Propia — Mínimo riesgo absoluto",
-    icon: "🛡️",
+    icon: "",
     desc: "Portafolio de mínima varianza en la frontera eficiente, priorizando la estabilidad del capital sobre el retorno.",
     apiMethod: "markowitz",
     forcedMaxLoss: 0.10,
@@ -829,28 +829,28 @@ function renderPfForm() {
 
       <!-- Selector de modelo de recomendación -->
       <div class="pf-card">
-        <div class="pf-card-title">🤖 Modelo de Recomendación</div>
+        <div class="pf-card-title">Modelo de Recomendación</div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
           Elige el modelo de optimización para construir tu portafolio personalizado.
         </p>
         <div class="model-selector">
           <div class="model-card ${m === 'simple' ? 'active' : ''}" id="mc-simple" onclick="selectModel('simple')">
             <div class="model-card-check">✓</div>
-            <div class="model-card-icon">📊</div>
+            <div class="model-card-icon"></div>
             <div class="model-card-name">Modelo Simple</div>
             <div class="model-card-sub">Selección por mayor retorno histórico</div>
             <div class="model-card-desc">Acciones con mayor CAGR histórico distribuidas en pesos iguales. Caso base de referencia.</div>
           </div>
           <div class="model-card ${m === 'markowitz' ? 'active' : ''}" id="mc-markowitz" onclick="selectModel('markowitz')">
             <div class="model-card-check">✓</div>
-            <div class="model-card-icon">⚡</div>
+            <div class="model-card-icon"></div>
             <div class="model-card-name">Modelo Markowitz</div>
             <div class="model-card-sub">Maximización de retorno ajustado al riesgo</div>
             <div class="model-card-desc">Frontera eficiente que maximiza el ratio de Sharpe según tu perfil de riesgo.</div>
           </div>
           <div class="model-card ${m === 'propio' ? 'active' : ''}" id="mc-propio" onclick="selectModel('propio')">
             <div class="model-card-check">✓</div>
-            <div class="model-card-icon">🛡️</div>
+            <div class="model-card-icon"></div>
             <div class="model-card-name">Mínima Varianza</div>
             <div class="model-card-sub">Metodología Propia — Mínimo riesgo absoluto</div>
             <div class="model-card-desc">Portafolio de mínima varianza en la frontera eficiente, priorizando la estabilidad del capital sobre el retorno.</div>
@@ -860,7 +860,7 @@ function renderPfForm() {
 
       <!-- Perfil de riesgo -->
       <div class="pf-card">
-        <div class="pf-card-title">📋 Definir Perfil de Riesgo</div>
+        <div class="pf-card-title">Definir Perfil de Riesgo</div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
           Define tu tolerancia máxima de pérdida para recibir un portafolio
           adaptado a tu perfil de inversión.
@@ -897,7 +897,7 @@ function renderPfForm() {
             Generar portafolio
           </button>
           <span id="pf-loading" style="font-size:13px;color:var(--text-muted);display:none">
-            ⏳ Optimizando...
+            Optimizando...
           </span>
         </div>
       </div>
@@ -978,7 +978,7 @@ function renderPfResult(r, capital, maxLossPct) {
   const isCompatible = worstAnnual >= -maxLossPct;
   const compatHtml = `
     <div class="risk-compat ${isCompatible ? "compatible" : "incompatible"}">
-      ${isCompatible ? "✅ Compatible con tu perfil de riesgo" : "⚠️ Puede superar tu tolerancia de pérdida"}
+      ${isCompatible ? "Compatible con tu perfil de riesgo" : "Puede superar tu tolerancia de pérdida"}
       <span style="font-size:11px;font-weight:400;margin-left:6px;opacity:.85">
         Escenario desfavorable: ${r.scenarios.desfavorable.annual_return_pct}%/año &nbsp;·&nbsp; Tolerancia: −${(maxLossPct * 100).toFixed(0)}%
       </span>
@@ -986,7 +986,7 @@ function renderPfResult(r, capital, maxLossPct) {
 
   const validHtml = r.validation
     ? `<div class="validation-pill">
-         📊 Validación (${r.validation.period}):
+         Validación (${r.validation.period}):
          retorno portafolio = <strong style="margin-left:4px">${r.validation.total_return_pct > 0 ? "+" : ""}${r.validation.total_return_pct}%</strong>
          (anualizado: ${r.validation.annualized_return_pct > 0 ? "+" : ""}${r.validation.annualized_return_pct}%)
        </div>`
@@ -1048,7 +1048,7 @@ function renderPfResult(r, capital, maxLossPct) {
     <div class="pf-section-title">Escenarios de retorno estimado (5 años)</div>
     <div class="scenario-grid">
       <div class="scenario-card favorable">
-        <div class="scenario-label">🟢 Favorable</div>
+        <div class="scenario-label">Favorable</div>
         <div class="scenario-ret" style="color:var(--green)">
           ${sc.favorable.annual_return_pct > 0 ? "+" : ""}${sc.favorable.annual_return_pct}%/año
         </div>
@@ -1056,7 +1056,7 @@ function renderPfResult(r, capital, maxLossPct) {
         <div class="scenario-cap">Retorno total: ${sc.favorable.total_return_pct > 0 ? "+" : ""}${sc.favorable.total_return_pct}%</div>
       </div>
       <div class="scenario-card neutro">
-        <div class="scenario-label">🔵 Neutro</div>
+        <div class="scenario-label">Neutro</div>
         <div class="scenario-ret" style="color:var(--azul-claro)">
           ${sc.neutro.annual_return_pct > 0 ? "+" : ""}${sc.neutro.annual_return_pct}%/año
         </div>
@@ -1064,7 +1064,7 @@ function renderPfResult(r, capital, maxLossPct) {
         <div class="scenario-cap">Retorno total: ${sc.neutro.total_return_pct > 0 ? "+" : ""}${sc.neutro.total_return_pct}%</div>
       </div>
       <div class="scenario-card desfavorable">
-        <div class="scenario-label">🔴 Desfavorable</div>
+        <div class="scenario-label">Desfavorable</div>
         <div class="scenario-ret" style="color:var(--red)">
           ${sc.desfavorable.annual_return_pct > 0 ? "+" : ""}${sc.desfavorable.annual_return_pct}%/año
         </div>
@@ -1116,7 +1116,7 @@ function renderPfResult(r, capital, maxLossPct) {
 
     <!-- Botón retiro (Épica 1) -->
     <div class="pf-card" style="background:rgba(248,81,73,.05);border-color:rgba(248,81,73,.3)">
-      <div class="pf-card-title" style="color:var(--red)">⚠️ Derecho a retiro</div>
+      <div class="pf-card-title" style="color:var(--red)">Derecho a retiro</div>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
         Si las pérdidas de tu portafolio superan tu tolerancia máxima (${(maxLossPct*100).toFixed(0)}%),
         puedes retirar tu inversión en cualquier momento.
@@ -1244,7 +1244,7 @@ async function renderBenchmark() {
   const contentEl = document.getElementById("content");
   contentEl.innerHTML = `<div class="pf-section">
     <div class="pf-card">
-      <div class="pf-card-title">🏆 Benchmark Simple — Top CAGR</div>
+      <div class="pf-card-title">Benchmark Simple — Top CAGR</div>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
         Selección de las N acciones con mayor CAGR histórico con pesos iguales.
         Sirve como caso base de comparación frente al modelo de Markowitz.
@@ -1331,7 +1331,7 @@ function renderSimulation() {
   contentEl.innerHTML = `
     <div class="pf-section">
       <div class="pf-card">
-        <div class="pf-card-title">🎲 Simulación de Comportamiento del Cliente</div>
+        <div class="pf-card-title">Simulación de Comportamiento del Cliente</div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
           Simula probabilísticamente cómo evoluciona el capital considerando recomendaciones
           periódicas de rebalanceo, probabilidad de aceptación y retiro ante pérdidas extremas.
@@ -1367,7 +1367,7 @@ function renderSimulation() {
         </div>
         <div style="display:flex;gap:10px;align-items:center">
           <button class="btn-primary" id="sim-btn" onclick="submitSimulation()">Ejecutar simulación</button>
-          <span id="sim-loading" style="font-size:13px;color:var(--text-muted);display:none">⏳ Simulando...</span>
+          <span id="sim-loading" style="font-size:13px;color:var(--text-muted);display:none">Simulando...</span>
         </div>
       </div>
       <div id="sim-result"></div>

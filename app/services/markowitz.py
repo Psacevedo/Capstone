@@ -1,12 +1,15 @@
 """
 markowitz.py — Optimización de Markowitz para selección de portafolios.
 
-Implementa:
+⚠️  MAQUETA: Esta es una maqueta sin funcionalidad real.
+El grupo debe definir la implementación formal del modelo de Markowitz con Gurobi.
+
+Estructura preparada para usar Gurobi como solver:
   - Portafolio de máximo Sharpe ratio (maximize_sharpe)
   - Portafolio de mínima varianza (minimum_variance_portfolio)
   - Estadísticas básicas de portafolio
 
-Si scipy no está disponible, cae a pesos iguales.
+Retorna valores placeholder/dummy hasta que sea implementado.
 """
 import logging
 from typing import Dict, List, Optional
@@ -16,11 +19,12 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 try:
-    from scipy.optimize import minimize
-    _SCIPY = True
+    import gurobipy as gp
+    from gurobipy import GRB
+    _GUROBI = True
 except ImportError:  # pragma: no cover
-    _SCIPY = False
-    log.warning("scipy no disponible — Markowitz usará pesos iguales como fallback")
+    _GUROBI = False
+    log.warning("Gurobi no disponible — usando pesos iguales como fallback")
 
 
 # ============================================================
@@ -33,8 +37,10 @@ def compute_markowitz_portfolio(
     risk_free_rate: float = 0.05,
 ) -> Dict:
     """
-    Portafolio de máximo Sharpe ratio.
-
+    ⚠️  MAQUETA: Portafolio de máximo Sharpe ratio.
+    
+    Retorna valores placeholder. A ser implementado por el grupo usando Gurobi.
+    
     Args:
         tickers: Lista de nombres/tickers (longitud N).
         daily_returns: Matriz (T x N) de retornos diarios.
@@ -47,32 +53,10 @@ def compute_markowitz_portfolio(
     if n == 0:
         return {}
 
-    if daily_returns.ndim == 1 or daily_returns.shape[1] == 1:
-        return _portfolio_stats(np.array([1.0]), daily_returns.reshape(-1, 1), risk_free_rate, tickers)
-
-    if not _SCIPY:
-        weights = np.ones(n) / n
-        return _portfolio_stats(weights, daily_returns, risk_free_rate, tickers)
-
-    ann_returns = daily_returns.mean(axis=0) * 252
-    ann_cov = np.cov(daily_returns.T) * 252
-
-    def _objective(w: np.ndarray) -> float:
-        return _neg_sharpe(w, ann_returns, ann_cov, risk_free_rate)
-
-    x0 = np.ones(n) / n
-    bounds = [(0.0, 1.0)] * n
-    constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
-
-    result = minimize(
-        _objective, x0, method="SLSQP",
-        bounds=bounds, constraints=constraints,
-        options={"ftol": 1e-9, "maxiter": 1000},
-    )
-    weights = result.x if result.success else x0
-    weights = np.maximum(weights, 0.0)
-    weights /= weights.sum()
-
+    # Maqueta: retorna pesos iguales
+    weights = np.ones(n) / n
+    log.warning(f"MAQUETA: compute_markowitz_portfolio retorna pesos iguales (sin optimizar)")
+    
     return _portfolio_stats(weights, daily_returns, risk_free_rate, tickers)
 
 
@@ -81,56 +65,25 @@ def minimum_variance_portfolio(
     daily_returns: np.ndarray,
     risk_free_rate: float = 0.05,
 ) -> Dict:
-    """Portafolio de mínima varianza (perfil conservador)."""
+    """
+    ⚠️  MAQUETA: Portafolio de mínima varianza (perfil conservador).
+    
+    Retorna valores placeholder. A ser implementado por el grupo usando Gurobi.
+    """
     n = len(tickers)
     if n == 0:
         return {}
 
-    if daily_returns.ndim == 1 or daily_returns.shape[1] == 1:
-        return _portfolio_stats(np.array([1.0]), daily_returns.reshape(-1, 1), risk_free_rate, tickers)
-
-    if not _SCIPY:
-        weights = np.ones(n) / n
-        return _portfolio_stats(weights, daily_returns, risk_free_rate, tickers)
-
-    ann_cov = np.cov(daily_returns.T) * 252
-
-    def _objective(w: np.ndarray) -> float:
-        return _portfolio_variance(w, ann_cov)
-
-    x0 = np.ones(n) / n
-    bounds = [(0.0, 1.0)] * n
-    constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
-
-    result = minimize(
-        _objective, x0, method="SLSQP",
-        bounds=bounds, constraints=constraints,
-        options={"ftol": 1e-9, "maxiter": 1000},
-    )
-    weights = result.x if result.success else x0
-    weights = np.maximum(weights, 0.0)
-    weights /= weights.sum()
-
+    # Maqueta: retorna pesos iguales
+    weights = np.ones(n) / n
+    log.warning(f"MAQUETA: minimum_variance_portfolio retorna pesos iguales (sin optimizar)")
+    
     return _portfolio_stats(weights, daily_returns, risk_free_rate, tickers)
 
 
 # ============================================================
 # Helpers
 # ============================================================
-
-def _neg_sharpe(w: np.ndarray, ann_returns: np.ndarray, ann_cov: np.ndarray, risk_free_rate: float) -> float:
-    """Negative Sharpe ratio (objective to minimise)."""
-    ret = float(np.dot(w, ann_returns))
-    vol = float(np.sqrt(w @ ann_cov @ w))
-    if vol < 1e-10:
-        return 1e10
-    return -(ret - risk_free_rate) / vol
-
-
-def _portfolio_variance(w: np.ndarray, ann_cov: np.ndarray) -> float:
-    """Portfolio variance (objective to minimise for min-variance portfolio)."""
-    return float(w @ ann_cov @ w)
-
 
 def _portfolio_stats(
     weights: np.ndarray,
