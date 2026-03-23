@@ -731,7 +731,41 @@ const PF = {
   lastBenchmark: null,       // última respuesta de /api/portfolio/benchmark
   lastSimulation: null,      // última respuesta de /api/portfolio/simulate
   recommendations: [],       // [{id, date, status, items}]
+  selectedModel: "simple",   // "simple" | "markowitz" | "propio"
 };
+
+// ---- Definición de los tres modelos de recomendación ----
+const MODEL_DEFS = {
+  simple: {
+    name: "Modelo Simple",
+    sub: "Selección por mayor retorno histórico",
+    icon: "📊",
+    desc: "Selecciona las acciones con mayor CAGR histórico distribuidas en pesos iguales. Caso base de referencia.",
+    apiMethod: "benchmark",
+  },
+  markowitz: {
+    name: "Modelo Markowitz",
+    sub: "Maximización de retorno ajustado al riesgo",
+    icon: "⚡",
+    desc: "Frontera eficiente que maximiza el ratio de Sharpe según tu perfil de riesgo.",
+    apiMethod: "markowitz",
+  },
+  propio: {
+    name: "Mínima Varianza",
+    sub: "Metodología Propia — Mínimo riesgo absoluto",
+    icon: "🛡️",
+    desc: "Portafolio de mínima varianza en la frontera eficiente, priorizando la estabilidad del capital sobre el retorno.",
+    apiMethod: "markowitz",
+    forcedMaxLoss: 0.10,
+  },
+};
+
+function selectModel(modelId) {
+  PF.selectedModel = modelId;
+  ["simple", "markowitz", "propio"].forEach(id => {
+    document.getElementById("mc-" + id)?.classList.toggle("active", id === modelId);
+  });
+}
 
 // ---- Cambio de módulo (Acciones / Portafolios) ----
 function switchModule(mod) {
@@ -788,13 +822,47 @@ function renderPfForm() {
     return ["agresivo","#f85149"];
   };
 
+  const m = PF.selectedModel || "simple";
   const contentEl = document.getElementById("content");
   contentEl.innerHTML = `
     <div class="pf-section">
+
+      <!-- Selector de modelo de recomendación -->
+      <div class="pf-card">
+        <div class="pf-card-title">🤖 Modelo de Recomendación</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+          Elige el modelo de optimización para construir tu portafolio personalizado.
+        </p>
+        <div class="model-selector">
+          <div class="model-card ${m === 'simple' ? 'active' : ''}" id="mc-simple" onclick="selectModel('simple')">
+            <div class="model-card-check">✓</div>
+            <div class="model-card-icon">📊</div>
+            <div class="model-card-name">Modelo Simple</div>
+            <div class="model-card-sub">Selección por mayor retorno histórico</div>
+            <div class="model-card-desc">Acciones con mayor CAGR histórico distribuidas en pesos iguales. Caso base de referencia.</div>
+          </div>
+          <div class="model-card ${m === 'markowitz' ? 'active' : ''}" id="mc-markowitz" onclick="selectModel('markowitz')">
+            <div class="model-card-check">✓</div>
+            <div class="model-card-icon">⚡</div>
+            <div class="model-card-name">Modelo Markowitz</div>
+            <div class="model-card-sub">Maximización de retorno ajustado al riesgo</div>
+            <div class="model-card-desc">Frontera eficiente que maximiza el ratio de Sharpe según tu perfil de riesgo.</div>
+          </div>
+          <div class="model-card ${m === 'propio' ? 'active' : ''}" id="mc-propio" onclick="selectModel('propio')">
+            <div class="model-card-check">✓</div>
+            <div class="model-card-icon">🛡️</div>
+            <div class="model-card-name">Mínima Varianza</div>
+            <div class="model-card-sub">Metodología Propia — Mínimo riesgo absoluto</div>
+            <div class="model-card-desc">Portafolio de mínima varianza en la frontera eficiente, priorizando la estabilidad del capital sobre el retorno.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Perfil de riesgo -->
       <div class="pf-card">
         <div class="pf-card-title">📋 Definir Perfil de Riesgo</div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
-          Define tu tolerancia máxima de pérdida para recibir un portafolio inicial
+          Define tu tolerancia máxima de pérdida para recibir un portafolio
           adaptado a tu perfil de inversión.
         </p>
 
@@ -806,13 +874,6 @@ function renderPfForm() {
           <div class="form-group">
             <label class="form-label">Número de acciones</label>
             <input id="pf-nstocks" class="form-input" type="number" min="3" max="20" value="10">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Método de optimización</label>
-            <select id="pf-method" class="form-select">
-              <option value="markowitz">Markowitz (Sharpe máximo)</option>
-              <option value="benchmark">Benchmark (top CAGR)</option>
-            </select>
           </div>
         </div>
 
@@ -857,8 +918,10 @@ function onRiskSlider(val) {
 async function submitPortfolioForm() {
   const capital    = parseFloat(document.getElementById("pf-capital").value) || 100000;
   const nstocks    = parseInt(document.getElementById("pf-nstocks").value)   || 10;
-  const method     = document.getElementById("pf-method").value;
   const maxLossPct = parseInt(document.getElementById("pf-loss-pct").value) / 100;
+
+  const modelDef   = MODEL_DEFS[PF.selectedModel] || MODEL_DEFS.simple;
+  const apiMaxLoss = modelDef.forcedMaxLoss ?? maxLossPct;
 
   const btn     = document.getElementById("pf-submit-btn");
   const loading = document.getElementById("pf-loading");
@@ -871,9 +934,9 @@ async function submitPortfolioForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         initial_capital: capital,
-        max_loss_pct:    maxLossPct,
+        max_loss_pct:    apiMaxLoss,
         n_stocks:        nstocks,
-        method:          method,
+        method:          modelDef.apiMethod,
       }),
     });
     PF.lastResult = result;
@@ -906,6 +969,21 @@ function renderPfResult(r, capital, maxLossPct) {
   const sc = r.scenarios;
   const yr = "3";
 
+  // Modelo seleccionado
+  const modelDef = MODEL_DEFS[PF.selectedModel] || MODEL_DEFS.simple;
+
+  // Indicador de compatibilidad con el perfil de riesgo del cliente
+  // Verifica si el escenario desfavorable anual cabe dentro de la tolerancia del cliente
+  const worstAnnual = r.scenarios.desfavorable.annual_return_pct / 100;
+  const isCompatible = worstAnnual >= -maxLossPct;
+  const compatHtml = `
+    <div class="risk-compat ${isCompatible ? "compatible" : "incompatible"}">
+      ${isCompatible ? "✅ Compatible con tu perfil de riesgo" : "⚠️ Puede superar tu tolerancia de pérdida"}
+      <span style="font-size:11px;font-weight:400;margin-left:6px;opacity:.85">
+        Escenario desfavorable: ${r.scenarios.desfavorable.annual_return_pct}%/año &nbsp;·&nbsp; Tolerancia: −${(maxLossPct * 100).toFixed(0)}%
+      </span>
+    </div>`;
+
   const validHtml = r.validation
     ? `<div class="validation-pill">
          📊 Validación (${r.validation.period}):
@@ -915,7 +993,16 @@ function renderPfResult(r, capital, maxLossPct) {
     : "";
 
   const html = `
-    <!-- Perfil de riesgo -->
+    <!-- Banner del modelo seleccionado -->
+    <div class="model-result-banner">
+      <span style="font-size:22px">${modelDef.icon}</span>
+      <div>
+        <span class="model-badge">${modelDef.name}</span>
+        <span style="color:var(--text-muted);margin-left:8px;font-size:12px">${modelDef.sub}</span>
+      </div>
+    </div>
+
+    <!-- Perfil de riesgo y compatibilidad -->
     <div class="pf-card">
       <div class="pf-card-title">Perfil de riesgo detectado</div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
@@ -926,6 +1013,7 @@ function renderPfResult(r, capital, maxLossPct) {
           <div style="font-size:13px;color:var(--text-muted)">Método: <strong>${r.metrics.method}</strong> | Comisión: <strong>${r.commission_rate_pct}% anual</strong></div>
         </div>
       </div>
+      ${compatHtml}
       ${validHtml}
       <div style="font-size:11px;color:var(--text-muted)">
         Calibración: ${r.data_split.calibration_start} → ${r.data_split.calibration_end} &nbsp;|&nbsp;
