@@ -5,6 +5,7 @@ data/
 *.db
 *.sqlite
 stocks_info.txt
+informe/
 
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
