@@ -663,6 +663,51 @@ function buildDividendChart(chart) {
   }, PLOTLY_CONFIG);
 }
 
+function renderEfficientFrontierChart(result, targetId = "frontier-chart") {
+  if (typeof Plotly === "undefined") return;
+  if (!result || !(result.efficient_frontier || []).length) return;
+  const el = document.getElementById(targetId);
+  if (!el) return;
+
+  const points = result.efficient_frontier || [];
+  const x = points.map(p => (p?.volatility_pct ?? p?.[0]));
+  const y = points.map(p => (p?.expected_return_pct ?? p?.[1]));
+  const metrics = result.metrics || {};
+
+  const traces = [
+    {
+      x,
+      y,
+      type: "scatter",
+      mode: "lines+markers",
+      name: "Frontera eficiente",
+      line: { color: "#0078bf", width: 2 },
+      marker: { size: 6 },
+      hovertemplate: "Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>",
+    },
+  ];
+
+  if (metrics.volatility_pct != null && metrics.expected_return_pct != null) {
+    traces.push({
+      x: [metrics.volatility_pct],
+      y: [metrics.expected_return_pct],
+      type: "scatter",
+      mode: "markers",
+      name: "Portafolio",
+      marker: { size: 12, color: "#c49b25", line: { color: "#0d1117", width: 2 } },
+      hovertemplate: "Portafolio<br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>",
+    });
+  }
+
+  Plotly.newPlot(el, traces, {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 12, r: 20, b: 60, l: 70 },
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: { text: "Volatilidad (%)", font: { size: 11 } } },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: { text: "Retorno esperado (%)", font: { size: 11 } } },
+    legend: { orientation: "h", y: -0.25 },
+  }, PLOTLY_CONFIG);
+}
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -1496,5 +1541,2742 @@ function renderSimChart(r, capital) {
   Plotly.newPlot("sim-chart", traces, layout, PLOTLY_CONFIG);
 }
 
+// ============================================================
+// OVERRIDES - SISTEMA RECOMENDADOR FINPUC
+// ============================================================
+
+PLOTLY_LAYOUT_BASE.paper_bgcolor = "#fffaf2";
+PLOTLY_LAYOUT_BASE.plot_bgcolor = "#fffaf2";
+PLOTLY_LAYOUT_BASE.font = { color: "#1c2733", size: 11 };
+PLOTLY_LAYOUT_BASE.xaxis = { gridcolor: "#d8d2c8", linecolor: "#d8d2c8", zerolinecolor: "#d8d2c8" };
+PLOTLY_LAYOUT_BASE.yaxis = { gridcolor: "#d8d2c8", linecolor: "#d8d2c8", zerolinecolor: "#d8d2c8" };
+
+PF.activeNav = "recommendation";
+PF.currentModule = "acciones";
+PF.selectedProfile = "neutro";
+PF.lastInputs = {
+  capital: 100000,
+  targetHoldings: 10,
+  candidatePoolSize: "",
+  sector: "",
+};
+
+const PF_PROFILES = {
+  muy_conservador: {
+    label: "Muy conservador",
+    alpha: "0%",
+    alphaNum: 0.00,
+    desc: "No admite perdidas sobre el capital.",
+    universe: "30-50 acciones, Utilities y Consumer Defensive, sesgo a dividendos.",
+    method: "Minima varianza global",
+    cvar: "99%",
+  },
+  conservador: {
+    label: "Conservador",
+    alpha: "5%",
+    alphaNum: 0.05,
+    desc: "Tolera perdidas minimas y privilegia estabilidad.",
+    universe: "50-80 acciones con sesgo a dividendos y menor volatilidad.",
+    method: "Minima varianza global",
+    cvar: "95%",
+  },
+  neutro: {
+    label: "Neutro",
+    alpha: "15%",
+    alphaNum: 0.15,
+    desc: "Equilibra retorno esperado y riesgo.",
+    universe: "80-120 acciones sobre el universo F5.",
+    method: "Media-varianza de Markowitz",
+    cvar: "90%",
+  },
+  arriesgado: {
+    label: "Arriesgado",
+    alpha: "30%",
+    alphaNum: 0.30,
+    desc: "Acepta mas volatilidad para capturar crecimiento.",
+    universe: "100-150 acciones con mas exposicion a sectores de crecimiento.",
+    method: "Media-varianza de Markowitz",
+    cvar: "85%",
+  },
+  muy_arriesgado: {
+    label: "Muy arriesgado",
+    alpha: "40%",
+    alphaNum: 0.40,
+    desc: "Opera sobre el universo F5 completo.",
+    universe: "Universo F5 completo, con holdings finales recortados al objetivo.",
+    method: "Maximo retorno esperado",
+    cvar: "80%",
+  },
+};
+
+function goHome() {
+  State.currentSector = null;
+  State.currentTicker = null;
+  State.sortKey = null;
+  State.sortAsc = true;
+  State.filterText = "";
+  State.currentPage = 1;
+  setActiveSector(null);
+  setNavState("home");
+  showContent(`
+    <div class="welcome">
+      <div class="welcome-panel">
+        <div class="welcome-kicker">Universo F5</div>
+        <h3>Exploracion del universo operativo</h3>
+        <p>Selecciona un sector para revisar acciones, metricas historicas y antecedentes del universo filtrado que alimenta el sistema FinPUC.</p>
+      </div>
+    </div>
+  `);
+  window.location.hash = "#/";
+}
+
+function setNavState(view) {
+  const btnHome = document.getElementById("btn-home");
+  const btnSector = document.getElementById("btn-sector");
+  const sep = document.getElementById("topbar-sep");
+  const current = document.getElementById("breadcrumb-current");
+
+  if (view === "home") {
+    btnHome.style.display = "none";
+    btnSector.style.display = "none";
+    sep.style.display = "none";
+    current.textContent = PF.currentModule === "portafolios" ? "Sistema recomendador FinPUC" : "Selecciona un sector del universo F5";
+  } else if (view === "sector") {
+    btnHome.style.display = "flex";
+    btnSector.style.display = "none";
+    sep.style.display = "none";
+    current.textContent = State.currentSector || "";
+  } else if (view === "stock") {
+    btnHome.style.display = "flex";
+    btnSector.style.display = "flex";
+    sep.style.display = "inline";
+    document.getElementById("btn-sector-label").textContent = State.currentSector || "Sector";
+    current.textContent = State.currentTicker || "";
+  }
+}
+
+function switchModule(mod) {
+  PF.currentModule = mod;
+  const tabUniverse = document.getElementById("tab-acciones");
+  const tabFinpuc = document.getElementById("tab-portafolios");
+  const sectorLabel = document.getElementById("sector-label");
+  const sectorList = document.getElementById("sector-list");
+  const portNav = document.getElementById("portfolio-nav");
+
+  if (mod === "portafolios") {
+    tabUniverse.classList.remove("active");
+    tabFinpuc.classList.add("active");
+    sectorLabel.style.display = "none";
+    sectorList.style.display = "none";
+    portNav.style.display = "block";
+    setNavState("home");
+    pfNavGo(PF.activeNav);
+    return;
+  }
+
+  tabFinpuc.classList.remove("active");
+  tabUniverse.classList.add("active");
+  sectorLabel.style.display = "";
+  sectorList.style.display = "";
+  portNav.style.display = "none";
+  goHome();
+}
+
+function pfNavGo(section) {
+  PF.activeNav = section;
+  ["recommendation", "scenarios", "simulate", "methodology"].forEach(id => {
+    document.getElementById("pnav-" + id)?.classList.remove("active");
+  });
+  document.getElementById("pnav-" + section)?.classList.add("active");
+  setNavState("home");
+
+  switch (section) {
+    case "recommendation":
+      renderPfForm();
+      break;
+    case "scenarios":
+      renderScenarioView();
+      break;
+    case "simulate":
+      renderSimulation();
+      break;
+    case "methodology":
+      renderMethodology();
+      break;
+  }
+}
+
+function pfSelectProfile(key) {
+  PF.selectedProfile = key;
+  Object.keys(PF_PROFILES).forEach(profileKey => {
+    document.getElementById("pf-card-" + profileKey)?.classList.toggle("selected", key === profileKey);
+  });
+  renderMethodologySummary(key);
+}
+
+function renderMethodologySummary(profileKey) {
+  const profile = PF_PROFILES[profileKey];
+  const box = document.getElementById("pf-methodology-summary");
+  if (!profile || !box) return;
+
+  box.innerHTML = `
+    <div class="methodology-chip-row">
+      <span class="methodology-chip">Motor activo: Modelo base FinPUC</span>
+      <span class="methodology-chip">Constructor: ${profile.method}</span>
+      <span class="methodology-chip">CVaR beta = ${profile.cvar}</span>
+      <span class="methodology-chip">alpha_p = ${profile.alpha}</span>
+    </div>
+    <div class="methodology-copy">
+      El backend resuelve automaticamente la estrategia segun el perfil, aplica filtros F5,
+      calcula CVaR historico, genera escenarios y reporta validacion out-of-sample.
+      Black-Litterman queda declarado como fase futura del informe.
+    </div>
+    <div class="methodology-copy methodology-copy-muted">Subuniverso recomendado: ${profile.universe}</div>
+  `;
+}
+
+function renderPfForm() {
+  const profileCards = Object.entries(PF_PROFILES).map(([key, profile]) => `
+    <button class="profile-card ${key === PF.selectedProfile ? "selected" : ""}" type="button"
+            id="pf-card-${key}" onclick="pfSelectProfile('${key}')">
+      <div class="profile-card-alpha">${profile.alpha}</div>
+      <div class="profile-card-name">${profile.label}</div>
+      <div class="profile-card-desc">${profile.desc}</div>
+      <div class="profile-card-foot">${profile.method}</div>
+    </button>
+  `).join("");
+
+  const sectorOptions = (State.sectors || [])
+    .map(sector => `<option value="${esc(sector.sector)}">${esc(sector.sector)}</option>`)
+    .join("");
+
+  const contentEl = document.getElementById("content");
+  contentEl.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Sistema recomendador FinPUC</div>
+        <h2 class="hero-title">Recomendacion de portafolio</h2>
+        <p class="hero-copy">
+          Flujo principal para perfilar al cliente, construir la cartera base, revisar escenarios
+          y dejar la simulacion del cliente como paso operacional siguiente.
+        </p>
+      </div>
+
+      <div class="pf-card">
+        <div class="step-header">
+          <div class="step-index">1</div>
+          <div>
+            <div class="pf-card-title">Perfil de riesgo</div>
+            <div class="step-copy">Cinco perfiles del informe con alpha_p y CVaR diferenciados.</div>
+          </div>
+        </div>
+        <div class="profile-grid">${profileCards}</div>
+      </div>
+
+      <div class="pf-card">
+        <div class="step-header">
+          <div class="step-index">2</div>
+          <div>
+            <div class="pf-card-title">Parametros del portafolio</div>
+            <div class="step-copy">Separacion entre holdings finales y universo evaluado.</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Capital inicial (USD)</label>
+            <input id="pf-capital" class="form-input" type="number" min="1000" step="1000" value="${PF.lastInputs.capital}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Holdings finales</label>
+            <select id="pf-target-holdings" class="form-select">
+              ${[5, 8, 10, 12, 15, 20, 25, 30].map(v => `<option value="${v}" ${PF.lastInputs.targetHoldings === v ? "selected" : ""}>${v} acciones</option>`).join("")}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Universo evaluado</label>
+            <select id="pf-candidate-pool" class="form-select">
+              <option value="" ${PF.lastInputs.candidatePoolSize === "" ? "selected" : ""}>Automatico por perfil</option>
+              <option value="40">40 acciones</option>
+              <option value="65">65 acciones</option>
+              <option value="100">100 acciones</option>
+              <option value="125">125 acciones</option>
+              <option value="150">150 acciones</option>
+              <option value="300">300 acciones</option>
+              <option value="636">Universo F5 completo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sector focal (opcional)</label>
+            <select id="pf-sector" class="form-select">
+              <option value="">Todos los sectores</option>
+              ${sectorOptions}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="step-header">
+          <div class="step-index">3</div>
+          <div>
+            <div class="pf-card-title">Resumen metodologico</div>
+            <div class="step-copy">Se explicita el motor activo y las limitaciones de la version actual.</div>
+          </div>
+        </div>
+        <div id="pf-methodology-summary" class="methodology-summary"></div>
+      </div>
+
+      <div class="pf-card">
+        <div class="step-header">
+          <div class="step-index">4</div>
+          <div>
+            <div class="pf-card-title">Generar recomendacion</div>
+            <div class="step-copy">La estrategia se resuelve automaticamente en backend a partir del perfil.</div>
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn-primary" id="pf-submit-btn" onclick="submitPortfolioForm()">Generar recomendacion</button>
+          <span id="pf-loading" class="subtle-status" style="display:none">Ejecutando optimizacion y escenarios...</span>
+        </div>
+      </div>
+
+      <div id="pf-result"></div>
+    </div>
+  `;
+
+  const sectorEl = document.getElementById("pf-sector");
+  if (sectorEl) sectorEl.value = PF.lastInputs.sector || "";
+  renderMethodologySummary(PF.selectedProfile);
+}
+
+async function submitPortfolioForm() {
+  const capital = parseFloat(document.getElementById("pf-capital")?.value) || 100000;
+  const targetHoldings = parseInt(document.getElementById("pf-target-holdings")?.value, 10) || 10;
+  const candidatePoolValue = document.getElementById("pf-candidate-pool")?.value || "";
+  const sector = document.getElementById("pf-sector")?.value || "";
+  const btn = document.getElementById("pf-submit-btn");
+  const loading = document.getElementById("pf-loading");
+
+  PF.lastInputs = {
+    capital,
+    targetHoldings,
+    candidatePoolSize: candidatePoolValue,
+    sector,
+  };
+
+  const payload = {
+    initial_capital: capital,
+    profile: PF.selectedProfile,
+    strategy: "auto",
+    target_holdings: targetHoldings,
+  };
+  if (candidatePoolValue) payload.candidate_pool_size = parseInt(candidatePoolValue, 10);
+  if (sector) payload.sector = sector;
+
+  if (btn) btn.disabled = true;
+  if (loading) loading.style.display = "inline";
+
+  try {
+    const result = await apiFetch("/api/portfolio/optimize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    PF.lastResult = result;
+    renderPfResult(result, capital);
+  } catch (e) {
+    document.getElementById("pf-result").innerHTML = `<div class="pf-card callout callout-danger">Error al generar la recomendacion: ${esc(e.message)}</div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+    if (loading) loading.style.display = "none";
+  }
+}
+
+function renderPfResult(result, capital) {
+  const validationHtml = result.validation ? `
+    <div class="validation-pill">
+      Validacion out-of-sample ${esc(result.validation.period)}:
+      <strong>${result.validation.total_return_pct > 0 ? "+" : ""}${result.validation.total_return_pct}%</strong>
+      anualizado ${result.validation.annualized_return_pct > 0 ? "+" : ""}${result.validation.annualized_return_pct}%
+    </div>
+  ` : "";
+
+  const methodology = result.methodology || {};
+  const universe = result.universe || {};
+  const weeklyCycle = result.weekly_cycle || {};
+  const scenarios = result.scenarios || {};
+
+  document.getElementById("pf-result").innerHTML = `
+    <div class="pf-card result-hero">
+      <div class="hero-eyebrow">Resultado activo</div>
+      <div class="result-hero-grid">
+        <div>
+          <div class="result-title">${esc(result.profile_label || result.risk_level || "")}</div>
+          <div class="result-copy">${esc(result.profile_description || "")}</div>
+          <div class="result-copy result-copy-muted">${esc(methodology.engine_label || "")}</div>
+        </div>
+        <div class="result-meta">
+          <div><span>Capital</span><strong>${fmtUSD(capital)}</strong></div>
+          <div><span>Constructor</span><strong>${esc(result.metrics?.method_label || methodology.constructor_label || "—")}</strong></div>
+          <div><span>Comision</span><strong>${result.commission_rate_pct}% anual</strong></div>
+          <div><span>CVaR beta</span><strong>${result.cvar_level_pct || "—"}%</strong></div>
+        </div>
+      </div>
+      ${validationHtml}
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Retorno esperado</div>
+        <div class="summary-value">${result.metrics.expected_return_pct > 0 ? "+" : ""}${result.metrics.expected_return_pct}%</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Volatilidad anual</div>
+        <div class="summary-value">${result.metrics.volatility_pct}%</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Sharpe</div>
+        <div class="summary-value">${result.metrics.sharpe_ratio}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">CVaR</div>
+        <div class="summary-value">${result.cvar_pct != null ? result.cvar_pct + "%" : "—"}</div>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="pf-card">
+        <div class="pf-section-title">Origen metodologico</div>
+        <div class="methodology-chip-row">
+          <span class="methodology-chip">alpha_p = ${Math.round((result.alpha_p || 0) * 100)}%</span>
+          <span class="methodology-chip">CVaR beta = ${result.cvar_level_pct}%</span>
+          <span class="methodology-chip">Holdings = ${universe.target_holdings || "—"}</span>
+          <span class="methodology-chip">Universo operativo = ${methodology.optimizer_universe_size || "—"}</span>
+        </div>
+        <div class="data-list">
+          <div><span>Universo</span><strong>${esc(universe.name || "Universo F5")}</strong></div>
+          <div><span>F5 disponible</span><strong>${universe.total_f5_count || "—"} acciones</strong></div>
+          <div><span>Candidatas evaluadas</span><strong>${universe.candidate_pool_size || "—"}</strong></div>
+          <div><span>Calibracion</span><strong>${esc(result.data_split.calibration_start)} a ${esc(result.data_split.calibration_end)}</strong></div>
+          <div><span>Validacion</span><strong>${esc(result.data_split.validation_start)} a ${esc(result.data_split.validation_end)}</strong></div>
+          <div><span>Filtro sectorial</span><strong>${esc(universe.sector_filter || "Sin filtro manual")}</strong></div>
+        </div>
+      </div>
+      <div class="pf-card">
+        <div class="pf-section-title">Ciclo semanal y supuestos</div>
+        <div class="data-list">
+          <div><span>Cadencia</span><strong>${esc(weeklyCycle.cadence || "Semanal")}</strong></div>
+          <div><span>Recomendacion</span><strong>${esc(weeklyCycle.rebalancing || "—")}</strong></div>
+          <div><span>Aceptacion cliente</span><strong>${esc(weeklyCycle.client_acceptance || "—")}</strong></div>
+          <div><span>Retiro</span><strong>${esc(weeklyCycle.client_withdrawal || "—")}</strong></div>
+          <div><span>Dividendos</span><strong>${esc(weeklyCycle.dividends || "—")}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pf-card">
+      <div class="pf-section-title">Escenarios resumidos</div>
+      <div class="scenario-grid">
+        <div class="scenario-card favorable">
+          <div class="scenario-label">Favorable (p90)</div>
+          <div class="scenario-ret">${scenarios.favorable?.annual_return_pct > 0 ? "+" : ""}${scenarios.favorable?.annual_return_pct ?? "—"}%</div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(scenarios.favorable?.capital_by_year?.["5"])}</strong></div>
+        </div>
+        <div class="scenario-card neutro">
+          <div class="scenario-label">Neutro (p50)</div>
+          <div class="scenario-ret">${scenarios.neutro?.annual_return_pct > 0 ? "+" : ""}${scenarios.neutro?.annual_return_pct ?? "—"}%</div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(scenarios.neutro?.capital_by_year?.["5"])}</strong></div>
+        </div>
+        <div class="scenario-card desfavorable">
+          <div class="scenario-label">Desfavorable (p10)</div>
+          <div class="scenario-ret">${scenarios.desfavorable?.annual_return_pct > 0 ? "+" : ""}${scenarios.desfavorable?.annual_return_pct ?? "—"}%</div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(scenarios.desfavorable?.capital_by_year?.["5"])}</strong></div>
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn-secondary" type="button" onclick="pfNavGo('scenarios')">Abrir vista de escenarios</button>
+        <button class="btn-secondary" type="button" onclick="fetchBenchmarkComparison()">Cargar caso base + benchmark</button>
+      </div>
+      <div id="benchmark-comparison"></div>
+    </div>
+
+    <div class="pf-card" style="padding:0;overflow:hidden">
+      <div class="table-header-inline">
+        <div class="pf-section-title" style="margin:0;border:none">Composicion del portafolio</div>
+        <div class="table-header-copy">${result.portfolio.length} posiciones finales</div>
+      </div>
+      <table class="pf-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Empresa</th>
+            <th>Sector</th>
+            <th style="text-align:right">Peso</th>
+            <th style="text-align:right">CAGR</th>
+            <th style="text-align:right">Volatilidad</th>
+            <th style="text-align:right">Dividend yield</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${result.portfolio.map(item => `
+            <tr>
+              <td><strong>${esc(item.ticker)}</strong></td>
+              <td>${esc(item.short_name || "—")}</td>
+              <td>${esc(item.sector || "—")}</td>
+              <td style="text-align:right">${(item.weight * 100).toFixed(1)}%</td>
+              <td style="text-align:right">${item.cagr_pct != null ? (item.cagr_pct > 0 ? "+" : "") + item.cagr_pct + "%" : "—"}</td>
+              <td style="text-align:right">${item.volatility_pct != null ? item.volatility_pct + "%" : "—"}</td>
+              <td style="text-align:right">${item.dividend_yield_pct != null ? item.dividend_yield_pct + "%" : "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+  queueMathTypeset();
+}
+
+async function fetchBenchmarkComparison(targetId = "benchmark-comparison") {
+  if (!PF.lastResult) return;
+
+  const getLastInputValue = (keys, fallback) => {
+    for (const key of keys) {
+      const value = PF.lastInputs?.[key];
+      if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return fallback;
+  };
+
+  const holdings = parseInt(String(getLastInputValue(["target_holdings", "targetHoldings"], 10)), 10) || 10;
+  const candidatePool = getLastInputValue(["candidate_pool_size", "candidatePoolSize"], "");
+  const sector = getLastInputValue(["sector"], "");
+
+  const benchParams = new URLSearchParams({ target_holdings: String(holdings) });
+  if (candidatePool) benchParams.set("candidate_pool_size", String(candidatePool));
+  if (sector) benchParams.set("sector", String(sector));
+
+  const baseParams = new URLSearchParams({ n: String(holdings) });
+  if (sector) baseParams.set("sector", String(sector));
+
+  try {
+    const [baseCase, benchmark] = await Promise.all([
+      apiFetch(`/api/portfolio/base_case?${baseParams.toString()}`),
+      apiFetch(`/api/portfolio/benchmark?${benchParams.toString()}`),
+    ]);
+    PF.lastBaseCase = baseCase;
+    PF.lastBenchmark = benchmark;
+    renderBenchmarkComparison(benchmark, baseCase, targetId);
+  } catch (e) {
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.innerHTML = `<div class="callout callout-danger">No fue posible cargar las comparaciones: ${esc(e.message)}</div>`;
+    }
+  }
+}
+
+function renderBenchmarkComparison(benchmark, baseCase, targetId = "benchmark-comparison") {
+  const target = document.getElementById(targetId);
+  if (!target || !PF.lastResult) return;
+
+  const base = PF.lastResult.metrics || {};
+  const simId = `${targetId}-base-sim`;
+  target.innerHTML = `
+    <div class="comparison-card">
+      <div class="pf-section-title" style="margin-bottom:8px;border:none;padding:0">Comparacion academica</div>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Medida</th>
+            <th>${esc(PF.lastResult.methodology?.label || "Modelo FinPUC")}</th>
+            <th>${esc(baseCase?.metrics?.method_label || "Caso base")}</th>
+            <th>${esc(benchmark?.metrics?.method_label || "Benchmark")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Retorno esperado</td>
+            <td>${base.expected_return_pct > 0 ? "+" : ""}${base.expected_return_pct}%</td>
+            <td>${baseCase?.metrics?.expected_return_pct > 0 ? "+" : ""}${baseCase?.metrics?.expected_return_pct ?? "—"}%</td>
+            <td>${benchmark?.metrics?.expected_return_pct > 0 ? "+" : ""}${benchmark?.metrics?.expected_return_pct ?? "—"}%</td>
+          </tr>
+          <tr>
+            <td>Volatilidad anual</td>
+            <td>${base.volatility_pct ?? "—"}%</td>
+            <td>${baseCase?.metrics?.volatility_pct ?? "—"}%</td>
+            <td>${benchmark?.metrics?.volatility_pct ?? "—"}%</td>
+          </tr>
+          <tr>
+            <td>Constructor</td>
+            <td>${esc(base.method_label || base.method || "—")}</td>
+            <td>${esc(baseCase?.metrics?.rebalance_policy || baseCase?.metrics?.method_label || "—")}</td>
+            <td>${esc(benchmark?.metrics?.method_label || benchmark?.metrics?.method || "—")}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="action-row" style="margin-top:12px">
+        <button class="btn-secondary" type="button" onclick="simulateBaseCaseComparison('${targetId}')">Simular caso base</button>
+      </div>
+      <div id="${simId}"></div>
+    </div>
+  `;
+}
+
+async function simulateBaseCaseComparison(targetId = "benchmark-comparison") {
+  const target = document.getElementById(`${targetId}-base-sim`);
+  const baseCase = PF.lastBaseCase;
+  if (!target || !baseCase) return;
+  target.innerHTML = `<div class="callout">Simulando caso base...</div>`;
+
+  const defaults = baseCase.simulation_defaults || {};
+  const payload = {
+    initial_capital: defaults.initial_capital ?? 100000,
+    max_loss_pct: ((defaults.max_loss_pct ?? 15.0) / 100.0),
+    expected_return: ((defaults.expected_return_pct ?? 0.0) / 100.0),
+    volatility: ((defaults.volatility_pct ?? 0.0) / 100.0),
+    years: defaults.years ?? 3,
+    n_simulations: 500,
+    commission_rate_pct: defaults.commission_rate_pct ?? 1.0,
+    p2_acceptance_prob_pct: defaults.p2_acceptance_prob_pct ?? 70.0,
+    rebalance_freq_weeks: defaults.rebalance_freq_weeks ?? 4,
+    rebalance_return_boost_pct: defaults.rebalance_return_boost_pct ?? 0.0,
+  };
+
+  try {
+    const result = await apiFetch("/api/portfolio/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    target.innerHTML = `
+      <div class="data-list" style="margin-top:12px">
+        <div><span>Capital final (media)</span><strong>${fmtUSD(result.final_capital_mean)}</strong></div>
+        <div><span>P10</span><strong>${fmtUSD(result.final_capital_p10)}</strong></div>
+        <div><span>P90</span><strong>${fmtUSD(result.final_capital_p90)}</strong></div>
+        <div><span>Tasa de retiro</span><strong>${result.withdrawal_rate}%</strong></div>
+      </div>
+    `;
+  } catch (error) {
+    target.innerHTML = `<div class="callout callout-danger">No fue posible simular el caso base: ${esc(error.message)}</div>`;
+  }
+}
+
+async function fetchReturnDiagnostics(targetId = "returns-diagnostics") {
+  const target = document.getElementById(targetId);
+  if (target) target.innerHTML = `<div class="callout">Calculando distribuciones de retornos...</div>`;
+
+  const getLastInputValue = (keys, fallback) => {
+    for (const key of keys) {
+      const value = PF.lastInputs?.[key];
+      if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return fallback;
+  };
+
+  const sector = getLastInputValue(["sector"], "");
+  const params = new URLSearchParams({ n: "30", order: "market_cap", bins: "30" });
+  if (sector) params.set("sector", String(sector));
+
+  try {
+    const result = await apiFetch(`/api/portfolio/diagnostics/returns?${params.toString()}`);
+    renderReturnDiagnosticsBySector(result, targetId);
+  } catch (error) {
+    if (target) {
+      target.innerHTML = `<div class="callout callout-danger">No fue posible calcular distribuciones: ${esc(error.message)}</div>`;
+    }
+  }
+}
+
+function renderReturnDiagnostics(result, targetId = "returns-diagnostics") {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const summary = result.summary || {};
+  const pooled = result.pooled || {};
+  const assets = Array.isArray(result.assets) ? result.assets.slice() : [];
+  assets.sort((a, b) => (a.jarque_bera_p ?? 1) - (b.jarque_bera_p ?? 1));
+  const worst = assets.slice(0, 10);
+
+  target.innerHTML = `
+    <div class="comparison-card">
+      <div class="data-list" style="margin-bottom:14px">
+        <div><span>Ventana calibracion</span><strong>${esc(result.calibration_window?.start || "—")} → ${esc(result.calibration_window?.end || "—")}</strong></div>
+        <div><span>Activos analizados</span><strong>${summary.n_assets ?? worst.length}</strong></div>
+        <div><span>JB (p≥0.05)</span><strong>${summary.jarque_bera_pass_rate_5pct != null ? Math.round(summary.jarque_bera_pass_rate_5pct * 100) + "%" : "—"}</strong></div>
+        <div><span>Normaltest (p≥0.05)</span><strong>${summary.normaltest_pass_rate_5pct != null ? Math.round(summary.normaltest_pass_rate_5pct * 100) + "%" : "—"}</strong></div>
+        <div><span>Pooled skew</span><strong>${pooled.skew ?? "—"}</strong></div>
+        <div><span>Pooled kurtosis</span><strong>${pooled.kurtosis_excess ?? "—"}</strong></div>
+      </div>
+
+      <div class="pf-section-title" style="margin-bottom:8px;border:none;padding:0">Peores p-values (JB)</div>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th style="text-align:right">n</th>
+            <th style="text-align:right">mean</th>
+            <th style="text-align:right">std</th>
+            <th style="text-align:right">JB p</th>
+            <th style="text-align:right">Normaltest p</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${worst.map(a => `
+            <tr>
+              <td><strong>${esc(a.ticker)}</strong></td>
+              <td style="text-align:right">${esc(String(a.n ?? "—"))}</td>
+              <td style="text-align:right">${a.mean_daily_pct != null ? a.mean_daily_pct.toFixed(4) + "%" : "—"}</td>
+              <td style="text-align:right">${a.std_daily_pct != null ? a.std_daily_pct.toFixed(4) + "%" : "—"}</td>
+              <td style="text-align:right">${a.jarque_bera_p != null ? a.jarque_bera_p.toFixed(6) : "—"}</td>
+              <td style="text-align:right">${a.normaltest_p != null ? a.normaltest_p.toFixed(6) : "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+      <div class="methodology-copy" style="margin-top:12px">${esc(summary.notes || "")}</div>
+    </div>
+  `;
+}
+
+function _histogramToPlotlyBars(histogram) {
+  const edges = Array.isArray(histogram?.bin_edges_pct) ? histogram.bin_edges_pct : [];
+  const counts = Array.isArray(histogram?.counts) ? histogram.counts : [];
+  if (edges.length < 2 || counts.length < 1) return null;
+  const x = [];
+  for (let i = 0; i < Math.min(counts.length, edges.length - 1); i++) {
+    x.push((edges[i] + edges[i + 1]) / 2.0);
+  }
+  const binWidth = (edges[1] - edges[0]) || null;
+  const totalCount = counts.reduce((acc, v) => acc + (Number.isFinite(v) ? v : 0), 0);
+  return { x, y: counts, binWidth, totalCount };
+}
+
+function _logGamma(z) {
+  // Lanczos approximation (Numerical Recipes / common JS implementations)
+  const p = [
+    676.5203681218851,
+    -1259.1392167224028,
+    771.3234287776531,
+    -176.6150291621406,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.984369578019572e-6,
+    1.5056327351493116e-7,
+  ];
+
+  if (z < 0.5) {
+    return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - _logGamma(1 - z);
+  }
+
+  z -= 1;
+  let x = 0.99999999999980993;
+  for (let i = 0; i < p.length; i++) {
+    x += p[i] / (z + i + 1);
+  }
+  const t = z + p.length - 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+
+function _studentTPdf(x, df, loc, scale) {
+  const v = df;
+  const s = scale;
+  if (!isFinite(v) || !isFinite(loc) || !isFinite(s) || s <= 0 || v <= 0) return NaN;
+  const z = (x - loc) / s;
+  const logCoeff = _logGamma((v + 1) / 2) - _logGamma(v / 2) - 0.5 * Math.log(v * Math.PI) - Math.log(Math.abs(s));
+  const logKernel = -((v + 1) / 2) * Math.log(1 + (z * z) / v);
+  return Math.exp(logCoeff + logKernel);
+}
+
+function _fitLabel(fit) {
+  const best = fit?.best_by_bic;
+  if (!best) return "N/A";
+  if (best === "normal") return "Normal";
+  if (best === "student_t") {
+    const cand = Array.isArray(fit?.candidates) ? fit.candidates.find(c => c.name === "student_t") : null;
+    const df = cand?.params?.df;
+    return df != null ? `Student-t (df=${Number(df).toFixed(2)})` : "Student-t";
+  }
+  if (best === "johnsonsu") return "Johnson SU (asimetria + colas)";
+  return String(best);
+}
+
+function _extractStudentTParams(fit) {
+  const cand = Array.isArray(fit?.candidates) ? fit.candidates.find(c => c.name === "student_t") : null;
+  const p = cand?.params || null;
+  if (!p) return null;
+  const df = Number(p.df);
+  const loc = Number(p.loc_pct);
+  const scale = Number(p.scale_pct);
+  if (!isFinite(df) || !isFinite(loc) || !isFinite(scale) || scale <= 0) return null;
+  return { df, loc, scale };
+}
+
+function renderHistogramChart(containerId, histogram, title, normalFit) {
+  if (typeof Plotly === "undefined") return;
+  const bars = _histogramToPlotlyBars(histogram);
+  if (!bars) return;
+  const barTrace = {
+    type: "bar",
+    x: bars.x,
+    y: bars.y,
+    marker: { color: "#0f4c81" },
+    opacity: 0.75,
+    hovertemplate: "Retorno: %{x:.3f}%<br>Cuenta: %{y}<extra></extra>",
+  };
+
+  const traces = [barTrace];
+  const mean = typeof normalFit?.mean === "number" ? normalFit.mean : null;
+  const std = typeof normalFit?.std === "number" ? normalFit.std : null;
+  if (mean != null && std != null && std > 0 && bars.binWidth && bars.totalCount > 0) {
+    const inv = 1.0 / (std * Math.sqrt(2.0 * Math.PI));
+    const yNorm = bars.x.map(x => inv * Math.exp(-0.5 * Math.pow((x - mean) / std, 2.0)) * bars.totalCount * bars.binWidth);
+    traces.push({
+      type: "scatter",
+      mode: "lines",
+      x: bars.x,
+      y: yNorm,
+      name: "Normal ajustada (μ,σ)",
+      line: { color: "#b48a2c", width: 2 },
+      hovertemplate: "Normal ajustada<br>Retorno: %{x:.3f}%<br>Frecuencia: %{y:.1f}<extra></extra>",
+    });
+  }
+
+  const tFit = normalFit?.student_t;
+  if (tFit && bars.binWidth && bars.totalCount > 0) {
+    const yT = bars.x.map(x => {
+      const pdf = _studentTPdf(x, tFit.df, tFit.loc, tFit.scale);
+      if (!isFinite(pdf)) return NaN;
+      return pdf * bars.totalCount * bars.binWidth;
+    });
+    traces.push({
+      type: "scatter",
+      mode: "lines",
+      x: bars.x,
+      y: yT,
+      name: "Student-t ajustada",
+      line: { color: "#1f6f52", width: 2 },
+      hovertemplate: "Student-t ajustada<br>Retorno: %{x:.3f}%<br>Frecuencia: %{y:.1f}<extra></extra>",
+    });
+  }
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    title: title ? { text: title, x: 0, xanchor: "left", font: { size: 12 } } : undefined,
+    margin: { t: title ? 30 : 12, r: 20, b: 50, l: 60 },
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: "Retorno diario (%)" },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Frecuencia" },
+    legend: traces.length > 1 ? { orientation: "h", y: -0.25 } : undefined,
+  };
+  Plotly.newPlot(containerId, traces, layout, PLOTLY_CONFIG);
+}
+
+async function loadTickerReturnDiagnostics(ticker, targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const t = String(ticker || "").toUpperCase();
+  target.innerHTML = `<div class="callout">Cargando diagnostico de ${esc(t)}...</div>`;
+
+  try {
+    const result = await apiFetch(`/api/portfolio/diagnostics/returns/${encodeURIComponent(t)}?bins=50`);
+    const summary = result.summary || {};
+    const asset = result.asset || {};
+    const histId = `${targetId}-hist`;
+    const qqId = `${targetId}-qq`;
+    const qqFit = result.qq_plot?.fit || {};
+    const jb = summary.jarque_bera_p;
+    const nt = summary.normaltest_p;
+    const normaltestAvailable = nt !== null && nt !== undefined;
+    const passesNormality = (jb !== null && jb !== undefined && jb >= 0.05) && (!normaltestAvailable || nt >= 0.05);
+    const normalityLabel = (jb === null || jb === undefined) ? "N/A" : (passesNormality ? "No rechazada (alpha 5%)" : "Rechazada (alpha 5%)");
+    const distFit = summary.fit || {};
+    const bestFitLabel = _fitLabel(distFit);
+    const studentTFit = _extractStudentTParams(distFit);
+
+    target.innerHTML = `
+      <div class="pf-card" style="margin-top:14px">
+        <div class="pf-section-title">Estudio individual: ${esc(asset.ticker || t)}</div>
+        <div style="color:var(--text-muted);font-size:13px;margin:-6px 0 10px">
+          ${esc(asset.short_name || "")}${asset.sector ? ` | ${esc(asset.sector)}` : ""}${asset.industry ? ` | ${esc(asset.industry)}` : ""}
+        </div>
+        <div class="methodology-copy" style="margin-bottom:12px">
+          <strong>Que es:</strong> retornos diarios (%) en la ventana de calibracion. El histograma muestra la frecuencia de retornos.
+          <br><strong>Como leer:</strong> la linea naranja es una Normal ajustada con la misma media y desviacion estandar.
+          <br><strong>Por que puede verse \"normal\":</strong> con bins anchos o mezcla de activos, la forma puede parecer campana; los tests detectan desviaciones pequenas cuando n es grande.
+        </div>
+        <div class="data-list" style="margin-bottom:14px">
+          <div><span>Ventana calibracion</span><strong>${esc(result.calibration_window?.start || "N/A")} -> ${esc(result.calibration_window?.end || "N/A")}</strong></div>
+          <div><span>Normalidad</span><strong>${esc(normalityLabel)}</strong></div>
+          <div><span>Mejor ajuste (BIC)</span><strong>${esc(bestFitLabel)}</strong></div>
+          <div><span>Mean</span><strong>${summary.mean_daily_pct != null ? summary.mean_daily_pct.toFixed(4) + "%" : "N/A"}</strong></div>
+          <div><span>Std</span><strong>${summary.std_daily_pct != null ? summary.std_daily_pct.toFixed(4) + "%" : "N/A"}</strong></div>
+          <div><span>Skew</span><strong>${summary.skew ?? "N/A"}</strong></div>
+          <div><span>Kurtosis</span><strong>${summary.kurtosis_excess ?? "N/A"}</strong></div>
+        </div>
+        ${distFit?.notes ? `<div style="color:var(--text-muted);font-size:12px;margin-top:-6px;margin-bottom:12px">${esc(distFit.notes)}</div>` : ""}
+        <details style="margin:-4px 0 12px">
+          <summary style="cursor:pointer;color:var(--text-muted);font-size:12px">Ver p-values y n</summary>
+          <div class="data-list" style="margin-top:10px">
+            <div><span>n</span><strong>${esc(String(summary.n ?? "N/A"))}</strong></div>
+            <div><span>Jarque-Bera p</span><strong>${summary.jarque_bera_p != null ? summary.jarque_bera_p.toFixed(6) : "N/A"}</strong></div>
+            <div><span>D'Agostino p</span><strong>${summary.normaltest_p != null ? summary.normaltest_p.toFixed(6) : "N/A"}</strong></div>
+          </div>
+        </details>
+
+        <div class="detail-grid">
+          <div class="chart-wrap">
+            <div class="pf-section-title" style="margin-bottom:8px;border:none;padding:0">Histograma de retornos</div>
+            <div id="${histId}" style="height:260px"></div>
+          </div>
+          <div class="chart-wrap">
+            <div class="pf-section-title" style="margin-bottom:8px;border:none;padding:0">QQ-plot vs Normal</div>
+            <div id="${qqId}" style="height:260px"></div>
+          </div>
+        </div>
+
+        <div class="action-row" style="margin-top:12px">
+          <button class="btn-secondary" type="button" onclick="selectStock('${esc(t)}')">Abrir ficha (F5)</button>
+        </div>
+
+        <div style="color:var(--text-muted);font-size:12px;margin-top:10px">
+          Ajuste QQ: y = ${esc(String(qqFit.slope ?? "N/A"))}x + ${esc(String(qqFit.intercept ?? "N/A"))}, r=${esc(String(qqFit.r ?? "N/A"))}.
+        </div>
+      </div>
+    `;
+
+    requestAnimationFrame(() => {
+      renderHistogramChart(histId, result.histogram, "", { mean: summary.mean_daily_pct, std: summary.std_daily_pct, student_t: studentTFit });
+      if (typeof Plotly === "undefined") return;
+      const theoretical = Array.isArray(result.qq_plot?.theoretical) ? result.qq_plot.theoretical : [];
+      const sample = Array.isArray(result.qq_plot?.sample) ? result.qq_plot.sample : [];
+      if (!theoretical.length || !sample.length) return;
+      const minX = Math.min(...theoretical);
+      const maxX = Math.max(...theoretical);
+      const slope = typeof qqFit.slope === "number" ? qqFit.slope : null;
+      const intercept = typeof qqFit.intercept === "number" ? qqFit.intercept : null;
+
+      const traces = [
+        { type: "scatter", mode: "markers", x: theoretical, y: sample, name: "Cuantiles", marker: { size: 5, color: "#0f4c81" } },
+      ];
+      if (slope != null && intercept != null && isFinite(minX) && isFinite(maxX)) {
+        traces.push({
+          type: "scatter",
+          mode: "lines",
+          x: [minX, maxX],
+          y: [slope * minX + intercept, slope * maxX + intercept],
+          name: "Ajuste",
+          line: { color: "#b48a2c", width: 2 },
+        });
+      }
+
+      const layout = {
+        ...PLOTLY_LAYOUT_BASE,
+        margin: { t: 12, r: 20, b: 50, l: 60 },
+        xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: "Cuantil teorico (Normal)" },
+        yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Cuantil muestral" },
+        showlegend: false,
+      };
+      Plotly.newPlot(qqId, traces, layout, PLOTLY_CONFIG);
+    });
+  } catch (error) {
+    target.innerHTML = `<div class="callout callout-danger">No fue posible cargar el diagnostico de ${esc(t)}: ${esc(error.message)}</div>`;
+  }
+}
+
+function renderReturnDiagnosticsBySector(result, targetId = "returns-diagnostics", selectedSector = "__all__") {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const summary = result.summary || {};
+  const pooled = result.pooled || {};
+  const sectors = Array.isArray(result.sectors) ? result.sectors.slice() : [];
+  const tickerDetailId = `${targetId}-ticker-detail`;
+  const pooledFitLabel = _fitLabel(pooled?.fit);
+
+  const sectorOptions = sectors
+    .map(item => `<option value="${esc(item.sector)}" ${item.sector === selectedSector ? "selected" : ""}>${esc(item.sector)} (${item.summary?.n_assets ?? item.assets?.length ?? 0})</option>`)
+    .join("");
+  const selected = selectedSector === "__all__" ? sectors : sectors.filter(item => item.sector === selectedSector);
+
+  target.innerHTML = `
+    <div class="comparison-card">
+      <div class="data-list" style="margin-bottom:14px">
+        <div><span>Ventana calibracion</span><strong>${esc(result.calibration_window?.start || "N/A")} -> ${esc(result.calibration_window?.end || "N/A")}</strong></div>
+        <div><span>Activos analizados</span><strong>${summary.n_assets ?? "N/A"}</strong></div>
+        <div><span>JB (p>=0.05)</span><strong>${summary.jarque_bera_pass_rate_5pct != null ? Math.round(summary.jarque_bera_pass_rate_5pct * 100) + "%" : "N/A"}</strong></div>
+        <div><span>Normaltest (p>=0.05)</span><strong>${summary.normaltest_pass_rate_5pct != null ? Math.round(summary.normaltest_pass_rate_5pct * 100) + "%" : "N/A"}</strong></div>
+        <div><span>Pooled skew</span><strong>${pooled.skew ?? "N/A"}</strong></div>
+        <div><span>Pooled kurtosis</span><strong>${pooled.kurtosis_excess ?? "N/A"}</strong></div>
+        <div><span>Mejor ajuste pooled (BIC)</span><strong>${esc(pooledFitLabel)}</strong></div>
+      </div>
+
+      <div class="pf-card" style="margin-bottom:12px">
+        <div class="pf-section-title">Como interpretar estos graficos</div>
+        <div class="methodology-copy">
+          <strong>Que se grafica:</strong> histograma de retornos diarios (%) "pooled" por sector (mezcla de activos + dias).
+          <br><strong>Linea naranja:</strong> Normal ajustada con la misma media y desviacion estandar. Si hay colas pesadas, veras mas masa en extremos y kurtosis_excess > 0.
+          <br><strong>Tests:</strong> p &lt; 0.05 rechaza normalidad. Es comun que se rechace aun cuando el histograma parezca campana (n grande => tests sensibles).
+          <br><strong>Ajuste sugerido:</strong> ${esc(pooledFitLabel)}. ${esc(pooled?.fit?.notes || "")}
+          <br>${esc(summary.notes || "")}
+        </div>
+      </div>
+
+      <div class="action-row" style="margin:6px 0 10px">
+        <label style="font-size:13px;color:var(--text-muted)">Sector</label>
+        <select onchange="renderReturnDiagnosticsBySector(PF.lastReturnDiagnostics, '${esc(targetId)}', this.value)">
+          <option value="__all__" ${selectedSector === "__all__" ? "selected" : ""}>Todos los sectores</option>
+          ${sectorOptions}
+        </select>
+      </div>
+
+      <div id="${targetId}-sectors">
+        ${selected.map((sec, idx) => `
+          <div class="pf-card" style="margin-top:12px">
+            <div class="pf-section-title">Sector: ${esc(sec.sector)}</div>
+            <div class="data-list" style="margin-bottom:12px">
+              <div><span>Activos</span><strong>${esc(String(sec.summary?.n_assets ?? sec.assets?.length ?? "N/A"))}</strong></div>
+              <div><span>Normalidad</span><strong>${esc(sec.summary?.jarque_bera_p == null ? "N/A" : ((sec.summary.jarque_bera_p >= 0.05 && (sec.summary.normaltest_p == null || sec.summary.normaltest_p >= 0.05)) ? "No rechazada (alpha 5%)" : "Rechazada (alpha 5%)"))}</strong></div>
+              <div><span>Mejor ajuste (BIC)</span><strong>${esc(_fitLabel(sec.summary?.fit))}</strong></div>
+              <div><span>Mean pooled</span><strong>${sec.summary?.mean_daily_pct != null ? sec.summary.mean_daily_pct.toFixed(4) + "%" : "N/A"}</strong></div>
+              <div><span>Std pooled</span><strong>${sec.summary?.std_daily_pct != null ? sec.summary.std_daily_pct.toFixed(4) + "%" : "N/A"}</strong></div>
+              <div><span>Skew</span><strong>${sec.summary?.skew ?? "N/A"}</strong></div>
+              <div><span>Kurtosis</span><strong>${sec.summary?.kurtosis_excess ?? "N/A"}</strong></div>
+            </div>
+            <details style="margin:-6px 0 12px">
+              <summary style="cursor:pointer;color:var(--text-muted);font-size:12px">Ver p-values sector</summary>
+              <div class="data-list" style="margin-top:10px">
+                <div><span>Jarque-Bera p</span><strong>${sec.summary?.jarque_bera_p != null ? sec.summary.jarque_bera_p.toFixed(6) : "N/A"}</strong></div>
+                <div><span>D'Agostino p</span><strong>${sec.summary?.normaltest_p != null ? sec.summary.normaltest_p.toFixed(6) : "N/A"}</strong></div>
+              </div>
+            </details>
+            <div class="chart-wrap">
+              <div id="${targetId}-sector-hist-${idx}" style="height:260px"></div>
+            </div>
+            <div style="margin-top:10px">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Estudiar una accion del sector</div>
+              <div class="reference-chip-row">
+                ${(Array.isArray(sec.assets) ? sec.assets.slice().sort((a, b) => (a.jarque_bera_p ?? 1) - (b.jarque_bera_p ?? 1)).slice(0, 16) : []).map(a => `
+                  <button class="reference-chip" type="button" onclick="loadTickerReturnDiagnostics('${esc(a.ticker)}', '${esc(tickerDetailId)}')">${esc(a.ticker)}</button>
+                `).join("")}
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Tip: se muestran hasta 16 tickers (peores JB p primero). Use el selector de sector para explorar el resto.</div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+
+      <div id="${tickerDetailId}"></div>
+      <div class="methodology-copy" style="margin-top:12px">${esc(summary.notes || "")}</div>
+    </div>
+  `;
+
+  PF.lastReturnDiagnostics = result;
+
+  requestAnimationFrame(() => {
+    selected.forEach((sec, idx) => {
+      renderHistogramChart(
+        `${targetId}-sector-hist-${idx}`,
+        sec.summary?.histogram,
+        `Histograma pooled - ${sec.sector}`,
+        { mean: sec.summary?.mean_daily_pct, std: sec.summary?.std_daily_pct, student_t: _extractStudentTParams(sec.summary?.fit) }
+      );
+    });
+  });
+}
+
+function renderScenarioView() {
+  const contentEl = document.getElementById("content");
+  if (!PF.lastResult) {
+    contentEl.innerHTML = `
+      <div class="pf-section">
+        <div class="hero-card">
+          <div class="hero-eyebrow">Escenarios</div>
+          <h2 class="hero-title">Proyecciones del portafolio</h2>
+          <p class="hero-copy">Ejecuta primero una recomendacion para construir los escenarios favorable, neutro y desfavorable.</p>
+          <div class="action-row">
+            <button class="btn-primary" type="button" onclick="pfNavGo('recommendation')">Ir a recomendacion</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const result = PF.lastResult;
+  const sc = result.scenarios;
+  contentEl.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Escenarios p10 / p50 / p90</div>
+        <h2 class="hero-title">Escenarios de retorno y capital</h2>
+        <p class="hero-copy">Los escenarios reportan trayectorias netas de comision usando las metricas del portafolio recomendado.</p>
+      </div>
+      <div class="scenario-grid">
+        <div class="scenario-card favorable">
+          <div class="scenario-label">Favorable (p90)</div>
+          <div class="scenario-ret">${sc.favorable.annual_return_pct > 0 ? "+" : ""}${sc.favorable.annual_return_pct}%</div>
+          <div class="scenario-cap">Ano 1: <strong>${fmtUSD(sc.favorable.capital_by_year["1"])}</strong></div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(sc.favorable.capital_by_year["5"])}</strong></div>
+          <div class="scenario-cap">Retorno total: ${sc.favorable.total_return_pct > 0 ? "+" : ""}${sc.favorable.total_return_pct}%</div>
+        </div>
+        <div class="scenario-card neutro">
+          <div class="scenario-label">Neutro (p50)</div>
+          <div class="scenario-ret">${sc.neutro.annual_return_pct > 0 ? "+" : ""}${sc.neutro.annual_return_pct}%</div>
+          <div class="scenario-cap">Ano 1: <strong>${fmtUSD(sc.neutro.capital_by_year["1"])}</strong></div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(sc.neutro.capital_by_year["5"])}</strong></div>
+          <div class="scenario-cap">Retorno total: ${sc.neutro.total_return_pct > 0 ? "+" : ""}${sc.neutro.total_return_pct}%</div>
+        </div>
+        <div class="scenario-card desfavorable">
+          <div class="scenario-label">Desfavorable (p10)</div>
+          <div class="scenario-ret">${sc.desfavorable.annual_return_pct > 0 ? "+" : ""}${sc.desfavorable.annual_return_pct}%</div>
+          <div class="scenario-cap">Ano 1: <strong>${fmtUSD(sc.desfavorable.capital_by_year["1"])}</strong></div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(sc.desfavorable.capital_by_year["5"])}</strong></div>
+          <div class="scenario-cap">Retorno total: ${sc.desfavorable.total_return_pct > 0 ? "+" : ""}${sc.desfavorable.total_return_pct}%</div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="pf-section-title" style="margin-bottom:8px;border:none;padding:0">Proyeccion mensual del capital</div>
+        <div id="pf-scenario-chart" style="height:320px"></div>
+      </div>
+      <div class="detail-grid">
+        <div class="pf-card">
+          <div class="pf-section-title">Parametros reportados</div>
+          <div class="data-list">
+            <div><span>Retorno esperado</span><strong>${result.metrics.expected_return_pct}%</strong></div>
+            <div><span>Volatilidad anual</span><strong>${result.metrics.volatility_pct}%</strong></div>
+            <div><span>Comision</span><strong>${result.commission_rate_pct}% anual</strong></div>
+            <div><span>CVaR</span><strong>${result.cvar_pct != null ? result.cvar_pct + "%" : "—"}</strong></div>
+          </div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-section-title">Lectura academica</div>
+          <div class="methodology-copy">Esta vista expone el componente de escenarios del modelo base. La simulacion del cliente queda disponible en el modulo siguiente.</div>
+        </div>
+      </div>
+    </div>
+  `;
+  renderScenarioChart(result.scenario_timeseries);
+}
+
+function renderScenarioChart(ts) {
+  if (!ts || !ts.months || typeof Plotly === "undefined") return;
+  const x = ts.months.map(month => `Mes ${month}`);
+  const traces = [
+    { x, y: ts.favorable, name: "Favorable", mode: "lines", line: { color: "#1f6f52", width: 2 } },
+    { x, y: ts.neutro, name: "Neutro", mode: "lines", line: { color: "#0f4c81", width: 2 } },
+    { x, y: ts.desfavorable, name: "Desfavorable", mode: "lines", line: { color: "#b34a3c", width: 2, dash: "dot" } },
+  ];
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 12, r: 20, b: 48, l: 80 },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Capital (USD)", tickformat: ",.0f" },
+    legend: { orientation: "h", y: -0.2 },
+  };
+  Plotly.newPlot("pf-scenario-chart", traces, layout, PLOTLY_CONFIG);
+}
+
+function renderSimulation() {
+  const capital = PF.lastInputs.capital || 100000;
+  const expectedReturn = PF.lastResult ? PF.lastResult.metrics.expected_return_pct : 10;
+  const volatility = PF.lastResult ? PF.lastResult.metrics.volatility_pct : 20;
+  const maxLoss = PF.lastResult ? Math.round((PF.lastResult.alpha_p || 0.15) * 100) : 15;
+
+  const contentEl = document.getElementById("content");
+  contentEl.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Simulacion del cliente</div>
+        <h2 class="hero-title">Ciclo semanal de aceptacion, comisiones y retiro</h2>
+        <p class="hero-copy">Aproximacion operacional del sistema: recomendacion semanal, aceptacion, cobro de comisiones y retiro por drawdown.</p>
+      </div>
+      <div class="pf-card">
+        <div class="pf-section-title" style="border:none;padding:0;margin-bottom:12px">Parametros de simulacion</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Capital inicial (USD)</label>
+            <input id="sim-capital" class="form-input" type="number" value="${capital}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Retorno esperado anual (%)</label>
+            <input id="sim-exp-ret" class="form-input" type="number" step="0.1" value="${expectedReturn}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Volatilidad anual (%)</label>
+            <input id="sim-vol" class="form-input" type="number" step="0.1" value="${volatility}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Horizonte (anos)</label>
+            <input id="sim-years" class="form-input" type="number" min="3" max="5" value="3">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Numero de simulaciones</label>
+            <input id="sim-n" class="form-input" type="number" min="100" max="2000" step="100" value="500">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tolerancia de perdida (%)</label>
+            <input id="sim-loss-pct" class="form-input" type="number" min="0" max="100" step="1" value="${maxLoss}">
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn-primary" id="sim-btn" onclick="submitSimulation()">Ejecutar simulacion</button>
+          <span id="sim-loading" class="subtle-status" style="display:none">Simulando trayectorias y rebalanceos...</span>
+        </div>
+      </div>
+      <div id="sim-result"></div>
+    </div>
+  `;
+}
+
+async function submitSimulation() {
+  const capital = parseFloat(document.getElementById("sim-capital")?.value) || 100000;
+  const expRet = parseFloat(document.getElementById("sim-exp-ret")?.value) || 10;
+  const vol = parseFloat(document.getElementById("sim-vol")?.value) || 20;
+  const years = parseInt(document.getElementById("sim-years")?.value, 10) || 3;
+  const nSim = parseInt(document.getElementById("sim-n")?.value, 10) || 500;
+  const maxLoss = parseFloat(document.getElementById("sim-loss-pct")?.value) || 15;
+  const btn = document.getElementById("sim-btn");
+  const loading = document.getElementById("sim-loading");
+
+  if (btn) btn.disabled = true;
+  if (loading) loading.style.display = "inline";
+
+  try {
+    const result = await apiFetch("/api/portfolio/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        initial_capital: capital,
+        expected_return: expRet / 100,
+        volatility: vol / 100,
+        max_loss_pct: maxLoss / 100,
+        years,
+        n_simulations: nSim,
+      }),
+    });
+    PF.lastSimulation = result;
+    renderSimulationResult(result, capital);
+  } catch (e) {
+    document.getElementById("sim-result").innerHTML = `<div class="pf-card callout callout-danger">Error al simular: ${esc(e.message)}</div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+    if (loading) loading.style.display = "none";
+  }
+}
+
+function renderSimulationResult(result, initialCapital) {
+  document.getElementById("sim-result").innerHTML = `
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Capital final promedio</div>
+        <div class="summary-value">${fmtUSD(result.final_capital_mean)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Capital p10</div>
+        <div class="summary-value">${fmtUSD(result.final_capital_p10)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Capital p90</div>
+        <div class="summary-value">${fmtUSD(result.final_capital_p90)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Tasa de retiro</div>
+        <div class="summary-value">${result.withdrawal_rate}%</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Comisiones promedio</div>
+        <div class="summary-value">${fmtUSD(result.total_commissions_mean)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Recs. aceptadas</div>
+        <div class="summary-value">${result.accepted_recommendations_mean}</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <div class="pf-section-title" style="margin-bottom:8px;border:none;padding:0">Trayectorias de capital</div>
+      <div id="sim-chart" style="height:320px"></div>
+    </div>
+    <div class="detail-grid">
+      <div class="pf-card">
+        <div class="pf-section-title">Lectura operacional</div>
+        <div class="data-list">
+          <div><span>Recomendaciones emitidas</span><strong>${result.total_recommendations}</strong></div>
+          <div><span>Modelo de aceptacion</span><strong>${esc(result.assumptions?.acceptance_model || "—")}</strong></div>
+          <div><span>Modelo de retiro</span><strong>${esc(result.assumptions?.withdrawal_model || "—")}</strong></div>
+          <div><span>Comision</span><strong>${result.assumptions?.commission_rate_pct || "—"}% anual</strong></div>
+        </div>
+      </div>
+      <div class="pf-card">
+        <div class="pf-section-title">Resumen</div>
+        <div class="methodology-copy">Capital inicial de referencia: ${fmtUSD(initialCapital)}. La simulacion resume la dinamica semanal, no una implementacion exacta de las funciones logisticas P1 y P2.</div>
+      </div>
+    </div>
+  `;
+  renderSimulationChart(result, initialCapital);
+}
+
+function renderSimulationChart(result, initialCapital) {
+  if (typeof Plotly === "undefined") return;
+  const x = result.periods.map(period => `Semana ${period}`);
+  const traces = [
+    { x, y: result.capital_p90, name: "P90", mode: "lines", line: { color: "#1f6f52", width: 1 } },
+    { x, y: result.capital_mean, name: "Media", mode: "lines", line: { color: "#0f4c81", width: 2 } },
+    { x, y: result.capital_p10, name: "P10", mode: "lines", line: { color: "#b34a3c", width: 1, dash: "dot" } },
+    { x, y: Array(x.length).fill(initialCapital), name: "Capital inicial", mode: "lines", line: { color: "#b48a2c", width: 1, dash: "dash" } },
+  ];
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 12, r: 20, b: 48, l: 80 },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Capital (USD)", tickformat: ",.0f" },
+    legend: { orientation: "h", y: -0.2 },
+  };
+  Plotly.newPlot("sim-chart", traces, layout, PLOTLY_CONFIG);
+}
+
+function renderMethodology() {
+  const last = PF.lastResult;
+  const dynamicSummary = last ? `
+    <div class="pf-card">
+      <div class="pf-section-title">Ultima corrida</div>
+      <div class="data-list">
+        <div><span>Perfil</span><strong>${esc(last.profile_label || "—")}</strong></div>
+        <div><span>Constructor activo</span><strong>${esc(last.metrics?.method_label || "—")}</strong></div>
+        <div><span>Holdings finales</span><strong>${last.universe?.target_holdings || "—"}</strong></div>
+        <div><span>Universo operativo</span><strong>${last.methodology?.optimizer_universe_size || "—"}</strong></div>
+      </div>
+    </div>
+  ` : "";
+
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Metodologia visible</div>
+        <h2 class="hero-title">Marco tecnico del sistema</h2>
+        <p class="hero-copy">La interfaz diferencia el motor base ya implementado de las extensiones del informe que siguen pendientes.</p>
+      </div>
+      ${dynamicSummary}
+      <details class="details-card" open>
+        <summary>Universo F5 y filtros operativos</summary>
+        <div class="details-body">Historia minima de 10 anos, precio >= 5 USD, market cap >= 2B USD, volatilidad anual entre 5% y 100%, excluyendo sector Unknown y Shell Companies.</div>
+      </details>
+      <details class="details-card" open>
+        <summary>Motor activo de esta version</summary>
+        <div class="details-body">Modelo base FinPUC: media-varianza / minima varianza / maximo retorno segun perfil, con CVaR historico, escenarios y simulacion simplificada del cliente.</div>
+      </details>
+      <details class="details-card">
+        <summary>Perfiles, alpha_p y restriccion CVaR</summary>
+        <div class="details-body">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Perfil</th>
+                <th>alpha_p</th>
+                <th>Constructor</th>
+                <th>CVaR beta</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.values(PF_PROFILES).map(profile => `
+                <tr>
+                  <td>${profile.label}</td>
+                  <td>${profile.alpha}</td>
+                  <td>${profile.method}</td>
+                  <td>${profile.cvar}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <details class="details-card">
+        <summary>Ciclo semanal y comportamiento del cliente</summary>
+        <div class="details-body">El sistema emite una recomendacion semanal, cobra comision sobre el capital gestionado y aproxima P1 y P2 en la simulacion del cliente. Los dividendos existen en los datos pero la caja chica no se separa aun dentro del optimizador.</div>
+      </details>
+      <details class="details-card">
+        <summary>Black-Litterman como fase futura</summary>
+        <div class="details-body">Avance inicial implementado: el sistema incluye una estimacion mu_BL con parametros τ, Ω (diagonal) y views en JSON. Falta profundizar en calibracion/validacion de Ω y en la integracion completa descrita en el informe.</div>
+      </details>
+      <div class="pf-card">
+        <div class="pf-section-title">Comparacion secundaria</div>
+        <div class="action-row">
+          <button class="btn-secondary" type="button" onclick="fetchBenchmarkComparisonFromMethodology()">Ejecutar caso base + benchmark</button>
+        </div>
+        <div id="methodology-benchmark"></div>
+      </div>
+    </div>
+  `;
+}
+
+async function fetchBenchmarkComparisonFromMethodology() {
+  if (!PF.lastResult) {
+    document.getElementById("methodology-benchmark").innerHTML = `<div class="callout">Ejecuta primero una recomendacion para comparar contra el benchmark.</div>`;
+    return;
+  }
+  await fetchBenchmarkComparison("methodology-benchmark");
+}
 
 
+
+// ============================================================
+// Override academico FinPUC
+// ============================================================
+
+const PF_NAV_ITEMS = [
+  { id: "introduction", label: "Introduccion" },
+  { id: "system", label: "Sistema y perfiles" },
+  { id: "methodologies", label: "Metodologias" },
+  { id: "parameters", label: "Parametros" },
+  { id: "results", label: "Resultados" },
+  { id: "scenarios", label: "Escenarios" },
+  { id: "simulate", label: "Simulacion cliente" },
+  { id: "references", label: "Datos y referencias" },
+];
+
+Object.assign(PF, {
+  activeNav: "introduction",
+  currentModule: PF.currentModule || "acciones",
+  selectedMethodologyId: PF.selectedMethodologyId || "finpuc_hibrido",
+  catalog: null,
+  reportOutline: null,
+  formState: PF.formState || {},
+  bootstrapError: null,
+});
+
+let mathTypesetToken = null;
+let mathTypesetRetry = 0;
+
+function getPortfolioNavLabel(section) {
+  return PF_NAV_ITEMS.find(item => item.id === section)?.label || "Sistema FinPUC";
+}
+
+function queueMathTypeset() {
+  if (!window.MathJax || typeof window.MathJax.typesetPromise !== "function") {
+    // MathJax carga asíncrono; reintenta un número acotado de veces para evitar quedar con LaTeX sin renderizar.
+    if (mathTypesetRetry < 40) {
+      mathTypesetRetry += 1;
+      if (mathTypesetToken) clearTimeout(mathTypesetToken);
+      mathTypesetToken = setTimeout(queueMathTypeset, 150);
+    }
+    return;
+  }
+  if (mathTypesetToken) clearTimeout(mathTypesetToken);
+  mathTypesetToken = setTimeout(() => {
+    const container = document.getElementById("content");
+    const targets = container ? [container] : undefined;
+    window.MathJax.typesetPromise(targets)
+      .catch(() => null)
+      .finally(() => {
+        mathTypesetToken = null;
+        mathTypesetRetry = 0;
+      });
+  }, 0);
+}
+
+function renderFormulaBlock(latex, fallback) {
+  if (latex) {
+    return `
+      <div class="formula-box">
+        <div class="latex-block">\\[${latex}\\]</div>
+        ${fallback ? `<div class="formula-caption">${esc(fallback)}</div>` : ""}
+      </div>
+    `;
+  }
+  return `<div class="formula-box">${esc(fallback || "—")}</div>`;
+}
+
+function renderReportVisuals() {
+  const visuals = PF.reportOutline?.visual_assets || [];
+  if (!visuals.length) {
+    return `<div class="results-empty">No hay vistas previas del informe disponibles en este entorno.</div>`;
+  }
+
+  return `
+    <div class="report-visual-grid">
+      ${visuals.map(asset => `
+        <div class="report-preview-card">
+          <div class="report-preview-head">
+            <span class="report-preview-kind">${esc(asset.kind || "Vista")}</span>
+            <span class="report-preview-page">Pagina ${esc(String(asset.page_number || "—"))}</span>
+          </div>
+          <h4>${esc(asset.label)}</h4>
+          <p>${esc(asset.summary || "")}</p>
+          <div class="report-preview-image-wrap">
+            <img class="report-preview-image" loading="lazy" src="${asset.image_url}" alt="${esc(asset.label)}">
+          </div>
+          <p>${esc(asset.caption || "")}</p>
+          <div class="report-preview-actions">
+            <a class="inline-link" href="${asset.image_url}" target="_blank" rel="noopener noreferrer">Abrir vista previa</a>
+            <a class="inline-link" href="/api/report/file/pdf" target="_blank" rel="noopener noreferrer">Abrir informe PDF</a>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function getCatalogMethod(methodologyId = PF.selectedMethodologyId) {
+  return PF.catalog?.methodologies?.find(methodology => methodology.id === methodologyId) || null;
+}
+
+function getCatalogProfile(profileId = PF.formState.profile || "neutro") {
+  return PF.catalog?.profiles?.find(profile => profile.id === profileId) || null;
+}
+
+function getDefaultMethodologyId() {
+  return PF.catalog?.default_methodology_id || "finpuc_hibrido";
+}
+
+function basePortfolioDefaults() {
+  const neutralProfile = getCatalogProfile("neutro");
+  return {
+    initial_capital: PF.formState.initial_capital || 100000,
+    profile: PF.formState.profile || "neutro",
+    candidate_pool_size:
+      PF.formState.candidate_pool_size !== undefined
+        ? PF.formState.candidate_pool_size
+        : (neutralProfile?.candidate_pool_default ?? ""),
+    target_holdings: PF.formState.target_holdings || 10,
+    sector: PF.formState.sector || "",
+  };
+}
+
+function seedMethodologyState(methodologyId) {
+  const methodology = getCatalogMethod(methodologyId);
+  if (!methodology) return;
+  for (const def of methodology.parameters || []) {
+    if (PF.formState[def.key] === undefined) {
+      PF.formState[def.key] = def.default ?? "";
+    }
+  }
+}
+
+function seedPortfolioState() {
+  Object.assign(PF.formState, basePortfolioDefaults());
+  if (!getCatalogMethod(PF.selectedMethodologyId)) {
+    PF.selectedMethodologyId = getDefaultMethodologyId();
+  }
+  seedMethodologyState(PF.selectedMethodologyId);
+}
+
+async function ensurePortfolioBootstrap() {
+  if (PF.catalog && PF.reportOutline) return;
+
+  try {
+    const [catalog, reportOutline] = await Promise.all([
+      apiFetch("/api/portfolio/catalog"),
+      apiFetch("/api/report/outline"),
+    ]);
+    PF.catalog = catalog;
+    PF.reportOutline = reportOutline;
+    PF.selectedMethodologyId = PF.selectedMethodologyId || getDefaultMethodologyId();
+    seedPortfolioState();
+    PF.bootstrapError = null;
+  } catch (error) {
+    PF.bootstrapError = error.message;
+    throw error;
+  }
+}
+
+function setPortfolioNavActive(section) {
+  for (const item of PF_NAV_ITEMS) {
+    document.getElementById("pnav-" + item.id)?.classList.remove("active");
+  }
+  document.getElementById("pnav-" + section)?.classList.add("active");
+}
+
+function setNavState(view) {
+  const btnHome = document.getElementById("btn-home");
+  const btnSector = document.getElementById("btn-sector");
+  const sep = document.getElementById("topbar-sep");
+  const current = document.getElementById("breadcrumb-current");
+
+  if (PF.currentModule === "portafolios") {
+    btnHome.style.display = "none";
+    btnSector.style.display = "none";
+    sep.style.display = "none";
+    current.textContent = `Sistema FinPUC / ${getPortfolioNavLabel(PF.activeNav)}`;
+    return;
+  }
+
+  if (view === "home") {
+    btnHome.style.display = "none";
+    btnSector.style.display = "none";
+    sep.style.display = "none";
+    current.textContent = "Selecciona un sector del universo F5";
+  } else if (view === "sector") {
+    btnHome.style.display = "flex";
+    btnSector.style.display = "none";
+    sep.style.display = "none";
+    current.textContent = State.currentSector || "";
+  } else if (view === "stock") {
+    btnHome.style.display = "flex";
+    btnSector.style.display = "flex";
+    sep.style.display = "inline";
+    document.getElementById("btn-sector-label").textContent = State.currentSector || "Sector";
+    current.textContent = State.currentTicker || "";
+  }
+}
+
+function goHome() {
+  if (PF.currentModule === "portafolios") {
+    pfNavGo("introduction");
+    return;
+  }
+  State.currentSector = null;
+  State.currentTicker = null;
+  State.sortKey = null;
+  State.sortAsc = true;
+  State.filterText = "";
+  State.currentPage = 1;
+  setActiveSector(null);
+  setNavState("home");
+  showContent(`
+    <div class="welcome">
+      <div class="welcome-panel">
+        <div class="welcome-kicker">Universo F5</div>
+        <h3>Exploracion del universo operativo</h3>
+        <p>Selecciona un sector para revisar las acciones disponibles y los insumos que alimentan el sistema recomendador FinPUC.</p>
+      </div>
+    </div>
+  `);
+  window.location.hash = "#/";
+}
+
+async function switchModule(mod) {
+  PF.currentModule = mod;
+  const tabUniverse = document.getElementById("tab-acciones");
+  const tabFinpuc = document.getElementById("tab-portafolios");
+  const sectorLabel = document.getElementById("sector-label");
+  const sectorList = document.getElementById("sector-list");
+  const portNav = document.getElementById("portfolio-nav");
+
+  if (mod === "portafolios") {
+    tabUniverse.classList.remove("active");
+    tabFinpuc.classList.add("active");
+    sectorLabel.style.display = "none";
+    sectorList.style.display = "none";
+    portNav.style.display = "block";
+    document.getElementById("content").innerHTML = `<div class="results-empty">Cargando estructura academica del sistema FinPUC...</div>`;
+    try {
+      await ensurePortfolioBootstrap();
+      if (!PF.activeNav || !PF_NAV_ITEMS.find(item => item.id === PF.activeNav)) {
+        PF.activeNav = "introduction";
+      }
+      await pfNavGo(PF.activeNav);
+    } catch (error) {
+      document.getElementById("content").innerHTML = `<div class="callout callout-danger">No fue posible cargar el catalogo academico: ${esc(error.message)}</div>`;
+    }
+    return;
+  }
+
+  tabUniverse.classList.add("active");
+  tabFinpuc.classList.remove("active");
+  sectorLabel.style.display = "";
+  sectorList.style.display = "block";
+  portNav.style.display = "none";
+  setNavState("home");
+  goHome();
+}
+
+function updateFormValue(key, value) {
+  PF.formState[key] = value;
+}
+
+function setMethodology(methodologyId, navigateToParameters = false) {
+  PF.selectedMethodologyId = methodologyId;
+  seedMethodologyState(methodologyId);
+  if (navigateToParameters) {
+    pfNavGo("parameters");
+  } else {
+    renderMethodologies();
+  }
+}
+
+function updateProfileSelection(profileId) {
+  PF.formState.profile = profileId;
+  const profile = getCatalogProfile(profileId);
+  if (profile && (PF.formState.candidate_pool_size === "" || PF.formState.candidate_pool_size === undefined || PF.formState.candidate_pool_size === null)) {
+    PF.formState.candidate_pool_size = profile.candidate_pool_default ?? "";
+  }
+  renderParametersView();
+}
+
+function renderReferenceLinks() {
+  return (PF.reportOutline?.assets || []).map(asset => `
+    <a class="reference-link" href="${asset.url}" target="_blank" rel="noopener noreferrer">
+      ${esc(asset.label)}
+      <small>Acceso directo desde la app al documento base del informe.</small>
+    </a>
+  `).join("");
+}
+
+function renderIntroduction() {
+  const sections = PF.reportOutline?.sections || [];
+  const tables = PF.reportOutline?.tables || [];
+  const formulas = PF.reportOutline?.formulae || [];
+  const selectedMethod = getCatalogMethod();
+
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Portada academica</div>
+        <h2 class="hero-title">Sistema recomendador FinPUC</h2>
+        <p class="hero-copy">FinPUC genera recomendaciones semanales de portafolio para cinco perfiles de riesgo, utilizando un universo F5 filtrado, metodologias de optimizacion y una capa de analisis de escenarios y simulacion del cliente. Esta portada resume el funcionamiento del sistema y lo conecta explicitamente con las secciones y tablas del informe.</p>
+        <div class="link-row">
+          ${renderReferenceLinks()}
+        </div>
+      </div>
+
+      <div class="academic-grid">
+        <div class="academic-card">
+          <h4>Proposito del sistema</h4>
+          <p>${esc(PF.reportOutline?.summary || "")}</p>
+        </div>
+        <div class="academic-card">
+          <h4>Metodologia recomendada</h4>
+          <p>${esc(selectedMethod?.label || "Metodologia hibrida FinPUC")} como flujo principal del sistema, manteniendo visibles las demas tecnicas del informe para comparacion y estudio.</p>
+        </div>
+        <div class="academic-card">
+          <h4>Base documental</h4>
+          <p>La navegacion replica la estructura formal del informe: descripcion del sistema, perfiles, formulacion, metodologias, datos, resultados y referencias.</p>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Funcionamiento general del sistema</div>
+        <div class="timeline">
+          <div class="timeline-step">
+            <strong>1. Perfil del cliente y alpha_p</strong>
+            <p>El sistema clasifica al cliente en uno de cinco perfiles y fija su tolerancia maxima de perdida. Basado en Seccion 2.2.2 y Tabla 2.1.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>2. Universo operativo F5</strong>
+            <p>Se selecciona un sub-universo compatible con el perfil y los filtros F0-F5. Basado en Seccion 2.5, Tabla 2.4 y Tabla 0.10.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>3. Estimacion y optimizacion</strong>
+            <p>El usuario elige una metodologia del informe, define parametros y ejecuta la asignacion del portafolio. Basado en Seccion 3, Seccion 4 y Ecuaciones 4.4 a 4.7.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>4. Escenarios y simulacion del cliente</strong>
+            <p>El sistema reporta escenarios p10/p50/p90 y modela la aceptacion o abandono del cliente bajo el ciclo semanal. Basado en Seccion 2.2.1 y Ecuaciones 4.5 y 4.6.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="academic-grid">
+        <div class="academic-card">
+          <h4>Secciones clave del informe</h4>
+          <div class="reference-chip-row">
+            ${sections.map(section => `<span class="reference-chip">${esc(section.label)}</span>`).join("")}
+          </div>
+        </div>
+        <div class="academic-card">
+          <h4>Tablas clave</h4>
+          <div class="reference-chip-row">
+            ${tables.map(table => `<span class="reference-chip">${esc(table.label)}</span>`).join("")}
+          </div>
+        </div>
+        <div class="academic-card">
+          <h4>Formulas visibles</h4>
+          <div class="reference-chip-row">
+            ${formulas.map(formula => `<span class="reference-chip">${esc(formula.label)}</span>`).join("")}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSystemProfiles() {
+  const profiles = PF.catalog?.profiles || [];
+  const lastCycle = PF.lastResult?.weekly_cycle;
+
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Sistema y perfiles</div>
+        <h2 class="hero-title">Ciclo operacional y tolerancia de perdida</h2>
+        <p class="hero-copy">Esta vista resume el funcionamiento semanal del sistema y la relacion entre cada perfil de riesgo, alpha_p y el sub-universo sugerido por el informe.</p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Ciclo operacional semanal</div>
+        <div class="timeline">
+          <div class="timeline-step">
+            <strong>Recomendacion semanal</strong>
+            <p>El optimizador genera un portafolio recomendado cada semana para el perfil seleccionado. Referencia: Seccion 2.2.1.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Aceptacion o rechazo</strong>
+            <p>El cliente puede aceptar la recomendacion con una probabilidad operacional asociada a P2(x2). Referencia: Ecuacion 4.6.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Comision y evolucion del capital</strong>
+            <p>Si hay rebalanceo, el sistema cobra una comision k y luego el capital evoluciona con precios y dividendos. Referencia: Seccion 2.2.1 y Tabla 0.9.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Abandono por perdida excedida</strong>
+            <p>Si el drawdown supera la tolerancia del perfil, el cliente puede salir de la plataforma via P1(x1). Referencia: Ecuacion 4.5.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Perfiles de riesgo FinPUC</div>
+        <table class="profile-table">
+          <thead>
+            <tr>
+              <th>Perfil</th>
+              <th>alpha_p</th>
+              <th>Descripcion</th>
+              <th>Sub-universo sugerido</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${profiles.map(profile => `
+              <tr>
+                <td><strong>${esc(profile.label)}</strong></td>
+                <td>${profile.alpha_pct}%</td>
+                <td>${esc(profile.description || "—")}</td>
+                <td>${esc(profile.candidate_pool_range || "—")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+
+      ${lastCycle ? `
+        <div class="pf-card">
+          <div class="pf-section-title">Lectura operacional de la ultima corrida</div>
+          <div class="data-list">
+            <div><span>Cadencia</span><strong>${esc(lastCycle.cadence || "Semanal")}</strong></div>
+            <div><span>Aceptacion</span><strong>${esc(lastCycle.client_acceptance || "—")}</strong></div>
+            <div><span>Retiro</span><strong>${esc(lastCycle.client_withdrawal || "—")}</strong></div>
+            <div><span>Comisiones</span><strong>${esc(lastCycle.commissions || "—")}</strong></div>
+          </div>
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+function renderMethodologies() {
+  const methods = PF.catalog?.methodologies || [];
+
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Metodologias del informe</div>
+        <h2 class="hero-title">Catalogo metodologico seleccionable</h2>
+        <p class="hero-copy">Cada metodologia expone su formulacion resumida, su rol dentro del informe y los parametros que el usuario debe entregar antes de ejecutar el portafolio.</p>
+      </div>
+
+      <div class="method-grid">
+        ${methods.map(method => {
+          const isWip = !!method.wip;
+          const cardClass = [
+            method.id === PF.selectedMethodologyId ? "selected" : "",
+            isWip ? "wip" : "",
+          ].filter(Boolean).join(" ");
+          const badgeClass = method.recommended ? "recommended" : isWip ? "wip" : "";
+          const badgeText = method.recommended ? "Recomendada" : isWip ? "En desarrollo" : "Activa";
+          const chipClass = isWip ? "note-chip wip" : "note-chip";
+          return `
+          <div class="method-card ${cardClass}" onclick="setMethodology('${esc(method.id)}')">
+            <div class="method-head">
+              <div>
+                <div class="method-family">${esc(method.family)}</div>
+                <div class="method-title">${esc(method.label)}</div>
+              </div>
+              <span class="method-badge ${badgeClass}">${badgeText}</span>
+            </div>
+            <p>${esc(method.description)}</p>
+            ${renderFormulaBlock(method.formula_latex, method.formula_summary)}
+            <div class="reference-chip-row">
+              ${(method.report_references || []).map(ref => `<span class="reference-chip">${esc(ref)}</span>`).join("")}
+            </div>
+            <div class="note-chip-row">
+              <span class="${chipClass}">${esc(method.implementation_status || "Operativa")}</span>
+              ${isWip ? `<span class="note-chip wip">Trabajo en paralelo</span>` : ""}
+            </div>
+            <div class="action-row" style="margin-top:14px">
+              <button class="btn-secondary" type="button" onclick="event.stopPropagation(); setMethodology('${esc(method.id)}', true)">${isWip ? "Ver avance" : "Configurar parametros"}</button>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+  `;
+  queueMathTypeset();
+}
+
+function parameterRoleText(key, methodologyId) {
+  const k = String(key || "");
+  switch (k) {
+    case "initial_capital":
+      return "Escala escenarios y simulaciones (no cambia los pesos óptimos).";
+    case "profile":
+      return "Determina α_p (tolerancia de pérdida) y el sub-universo sugerido por perfil.";
+    case "candidate_pool_size":
+      return "Controla el tamaño del sub-universo operativo para reducir dimensionalidad y tiempo de cómputo.";
+    case "target_holdings":
+      return "Fija la cardinalidad final del portafolio; el sistema recorta y renormaliza los pesos.";
+    case "sector":
+      return "Restringe el universo F5 a un sector para análisis o escenarios específicos.";
+    case "risk_free_rate_pct":
+      return "Se usa como r_f en CAPM y en el exceso de retorno del ratio de Sharpe en Markowitz.";
+    case "market_return_pct":
+      return "Se usa como E[r_m] para construir la prima de riesgo (E[r_m] − r_f) en CAPM/Fama-French.";
+    case "smb_premium_pct":
+      return "Prima SMB en el modelo de factores: captura el efecto tamaño (small minus big) en el retorno esperado.";
+    case "hml_premium_pct":
+      return "Prima HML en el modelo de factores: captura el efecto valor (high minus low) en el retorno esperado.";
+    case "cvar_beta_pct":
+      return "Define β (nivel de confianza) para medir CVaR y reportar cumplimiento frente a α_p.";
+    case "lambda_risk_aversion":
+      return "Parámetro λ de Black-Litterman: aversión al riesgo usada para derivar la prior de equilibrio π del mercado.";
+    case "tau":
+      return "Parámetro τ de Black-Litterman: controla cuánto pesa la prior del mercado vs. las views del analista.";
+    case "omega_diag":
+      return "Parámetro Ω (diagonal) de Black-Litterman: controla la confianza en las views; Ω mayor ⇒ views pesan menos.";
+    case "views_json":
+      return "Define las views Q por ticker para ajustar μ_BL (input clave del avance Black-Litterman).";
+    case "prob_desfavorable_pct":
+    case "prob_neutro_pct":
+    case "prob_favorable_pct":
+      return "Define las probabilidades π_s de escenarios para ponderar el retorno esperado en el modelo estocástico.";
+    case "commission_rate_pct":
+      return "Comisión anual k: descuenta el retorno neto en escenarios/simulación y modela costo operacional.";
+    case "p1_withdrawal_drawdown_pct":
+      return "Umbral de drawdown usado para aproximar P1 (retiro) en el ciclo operacional.";
+    case "p2_acceptance_prob_pct":
+      return "Probabilidad base usada para aproximar P2 (aceptación) de recomendaciones/rebalanceos.";
+    case "cash_buffer_pct":
+      return "Reserva operacional referencial asociada a dividendos/caja chica.";
+    default:
+      if (methodologyId === "finpuc_hibrido") {
+        return "Parámetro de entrada que ajusta calibración, riesgo o dinámica cliente dentro del flujo híbrido.";
+      }
+      return "Parámetro de entrada usado para calibrar/validar la metodología.";
+  }
+}
+
+function renderBaseFieldCards(method) {
+  const profiles = PF.catalog?.profiles || [];
+  const selectedProfile = PF.formState.profile || "neutro";
+  const methodId = method?.id || PF.selectedMethodologyId || "";
+
+  return `
+    <div class="field-grid">
+      <div class="field-card">
+        <label>Capital inicial</label>
+        <input type="number" min="1000" step="1000" value="${esc(String(PF.formState.initial_capital ?? 100000))}" oninput="updateFormValue('initial_capital', this.value)">
+        <div class="field-help">Monto base sobre el cual se construye la recomendacion y se proyectan los escenarios.</div>
+        <div class="field-help">Funcion en el metodo: ${parameterRoleText("initial_capital", methodId)}</div>
+        <span class="field-ref">Basado en Seccion 2.3.1</span>
+      </div>
+      <div class="field-card">
+        <label>Perfil de riesgo</label>
+        <select onchange="updateProfileSelection(this.value)">
+          ${profiles.map(profile => `<option value="${esc(profile.id)}" ${profile.id === selectedProfile ? "selected" : ""}>${esc(profile.label)} (${profile.alpha_pct}%)</option>`).join("")}
+        </select>
+        <div class="field-help">Define alpha_p, la tolerancia maxima de perdida del cliente.</div>
+        <div class="field-help">Funcion en el metodo: ${parameterRoleText("profile", methodId)}</div>
+        <span class="field-ref">Tabla 2.1 / Seccion 2.2.2</span>
+      </div>
+      <div class="field-card">
+        <label>Tamano del sub-universo</label>
+        <input type="number" min="10" max="636" step="1" value="${esc(String(PF.formState.candidate_pool_size ?? ""))}" oninput="updateFormValue('candidate_pool_size', this.value)">
+        <div class="field-help">Cantidad de activos candidatos que pasan al universo operativo previo a la optimizacion.</div>
+        <div class="field-help">Funcion en el metodo: ${parameterRoleText("candidate_pool_size", methodId)}</div>
+        <span class="field-ref">Tabla 0.10 / Tabla 2.4</span>
+      </div>
+      <div class="field-card">
+        <label>Holdings finales</label>
+        <input type="number" min="3" max="30" step="1" value="${esc(String(PF.formState.target_holdings ?? 10))}" oninput="updateFormValue('target_holdings', this.value)">
+        <div class="field-help">Numero de posiciones visibles en el portafolio final.</div>
+        <div class="field-help">Funcion en el metodo: ${parameterRoleText("target_holdings", methodId)}</div>
+        <span class="field-ref">Seccion 2.3.1</span>
+      </div>
+      <div class="field-card">
+        <label>Filtro sectorial opcional</label>
+        <input type="text" value="${esc(PF.formState.sector || "")}" placeholder="Technology, Utilities..." oninput="updateFormValue('sector', this.value)">
+        <div class="field-help">Restringe el universo a un sector del F5 cuando el analisis lo requiere.</div>
+        <div class="field-help">Funcion en el metodo: ${parameterRoleText("sector", methodId)}</div>
+        <span class="field-ref">Anexo 1 / Tabla 0.3</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderMethodField(definition, method) {
+  const value = PF.formState[definition.key] ?? definition.default ?? "";
+  const isTextArea = definition.input_type === "textarea";
+  const inputHtml = isTextArea
+    ? `<textarea oninput="updateFormValue('${esc(definition.key)}', this.value)">${esc(String(value))}</textarea>`
+    : definition.input_type === "text"
+      ? `<input type="text" value="${esc(String(value))}" placeholder="${esc(definition.placeholder || "")}" oninput="updateFormValue('${esc(definition.key)}', this.value)">`
+      : `<input type="number"
+                 ${definition.min != null ? `min="${definition.min}"` : ""}
+                 ${definition.max != null ? `max="${definition.max}"` : ""}
+                 ${definition.step != null ? `step="${definition.step}"` : ""}
+                 value="${esc(String(value))}"
+                 oninput="updateFormValue('${esc(definition.key)}', this.value)">`;
+
+  return `
+    <div class="field-card">
+      <label>${esc(definition.label)}${definition.required ? " *" : ""}</label>
+      ${inputHtml}
+      <div class="field-help">${esc(definition.meaning)}${definition.unit ? ` Unidad: ${esc(definition.unit)}.` : ""}</div>
+      <div class="field-help">Funcion en el metodo: ${parameterRoleText(definition.key, method?.id || "")}</div>
+      <span class="field-ref">Basado en ${esc(definition.report_reference)}</span>
+    </div>
+  `;
+}
+
+function renderParametersView() {
+  const method = getCatalogMethod();
+  if (!method) {
+    document.getElementById("content").innerHTML = `<div class="callout callout-danger">No hay una metodologia seleccionada.</div>`;
+    return;
+  }
+
+  seedMethodologyState(method.id);
+  const groups = ["Estimacion", "Riesgo y escenarios", "Cliente y negocio"];
+
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Parametros</div>
+        <h2 class="hero-title">${esc(method.label)}</h2>
+        <p class="hero-copy">${esc(method.description)}</p>
+        ${renderFormulaBlock(method.formula_latex, method.formula_summary)}
+        <div class="reference-chip-row">
+          ${(method.report_references || []).map(ref => `<span class="reference-chip">${esc(ref)}</span>`).join("")}
+        </div>
+      </div>
+
+      <div class="parameter-group">
+        <h3>Perfil y universo</h3>
+        <p>Estos parametros fijan el capital inicial, el perfil de riesgo, el tamano del universo operativo y la cardinalidad final del portafolio.</p>
+        ${renderBaseFieldCards(method)}
+      </div>
+
+      ${groups.map(group => {
+        const defs = (method.parameters || []).filter(def => def.group === group);
+        if (!defs.length) return "";
+        return `
+          <div class="parameter-group">
+            <h3>${esc(group)}</h3>
+            <p>Cada campo indica su significado financiero, la unidad de medida y la referencia documental dentro del informe.</p>
+            <div class="field-grid">
+              ${defs.map(def => renderMethodField(def, method)).join("")}
+            </div>
+          </div>
+        `;
+      }).join("")}
+
+      <div class="pf-card">
+        <div class="pf-section-title">Ejecucion de la metodologia</div>
+        <div class="action-row">
+          <button class="btn-primary" type="button" id="run-method-btn" onclick="submitMethodologyRun()">Ejecutar metodologia</button>
+          <button class="btn-secondary" type="button" onclick="pfNavGo('methodologies')">Volver al catalogo</button>
+          <span id="method-run-status" class="subtle-status"></span>
+        </div>
+      </div>
+    </div>
+  `;
+  queueMathTypeset();
+}
+
+function buildOptimizationPayload() {
+  const method = getCatalogMethod();
+  const parameterValues = {};
+  for (const definition of method.parameters || []) {
+    parameterValues[definition.key] = PF.formState[definition.key];
+  }
+  return {
+    initial_capital: parseFloat(PF.formState.initial_capital || 100000),
+    methodology_id: method.id,
+    profile: PF.formState.profile || "neutro",
+    candidate_pool_size: PF.formState.candidate_pool_size === "" ? null : parseInt(PF.formState.candidate_pool_size, 10),
+    target_holdings: parseInt(PF.formState.target_holdings || 10, 10),
+    sector: PF.formState.sector || null,
+    parameter_values: parameterValues,
+  };
+}
+
+async function submitMethodologyRun() {
+  const payload = buildOptimizationPayload();
+  const runBtn = document.getElementById("run-method-btn");
+  const statusEl = document.getElementById("method-run-status");
+  if (runBtn) runBtn.disabled = true;
+  if (statusEl) statusEl.textContent = "Ejecutando metodologia y construyendo portafolio...";
+
+  try {
+    const result = await apiFetch("/api/portfolio/optimize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    PF.lastResult = result;
+    PF.lastInputs = payload;
+    PF.lastBenchmark = null;
+    if (statusEl) statusEl.textContent = "Portafolio generado correctamente.";
+    await pfNavGo("results");
+  } catch (error) {
+    if (statusEl) statusEl.textContent = "";
+    const errorBox = `<div class="callout callout-danger">No fue posible ejecutar la metodologia: ${esc(error.message)}</div>`;
+    const contentEl = document.getElementById("content");
+    const runStatus = document.getElementById("method-run-status");
+    if (runStatus) runStatus.insertAdjacentHTML("afterend", errorBox);
+    else if (contentEl) contentEl.insertAdjacentHTML("afterbegin", errorBox);
+  } finally {
+    if (runBtn) runBtn.disabled = false;
+  }
+}
+
+function renderParameterSummary(groups) {
+  return groups.map(group => `
+    <div class="parameter-group">
+      <h3>${esc(group.group)}</h3>
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th>Parametro</th>
+            <th>Valor</th>
+            <th>Significado</th>
+            <th>Referencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${group.items.map(item => `
+            <tr>
+              <td><strong>${esc(item.label)}</strong></td>
+              <td>${esc(item.value_display || "—")}</td>
+              <td>${esc(item.meaning || "—")}</td>
+              <td>${esc(item.report_reference || "—")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `).join("");
+}
+
+function renderResultsView() {
+  if (!PF.lastResult) {
+    document.getElementById("content").innerHTML = `
+      <div class="pf-section">
+        <div class="results-empty">
+          Todavia no existe una corrida metodologica. Selecciona una metodologia del informe, configura sus parametros y ejecuta el portafolio para ver resultados.
+          <div class="action-row" style="margin-top:14px">
+            <button class="btn-primary" type="button" onclick="pfNavGo('methodologies')">Ir a metodologias</button>
+            <button class="btn-secondary" type="button" onclick="pfNavGo('parameters')">Ir a parametros</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const result = PF.lastResult;
+  const methodology = result.methodology || {};
+  const metrics = result.metrics || {};
+  const universe = result.universe || {};
+  const weeklyCycle = result.weekly_cycle || {};
+
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Resultados</div>
+        <h2 class="hero-title">${esc(methodology.label || result.methodology_id || "Metodo ejecutado")}</h2>
+        <p class="hero-copy">${esc(methodology.description || "Resultado de la metodologia seleccionada.")}</p>
+        ${renderFormulaBlock(methodology.formula_latex, methodology.formula_summary)}
+        <div class="reference-chip-row">
+          ${(methodology.report_references || []).map(ref => `<span class="reference-chip">${esc(ref)}</span>`).join("")}
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">Retorno esperado</div>
+          <div class="summary-value">${metrics.expected_return_pct > 0 ? "+" : ""}${metrics.expected_return_pct}%</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Volatilidad anual</div>
+          <div class="summary-value">${metrics.volatility_pct}%</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Sharpe</div>
+          <div class="summary-value">${metrics.sharpe_ratio}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">CVaR</div>
+          <div class="summary-value">${result.cvar_pct}%</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">alpha_p</div>
+          <div class="summary-value">${(result.alpha_p * 100).toFixed(0)}%</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Caja chica</div>
+          <div class="summary-value">${metrics.cash_weight_pct != null ? metrics.cash_weight_pct + "%" : "0%"}</div>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="pf-card">
+          <div class="pf-section-title">Lectura metodologica</div>
+          <div class="data-list">
+            <div><span>Perfil</span><strong>${esc(result.profile_label || "—")}</strong></div>
+            <div><span>Universo F5 total</span><strong>${universe.total_f5_count || "—"}</strong></div>
+            <div><span>Sub-universo operativo</span><strong>${universe.optimizer_universe_size || "—"}</strong></div>
+            <div><span>Holdings finales</span><strong>${universe.target_holdings || "—"}</strong></div>
+            <div><span>Comision k</span><strong>${result.commission_rate_pct}% anual</strong></div>
+          </div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-section-title">Ciclo semanal reportado</div>
+          <div class="data-list">
+            <div><span>Cadencia</span><strong>${esc(weeklyCycle.cadence || "Semanal")}</strong></div>
+            <div><span>Aceptacion</span><strong>${esc(weeklyCycle.client_acceptance || "—")}</strong></div>
+            <div><span>Retiro</span><strong>${esc(weeklyCycle.client_withdrawal || "—")}</strong></div>
+            <div><span>Dividendos</span><strong>${esc(weeklyCycle.dividends || "—")}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Portafolio recomendado</div>
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Empresa</th>
+              <th>Sector</th>
+              <th>Peso</th>
+              <th>CAGR</th>
+              <th>Volatilidad</th>
+              <th>Dividend yield</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${result.portfolio.map(item => `
+              <tr>
+                <td><strong>${esc(item.ticker)}</strong></td>
+                <td>${esc(item.short_name || "—")}</td>
+                <td>${esc(item.sector || "—")}</td>
+                <td>${(item.weight * 100).toFixed(2)}%</td>
+                <td>${item.cagr_pct != null ? item.cagr_pct + "%" : "—"}</td>
+                <td>${item.volatility_pct != null ? item.volatility_pct + "%" : "—"}</td>
+                <td>${item.dividend_yield_pct != null ? item.dividend_yield_pct + "%" : "—"}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+
+      ${methodology.solver_details ? `
+        <div class="pf-card">
+          <div class="pf-section-title">Motor de resolucion</div>
+          <div class="data-list">
+            <div><span>Solver</span><strong>${esc(methodology.solver_details.solver_used || "—")}</strong></div>
+            <div><span>Estado</span><strong>${esc(methodology.solver_details.status || "—")}</strong></div>
+            <div><span>Mensaje</span><strong>${esc(methodology.solver_details.message || "—")}</strong></div>
+            <div><span>Tiempo</span><strong>${methodology.solver_details.solve_time_s != null ? methodology.solver_details.solve_time_s.toFixed(3) + " s" : "—"}</strong></div>
+          </div>
+        </div>
+      ` : ""}
+
+      ${renderParameterSummary(result.parameters_used || [])}
+
+      ${(result.efficient_frontier || []).length ? `
+        <div class="pf-card">
+          <div class="pf-section-title">Frontera eficiente (Markowitz)</div>
+          <p style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:14px">Se calcula sobre el universo operativo y la ventana de calibracion. La marca destaca el portafolio recomendado.</p>
+          <div id="frontier-chart" style="height:340px"></div>
+        </div>
+      ` : ""}
+
+      <div class="pf-card">
+        <div class="pf-section-title">Comparacion secundaria</div>
+        <div class="action-row">
+          <button class="btn-secondary" type="button" onclick="fetchBenchmarkComparison('benchmark-comparison')">Ejecutar caso base + benchmark</button>
+        </div>
+        <div id="benchmark-comparison"></div>
+      </div>
+    </div>
+  `;
+  renderEfficientFrontierChart(result);
+  queueMathTypeset();
+}
+
+async function fetchBenchmarkComparison(targetId = "benchmark-comparison") {
+  const target = document.getElementById(targetId);
+  if (!PF.lastResult) return;
+  if (target) target.innerHTML = `<div class="callout">Construyendo caso base y benchmark...</div>`;
+
+  const getLastInputValue = (keys, fallback) => {
+    for (const key of keys) {
+      const value = PF.lastInputs?.[key];
+      if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return fallback;
+  };
+
+  const holdings = parseInt(String(getLastInputValue(["target_holdings", "targetHoldings"], 10)), 10) || 10;
+  const candidatePool = getLastInputValue(["candidate_pool_size", "candidatePoolSize"], "");
+  const sector = getLastInputValue(["sector"], "");
+
+  const benchParams = new URLSearchParams({ target_holdings: String(holdings) });
+  if (candidatePool) benchParams.set("candidate_pool_size", String(candidatePool));
+  if (sector) benchParams.set("sector", String(sector));
+
+  const baseParams = new URLSearchParams({ n: String(holdings) });
+  if (sector) baseParams.set("sector", String(sector));
+
+  try {
+    const [baseCase, benchmark] = await Promise.all([
+      apiFetch(`/api/portfolio/base_case?${baseParams.toString()}`),
+      apiFetch(`/api/portfolio/benchmark?${benchParams.toString()}`),
+    ]);
+    PF.lastBaseCase = baseCase;
+    PF.lastBenchmark = benchmark;
+    renderBenchmarkComparison(benchmark, baseCase, targetId);
+  } catch (error) {
+    if (target) {
+      target.innerHTML = `<div class="callout callout-danger">No fue posible construir las comparaciones: ${esc(error.message)}</div>`;
+    }
+  }
+}
+
+function renderBenchmarkComparison(benchmark, baseCase, targetId = "benchmark-comparison") {
+  const target = document.getElementById(targetId);
+  if (!target || !PF.lastResult) return;
+  const base = PF.lastResult.metrics || {};
+  const simId = `${targetId}-base-sim`;
+  target.innerHTML = `
+    <div class="comparison-card">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Medida</th>
+            <th>${esc(PF.lastResult.methodology?.label || "Modelo FinPUC")}</th>
+            <th>${esc(baseCase?.metrics?.method_label || "Caso base")}</th>
+            <th>${esc(benchmark?.metrics?.method_label || "Benchmark")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Retorno esperado</td>
+            <td>${base.expected_return_pct > 0 ? "+" : ""}${base.expected_return_pct}%</td>
+            <td>${baseCase?.metrics?.expected_return_pct > 0 ? "+" : ""}${baseCase?.metrics?.expected_return_pct ?? "—"}%</td>
+            <td>${benchmark?.metrics?.expected_return_pct > 0 ? "+" : ""}${benchmark?.metrics?.expected_return_pct ?? "—"}%</td>
+          </tr>
+          <tr>
+            <td>Volatilidad</td>
+            <td>${base.volatility_pct ?? "—"}%</td>
+            <td>${baseCase?.metrics?.volatility_pct ?? "—"}%</td>
+            <td>${benchmark?.metrics?.volatility_pct ?? "—"}%</td>
+          </tr>
+          <tr>
+            <td>Constructor</td>
+            <td>${esc(base.method_label || "—")}</td>
+            <td>${esc(baseCase?.metrics?.rebalance_policy || baseCase?.metrics?.method_label || "—")}</td>
+            <td>${esc(benchmark?.metrics?.method_label || "—")}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="action-row" style="margin-top:12px">
+        <button class="btn-secondary" type="button" onclick="simulateBaseCaseComparison('${targetId}')">Simular caso base</button>
+      </div>
+      <div id="${simId}"></div>
+    </div>
+  `;
+}
+
+function renderScenarioView() {
+  const contentEl = document.getElementById("content");
+  if (!PF.lastResult) {
+    contentEl.innerHTML = `
+      <div class="pf-section">
+        <div class="results-empty">
+          Ejecuta primero una metodologia para construir los escenarios favorable, neutro y desfavorable del informe.
+          <div class="action-row" style="margin-top:14px">
+            <button class="btn-primary" type="button" onclick="pfNavGo('parameters')">Ir a parametros</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const result = PF.lastResult;
+  const sc = result.scenarios;
+  contentEl.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Escenarios p10 / p50 / p90</div>
+        <h2 class="hero-title">Escenarios del portafolio recomendado</h2>
+        <p class="hero-copy">La proyeccion traduce el retorno esperado y la volatilidad del portafolio a escenarios favorable, neutro y desfavorable. Referencia: Seccion 4 y componente de Monte Carlo del informe.</p>
+      </div>
+
+      <div class="scenario-grid">
+        <div class="scenario-card favorable">
+          <div class="scenario-label">Favorable (p90)</div>
+          <div class="scenario-ret">${sc.favorable.annual_return_pct > 0 ? "+" : ""}${sc.favorable.annual_return_pct}%</div>
+          <div class="scenario-cap">Ano 1: <strong>${fmtUSD(sc.favorable.capital_by_year["1"])}</strong></div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(sc.favorable.capital_by_year["5"])}</strong></div>
+        </div>
+        <div class="scenario-card neutro">
+          <div class="scenario-label">Neutro (p50)</div>
+          <div class="scenario-ret">${sc.neutro.annual_return_pct > 0 ? "+" : ""}${sc.neutro.annual_return_pct}%</div>
+          <div class="scenario-cap">Ano 1: <strong>${fmtUSD(sc.neutro.capital_by_year["1"])}</strong></div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(sc.neutro.capital_by_year["5"])}</strong></div>
+        </div>
+        <div class="scenario-card desfavorable">
+          <div class="scenario-label">Desfavorable (p10)</div>
+          <div class="scenario-ret">${sc.desfavorable.annual_return_pct > 0 ? "+" : ""}${sc.desfavorable.annual_return_pct}%</div>
+          <div class="scenario-cap">Ano 1: <strong>${fmtUSD(sc.desfavorable.capital_by_year["1"])}</strong></div>
+          <div class="scenario-cap">Ano 5: <strong>${fmtUSD(sc.desfavorable.capital_by_year["5"])}</strong></div>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="pf-section-title" style="margin-bottom:8px;border:none;padding:0">Proyeccion mensual del capital</div>
+        <div id="pf-scenario-chart" style="height:320px"></div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="pf-card">
+          <div class="pf-section-title">Parametros reportados</div>
+          <div class="data-list">
+            <div><span>Retorno esperado</span><strong>${result.metrics.expected_return_pct}%</strong></div>
+            <div><span>Volatilidad anual</span><strong>${result.metrics.volatility_pct}%</strong></div>
+            <div><span>CVaR</span><strong>${result.cvar_pct}%</strong></div>
+            <div><span>Comision k</span><strong>${result.commission_rate_pct}%</strong></div>
+          </div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-section-title">Referencia academica</div>
+          <div class="methodology-copy">Basado en Seccion 4 del informe y en la construccion de escenarios representativos p10/p50/p90 para interpretar riesgo y retorno del portafolio.</div>
+        </div>
+      </div>
+    </div>
+  `;
+  renderScenarioChart(result.scenario_timeseries);
+}
+
+function renderScenarioChart(ts) {
+  if (!ts || !ts.months || typeof Plotly === "undefined") return;
+  const x = ts.months.map(month => `Mes ${month}`);
+  const traces = [
+    { x, y: ts.favorable, name: "Favorable", mode: "lines", line: { color: "#1f6f52", width: 2 } },
+    { x, y: ts.neutro, name: "Neutro", mode: "lines", line: { color: "#0f4c81", width: 2 } },
+    { x, y: ts.desfavorable, name: "Desfavorable", mode: "lines", line: { color: "#b34a3c", width: 2, dash: "dot" } },
+  ];
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 12, r: 20, b: 48, l: 80 },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Capital (USD)", tickformat: ",.0f" },
+    legend: { orientation: "h", y: -0.2 },
+  };
+  Plotly.newPlot("pf-scenario-chart", traces, layout, PLOTLY_CONFIG);
+}
+
+function renderSimulation() {
+  const defaults = PF.lastResult?.simulation_defaults || {};
+  const commission = defaults.commission_rate_pct ?? 1.0;
+  const accept = defaults.p2_acceptance_prob_pct ?? 70.0;
+  const contentEl = document.getElementById("content");
+  contentEl.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Simulacion del cliente</div>
+        <h2 class="hero-title">P1, P2, comisiones y ciclo semanal</h2>
+        <p class="hero-copy">La simulacion operacional resume el comportamiento del cliente frente a recomendaciones semanales, aceptacion, comisiones y abandono por drawdown. Referencia: Seccion 2.2.1 y Ecuaciones 4.5 y 4.6.</p>
+      </div>
+
+      <div class="parameter-group">
+        <h3>Entradas de simulacion</h3>
+        <p>La simulacion utiliza los resultados del portafolio recomendado como base, pero permite ajustar explicitamente P2, la comision k, el horizonte y la frecuencia de rebalanceo.</p>
+        <div class="field-grid">
+          <div class="field-card">
+            <label>Capital inicial</label>
+            <input id="sim-capital" type="number" value="${esc(String(defaults.initial_capital ?? 100000))}">
+            <div class="field-help">Capital de partida del cliente.</div>
+            <span class="field-ref">Seccion 2.2.1</span>
+          </div>
+          <div class="field-card">
+            <label>Retorno esperado anual</label>
+            <input id="sim-exp-ret" type="number" step="0.1" value="${esc(String(defaults.expected_return_pct ?? 10))}">
+            <div class="field-help">Retorno anual del portafolio que alimenta la simulacion.</div>
+            <span class="field-ref">Resultados metodologicos</span>
+          </div>
+          <div class="field-card">
+            <label>Volatilidad anual</label>
+            <input id="sim-vol" type="number" step="0.1" value="${esc(String(defaults.volatility_pct ?? 20))}">
+            <div class="field-help">Volatilidad anual usada para las trayectorias de capital.</div>
+            <span class="field-ref">Resultados metodologicos</span>
+          </div>
+          <div class="field-card">
+            <label>Horizonte</label>
+            <input id="sim-years" type="number" min="3" max="5" value="3">
+            <div class="field-help">Numero de anos simulados.</div>
+            <span class="field-ref">Seccion 2.2.1</span>
+          </div>
+          <div class="field-card">
+            <label>Numero de simulaciones</label>
+            <input id="sim-n" type="number" min="100" max="2000" step="100" value="500">
+            <div class="field-help">Cantidad de trayectorias Monte Carlo generadas.</div>
+            <span class="field-ref">Seccion 4 / Monte Carlo</span>
+          </div>
+          <div class="field-card">
+            <label>Umbral P1 de retiro</label>
+            <input id="sim-loss-pct" type="number" min="0" max="100" step="1" value="${esc(String(defaults.max_loss_pct ?? 15))}">
+            <div class="field-help">Drawdown porcentual a partir del cual se activa la aproximacion operacional de P1.</div>
+            <span class="field-ref">Ecuacion 4.5</span>
+          </div>
+          <div class="field-card">
+            <label>Probabilidad base P2</label>
+            <input id="sim-accept-pct" type="number" min="0" max="100" step="1" value="${esc(String(accept))}">
+            <div class="field-help">Probabilidad base de aceptar una recomendacion semanal.</div>
+            <span class="field-ref">Ecuacion 4.6</span>
+          </div>
+          <div class="field-card">
+            <label>Comision anual k</label>
+            <input id="sim-commission-pct" type="number" min="0" max="10" step="0.1" value="${esc(String(commission))}">
+            <div class="field-help">Comision anual cobrada sobre el capital gestionado.</div>
+            <span class="field-ref">Seccion 2.2.1</span>
+          </div>
+          <div class="field-card">
+            <label>Frecuencia de rebalanceo</label>
+            <input id="sim-rebalance-weeks" type="number" min="1" max="52" step="1" value="${esc(String(defaults.rebalance_freq_weeks ?? 1))}">
+            <div class="field-help">Cantidad de semanas entre recomendaciones.</div>
+            <span class="field-ref">Ciclo semanal FinPUC</span>
+          </div>
+          <div class="field-card">
+            <label>Mejora por rebalanceo</label>
+            <input id="sim-rebalance-boost-pct" type="number" min="0" max="5" step="0.1" value="${esc(String(defaults.rebalance_return_boost_pct ?? 0.1))}">
+            <div class="field-help">Ajuste adicional en retorno al aceptar un rebalanceo.</div>
+            <span class="field-ref">Aproximacion operacional del sistema</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="action-row">
+          <button class="btn-primary" id="sim-btn" onclick="submitSimulation()">Ejecutar simulacion</button>
+          <span id="sim-loading" class="subtle-status" style="display:none">Simulando trayectorias de capital y rebalanceos...</span>
+        </div>
+      </div>
+
+      <div id="sim-result"></div>
+    </div>
+  `;
+}
+
+async function submitSimulation() {
+  const payload = {
+    initial_capital: parseFloat(document.getElementById("sim-capital")?.value) || 100000,
+    expected_return: (parseFloat(document.getElementById("sim-exp-ret")?.value) || 10) / 100,
+    volatility: (parseFloat(document.getElementById("sim-vol")?.value) || 20) / 100,
+    max_loss_pct: (parseFloat(document.getElementById("sim-loss-pct")?.value) || 15) / 100,
+    years: parseInt(document.getElementById("sim-years")?.value, 10) || 3,
+    n_simulations: parseInt(document.getElementById("sim-n")?.value, 10) || 500,
+    p2_acceptance_prob_pct: parseFloat(document.getElementById("sim-accept-pct")?.value) || 70,
+    commission_rate_pct: parseFloat(document.getElementById("sim-commission-pct")?.value) || 1,
+    rebalance_freq_weeks: parseInt(document.getElementById("sim-rebalance-weeks")?.value, 10) || 1,
+    rebalance_return_boost_pct: parseFloat(document.getElementById("sim-rebalance-boost-pct")?.value) || 0.1,
+  };
+
+  const btn = document.getElementById("sim-btn");
+  const loading = document.getElementById("sim-loading");
+  if (btn) btn.disabled = true;
+  if (loading) loading.style.display = "inline";
+
+  try {
+    const result = await apiFetch("/api/portfolio/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    PF.lastSimulation = result;
+    renderSimulationResult(result, payload.initial_capital);
+  } catch (error) {
+    document.getElementById("sim-result").innerHTML = `<div class="callout callout-danger">Error al simular: ${esc(error.message)}</div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+    if (loading) loading.style.display = "none";
+  }
+}
+
+function renderSimulationResult(result, initialCapital) {
+  document.getElementById("sim-result").innerHTML = `
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Capital final promedio</div>
+        <div class="summary-value">${fmtUSD(result.final_capital_mean)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Capital p10</div>
+        <div class="summary-value">${fmtUSD(result.final_capital_p10)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Capital p90</div>
+        <div class="summary-value">${fmtUSD(result.final_capital_p90)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Tasa de retiro</div>
+        <div class="summary-value">${result.withdrawal_rate}%</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Comisiones promedio</div>
+        <div class="summary-value">${fmtUSD(result.total_commissions_mean)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Aceptaciones promedio</div>
+        <div class="summary-value">${result.accepted_recommendations_mean}</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="pf-section-title" style="margin-bottom:8px;border:none;padding:0">Trayectorias de capital</div>
+      <div id="sim-chart" style="height:320px"></div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="pf-card">
+        <div class="pf-section-title">Supuestos operacionales</div>
+        <div class="data-list">
+          <div><span>Recomendaciones emitidas</span><strong>${result.total_recommendations}</strong></div>
+          <div><span>Aceptacion P2</span><strong>${esc(result.assumptions?.acceptance_model || "—")}</strong></div>
+          <div><span>Retiro P1</span><strong>${esc(result.assumptions?.withdrawal_model || "—")}</strong></div>
+          <div><span>Comision</span><strong>${result.assumptions?.commission_rate_pct || "—"}% anual</strong></div>
+        </div>
+      </div>
+      <div class="pf-card">
+        <div class="pf-section-title">Lectura academica</div>
+        <div class="methodology-copy">Capital inicial de referencia: ${fmtUSD(initialCapital)}. La simulacion operacional no reemplaza el modelo teorico completo, pero permite visualizar de forma ejecutable la dinamica semanal del sistema descrita en el informe.</div>
+      </div>
+    </div>
+  `;
+  renderSimulationChart(result, initialCapital);
+}
+
+function renderSimulationChart(result, initialCapital) {
+  if (typeof Plotly === "undefined") return;
+  const x = result.periods.map(period => `Semana ${period}`);
+  const traces = [
+    { x, y: result.capital_p90, name: "P90", mode: "lines", line: { color: "#1f6f52", width: 1 } },
+    { x, y: result.capital_mean, name: "Media", mode: "lines", line: { color: "#0f4c81", width: 2 } },
+    { x, y: result.capital_p10, name: "P10", mode: "lines", line: { color: "#b34a3c", width: 1, dash: "dot" } },
+    { x, y: Array(x.length).fill(initialCapital), name: "Capital inicial", mode: "lines", line: { color: "#b48a2c", width: 1, dash: "dash" } },
+  ];
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 12, r: 20, b: 48, l: 80 },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Capital (USD)", tickformat: ",.0f" },
+    legend: { orientation: "h", y: -0.2 },
+  };
+  Plotly.newPlot("sim-chart", traces, layout, PLOTLY_CONFIG);
+}
+
+function renderReferencesView() {
+  const sections = PF.reportOutline?.sections || [];
+  const tables = PF.reportOutline?.tables || [];
+  const formulas = PF.reportOutline?.formulae || [];
+
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Datos y referencias</div>
+        <h2 class="hero-title">Trazabilidad documental del sistema</h2>
+        <p class="hero-copy">Esta vista concentra los accesos al informe, las tablas estructurales y las formulas que sustentan el comportamiento del sistema recomendador.</p>
+      </div>
+
+      <div class="reference-grid">
+        ${renderReferenceLinks()}
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Tablas y figuras del informe</div>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:14px">Se muestran vistas previas generadas directamente desde el PDF del informe para mantener trazabilidad documental dentro del sistema.</p>
+        ${renderReportVisuals()}
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Secciones del informe</div>
+        <div class="academic-list">
+          ${sections.map(section => `
+            <div class="academic-list-item">
+              <strong>${esc(section.label)}</strong>
+              <p>${esc(section.summary)}</p>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+
+      <div class="academic-grid">
+        <div class="academic-card">
+          <h4>Tablas clave</h4>
+          <div class="academic-list">
+            ${tables.map(table => `
+              <div class="academic-list-item">
+                <strong>${esc(table.label)}</strong>
+                <p>${esc(table.summary)}</p>
+                <p><a class="inline-link" href="${table.image_url}" target="_blank" rel="noopener noreferrer">Ver pagina ${esc(String(table.page_number || "—"))}</a></p>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+        <div class="academic-card">
+          <h4>Formulas visibles</h4>
+          <div class="academic-list">
+            ${formulas.map(formula => `
+              <div class="academic-list-item">
+                <strong>${esc(formula.label)}</strong>
+                <p>${esc(formula.summary)}</p>
+                ${renderFormulaBlock(formula.latex, "")}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Comparacion secundaria</div>
+        <div class="action-row">
+          <button class="btn-secondary" type="button" onclick="fetchBenchmarkComparison('references-benchmark')">Ejecutar caso base + benchmark</button>
+        </div>
+        <div id="references-benchmark"></div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Distribuciones de retornos (F5)</div>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:14px">Paso inmediato: verificar supuestos distribucionales (normalidad, asimetría, colas) sobre retornos diarios en la ventana de calibracion.</p>
+        <div class="action-row">
+          <button class="btn-secondary" type="button" onclick="fetchReturnDiagnostics('returns-diagnostics')">Calcular distribuciones</button>
+        </div>
+        <div id="returns-diagnostics"></div>
+      </div>
+    </div>
+  `;
+  queueMathTypeset();
+}
+
+async function pfNavGo(section) {
+  PF.activeNav = section;
+  setPortfolioNavActive(section);
+  setNavState("home");
+  if (!PF.catalog || !PF.reportOutline) {
+    await ensurePortfolioBootstrap();
+  }
+
+  if (section === "introduction") renderIntroduction();
+  else if (section === "system") renderSystemProfiles();
+  else if (section === "methodologies") renderMethodologies();
+  else if (section === "parameters") renderParametersView();
+  else if (section === "results") renderResultsView();
+  else if (section === "scenarios") renderScenarioView();
+  else if (section === "simulate") renderSimulation();
+  else if (section === "references") renderReferencesView();
+}

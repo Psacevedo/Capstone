@@ -3,33 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>P4 FinPUC — Acciones</title>
+  <title>P4 FinPUC - Sistema recomendador</title>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <style>
     /* ====================================================
        Variables y reset
     ==================================================== */
     :root {
       --azul:       #003865;
-      --azul-claro: #0078bf;
-      --azul-hover: #0090e0;
-      --dorado:     #c49b25;
-      --bg:         #0d1117;
-      --bg-card:    #161b22;
-      --bg-hover:   #1c2230;
-      --border:     #30363d;
-      --text:       #e6edf3;
-      --text-muted: #8b949e;
-      --green:      #3fb950;
-      --red:        #f85149;
-      --sidebar-w:  252px;
+      --azul-claro: #0f4c81;
+      --azul-hover: #125c9c;
+      --dorado:     #b48a2c;
+      --bg:         #f3eee6;
+      --bg-card:    #fffaf2;
+      --bg-hover:   #efe5d6;
+      --border:     #d8d2c8;
+      --text:       #1c2733;
+      --text-muted: #5f6b76;
+      --green:      #1f6f52;
+      --red:        #b34a3c;
+      --sidebar-w:  280px;
       --topbar-h:   52px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
       display: flex;
@@ -220,7 +223,7 @@
 
     /* Escenarios */
     .scenario-grid {
-      display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;
       margin-bottom:20px;
     }
     .scenario-card {
@@ -967,6 +970,595 @@
     }
 
     .summary-toggle:hover { text-decoration: underline; }
+
+    .hero-card {
+      background: linear-gradient(145deg, rgba(15,76,129,.08), rgba(180,138,44,.08));
+      border: 1px solid rgba(15,76,129,.18);
+      border-radius: 16px;
+      padding: 28px 30px;
+      margin-bottom: 20px;
+    }
+    .hero-eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--azul-claro);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .hero-title {
+      font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+      font-size: 30px;
+      line-height: 1.1;
+      margin-bottom: 10px;
+      color: var(--azul);
+    }
+    .hero-copy {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-muted);
+      max-width: 760px;
+    }
+    .step-header { display:flex; gap:14px; align-items:flex-start; margin-bottom:16px; }
+    .step-index {
+      width:30px; height:30px; border-radius:50%;
+      background: var(--azul); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:13px; flex-shrink:0;
+    }
+    .step-copy { font-size:12px; color:var(--text-muted); line-height:1.6; }
+    .profile-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
+      gap:12px;
+    }
+    .profile-card {
+      border:1px solid var(--border);
+      background:var(--bg-card);
+      border-radius:14px;
+      padding:16px;
+      text-align:left;
+      cursor:pointer;
+      transition:border-color .15s, transform .15s, box-shadow .15s;
+      color:var(--text);
+    }
+    .profile-card:hover {
+      border-color: rgba(15,76,129,.35);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px rgba(0,0,0,.05);
+    }
+    .profile-card.selected {
+      border-color: var(--azul-claro);
+      box-shadow: inset 0 0 0 1px rgba(15,76,129,.15);
+      background: linear-gradient(180deg, rgba(15,76,129,.04), rgba(255,250,242,.9));
+    }
+    .profile-card-alpha {
+      font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--azul);
+      margin-bottom: 6px;
+    }
+    .profile-card-name { font-size:14px; font-weight:700; margin-bottom:6px; }
+    .profile-card-desc { font-size:12px; color:var(--text-muted); line-height:1.6; min-height:58px; }
+    .profile-card-foot { font-size:11px; color:var(--azul-claro); margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-weight:600; }
+    .methodology-summary {
+      background: rgba(15,76,129,.04);
+      border: 1px solid rgba(15,76,129,.16);
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .methodology-chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+    .methodology-chip {
+      display:inline-flex; align-items:center;
+      background: rgba(15,76,129,.08);
+      color: var(--azul);
+      border: 1px solid rgba(15,76,129,.15);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .methodology-copy { font-size:13px; line-height:1.7; color:var(--text); }
+    .methodology-copy-muted { color:var(--text-muted); margin-top:8px; }
+    .action-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .subtle-status { font-size:13px; color:var(--text-muted); }
+    .result-hero-grid,
+    .detail-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+      gap:18px;
+    }
+    .result-title {
+      font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+      font-size: 28px;
+      color: var(--azul);
+      margin-bottom: 6px;
+    }
+    .result-copy { font-size:13px; line-height:1.6; color:var(--text); }
+    .result-copy-muted { color:var(--text-muted); margin-top:8px; }
+    .result-meta { display:grid; gap:10px; align-content:start; }
+    .result-meta div {
+      display:flex; justify-content:space-between; gap:16px;
+      padding-bottom:8px; border-bottom:1px solid var(--border); font-size:13px;
+    }
+    .result-meta span { color:var(--text-muted); }
+    .result-meta strong { color:var(--text); text-align:right; }
+    .summary-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(180px,1fr));
+      gap:14px;
+      margin-bottom:20px;
+    }
+    .summary-card {
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+    }
+    .summary-label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:6px; }
+    .summary-value {
+      font-family:"Space Grotesk", "IBM Plex Sans", sans-serif;
+      font-size:28px; line-height:1.1; color:var(--azul);
+    }
+    .data-list { display:grid; gap:10px; }
+    .data-list div {
+      display:flex; justify-content:space-between; gap:14px;
+      padding-bottom:10px; border-bottom:1px solid var(--border);
+      font-size:13px; line-height:1.5;
+    }
+    .data-list div:last-child { border-bottom:none; padding-bottom:0; }
+    .data-list span { color:var(--text-muted); }
+    .data-list strong { color:var(--text); text-align:right; }
+    .comparison-card {
+      margin-top:14px; border:1px solid var(--border); border-radius:14px;
+      background:var(--bg-card); padding:16px;
+    }
+    .comparison-table {
+      width:100%; border-collapse:collapse; font-size:13px;
+    }
+    .comparison-table th,
+    .comparison-table td {
+      padding:10px 12px; border-bottom:1px solid var(--border); text-align:left;
+    }
+    .comparison-table th {
+      font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted);
+    }
+    .comparison-table tr:last-child td { border-bottom:none; }
+    .details-card {
+      background:var(--bg-card); border:1px solid var(--border);
+      border-radius:14px; padding:16px 18px; margin-bottom:14px;
+    }
+    .details-card summary { cursor:pointer; font-weight:700; color:var(--text); list-style:none; }
+    .details-card summary::-webkit-details-marker { display:none; }
+    .details-body { margin-top:12px; font-size:13px; line-height:1.7; color:var(--text-muted); }
+    .welcome-panel {
+      background:var(--bg-card); border:1px solid var(--border); border-radius:18px;
+      padding:32px; max-width:540px; text-align:left; box-shadow:0 18px 40px rgba(0,0,0,.04);
+    }
+    .welcome-kicker {
+      font-size:11px; text-transform:uppercase; letter-spacing:.12em;
+      color:var(--azul-claro); margin-bottom:10px; font-weight:700;
+    }
+    .callout {
+      background: rgba(15,76,129,.06); border:1px solid rgba(15,76,129,.15);
+      border-radius:14px; padding:14px 16px; margin-top:14px; font-size:13px; color:var(--text);
+    }
+    .callout-danger {
+      background: rgba(179,74,60,.08); border-color: rgba(179,74,60,.18); color: var(--red);
+    }
+    .table-header-inline {
+      display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 24px 0;
+    }
+    .table-header-copy { font-size:12px; color:var(--text-muted); }
+    @media (max-width: 720px) {
+      #sidebar { width: 240px; min-width: 240px; }
+      .hero-card { padding: 22px; }
+      .hero-title { font-size: 24px; }
+      .summary-value { font-size: 24px; }
+      #content { padding: 18px; }
+      .pf-card { padding: 18px; }
+    }
+
+    .academic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .academic-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .academic-card h4 {
+      font-size: 14px;
+      color: var(--azul);
+      margin-bottom: 8px;
+    }
+    .academic-card p {
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-muted);
+    }
+    .reference-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .reference-link {
+      display: block;
+      background: rgba(15,76,129,.05);
+      border: 1px solid rgba(15,76,129,.14);
+      color: var(--azul);
+      text-decoration: none;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .reference-link small {
+      display: block;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .reference-link:hover {
+      background: rgba(15,76,129,.1);
+    }
+    .academic-list {
+      display: grid;
+      gap: 12px;
+    }
+    .academic-list-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+    .academic-list-item strong {
+      display: block;
+      color: var(--azul);
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .academic-list-item p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .method-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      cursor: pointer;
+      transition: transform .15s, border-color .15s, box-shadow .15s;
+    }
+    .method-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(15,76,129,.28);
+      box-shadow: 0 10px 22px rgba(0,0,0,.05);
+    }
+    .method-card.selected {
+      border-color: var(--azul-claro);
+      box-shadow: inset 0 0 0 1px rgba(15,76,129,.15);
+      background: linear-gradient(180deg, rgba(15,76,129,.05), rgba(255,250,242,.95));
+    }
+    .method-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .method-title {
+      font-size: 15px;
+      color: var(--azul);
+      font-weight: 700;
+    }
+    .method-family {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .method-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(15,76,129,.09);
+      color: var(--azul);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .method-badge.recommended {
+      background: rgba(180,138,44,.14);
+      color: var(--dorado);
+    }
+    .method-badge.wip {
+      background: rgba(180,100,20,.12);
+      color: #b86a1a;
+      border: 1px dashed rgba(180,100,20,.35);
+    }
+    .method-card.wip {
+      border-style: dashed;
+      border-color: rgba(180,100,20,.30);
+      opacity: .92;
+    }
+    .method-card.wip:hover {
+      border-color: rgba(180,100,20,.55);
+    }
+    .note-chip.wip {
+      background: rgba(180,100,20,.10);
+      color: #b86a1a;
+      border: 1px solid rgba(180,100,20,.20);
+    }
+    .method-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+    .formula-box {
+      background: rgba(15,76,129,.04);
+      border: 1px solid rgba(15,76,129,.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+      font-size: 13px;
+      color: var(--azul);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    .latex-block {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .formula-caption {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: "IBM Plex Sans", sans-serif;
+    }
+    .reference-chip-row,
+    .note-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .reference-chip,
+    .note-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      line-height: 1;
+    }
+    .reference-chip {
+      background: rgba(15,76,129,.08);
+      color: var(--azul);
+      border: 1px solid rgba(15,76,129,.12);
+    }
+    .note-chip {
+      background: rgba(180,138,44,.12);
+      color: var(--dorado);
+      border: 1px solid rgba(180,138,44,.14);
+    }
+    .parameter-group {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+    .parameter-group h3 {
+      font-size: 15px;
+      color: var(--azul);
+      margin-bottom: 8px;
+    }
+    .parameter-group > p {
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .field-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: var(--bg);
+    }
+    .field-card label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .field-card input,
+    .field-card textarea,
+    .field-card select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .field-card textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .field-help {
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .field-ref {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--azul-claro);
+      font-weight: 600;
+    }
+    .profile-table,
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .profile-table th,
+    .profile-table td,
+    .result-table th,
+    .result-table td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .profile-table th,
+    .result-table th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+    }
+    .timeline {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .timeline-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 15px 16px;
+    }
+    .timeline-step strong {
+      display: block;
+      color: var(--azul);
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .timeline-step p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .results-empty {
+      background: var(--bg-card);
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .link-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .inline-link {
+      color: var(--azul-claro);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .inline-link:hover {
+      text-decoration: underline;
+    }
+    .report-visual-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+    }
+    .report-preview-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .report-preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .report-preview-kind,
+    .report-preview-page {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      line-height: 1;
+    }
+    .report-preview-kind {
+      background: rgba(15,76,129,.08);
+      color: var(--azul);
+      border: 1px solid rgba(15,76,129,.12);
+    }
+    .report-preview-page {
+      background: rgba(180,138,44,.12);
+      color: var(--dorado);
+      border: 1px solid rgba(180,138,44,.14);
+    }
+    .report-preview-card h4 {
+      font-size: 15px;
+      color: var(--azul);
+      margin-bottom: 8px;
+    }
+    .report-preview-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+    .report-preview-image-wrap {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #f5f2ea;
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+    .report-preview-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 8px;
+    }
+    .report-preview-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
   </style>
 </head>
 <body>
@@ -983,30 +1575,45 @@
 <nav id="sidebar">
   <div id="sidebar-header">
     <h1>P4 FinPUC</h1>
-    <p>Mercado de acciones S&amp;P 500</p>
+    <p>Sistema recomendador y universo F5</p>
   </div>
 
   <div id="module-tabs">
-    <div class="module-tab active" id="tab-acciones" onclick="switchModule('acciones')">Acciones</div>
+    <div class="module-tab active" id="tab-acciones" onclick="switchModule('acciones')">Universo F5</div>
     <div class="module-tab" id="tab-portafolios" onclick="switchModule('portafolios')">
-      Portafolios
+      Sistema FinPUC
     </div>
   </div>
 
-  <div id="sector-label">Sectores</div>
+  <div id="sector-label">Universo F5</div>
   <div id="sector-list"><!-- generado por JS --></div>
 
   <!-- Portafolios nav (oculto al inicio) -->
   <div id="portfolio-nav">
-    <div class="portfolio-nav-label">Portafolios</div>
-    <div class="portfolio-nav-item active" id="pnav-nuevo" onclick="pfNavGo('nuevo')">
-      Nuevo Portafolio
+    <div class="portfolio-nav-label">Informe FinPUC</div>
+    <div class="portfolio-nav-item active" id="pnav-introduction" onclick="pfNavGo('introduction')">
+      Introduccion
     </div>
-    <div class="portfolio-nav-item" id="pnav-benchmark" onclick="pfNavGo('benchmark')">
-      Benchmark Simple
+    <div class="portfolio-nav-item" id="pnav-system" onclick="pfNavGo('system')">
+      Sistema y perfiles
+    </div>
+    <div class="portfolio-nav-item" id="pnav-methodologies" onclick="pfNavGo('methodologies')">
+      Metodologias
+    </div>
+    <div class="portfolio-nav-item" id="pnav-parameters" onclick="pfNavGo('parameters')">
+      Parametros
+    </div>
+    <div class="portfolio-nav-item" id="pnav-results" onclick="pfNavGo('results')">
+      Resultados
+    </div>
+    <div class="portfolio-nav-item" id="pnav-scenarios" onclick="pfNavGo('scenarios')">
+      Escenarios
     </div>
     <div class="portfolio-nav-item" id="pnav-simulate" onclick="pfNavGo('simulate')">
-      Simulación
+      Simulacion cliente
+    </div>
+    <div class="portfolio-nav-item" id="pnav-references" onclick="pfNavGo('references')">
+      Datos y referencias
     </div>
   </div>
 </nav>
@@ -1023,7 +1630,7 @@
       <span id="btn-sector-label">Sector</span>
     </button>
     <span id="topbar-sep" style="display:none">›</span>
-    <span id="breadcrumb-current">Selecciona un sector</span>
+    <span id="breadcrumb-current">Selecciona un sector del universo F5</span>
 
     <div id="topbar-right">
       <input type="text" id="search-global" placeholder="Buscar ticker o empresa..." autocomplete="off"
@@ -1034,13 +1641,31 @@
 
   <div id="content">
     <div class="welcome">
-      <div class="welcome-icon"></div>
-      <h3>Bienvenido al módulo Acciones</h3>
-      <p>Selecciona un sector en el panel izquierdo para explorar las acciones disponibles.</p>
+      <div class="welcome-panel">
+        <div class="welcome-kicker">Universo F5</div>
+        <h3>Exploracion del universo operativo</h3>
+        <p>Selecciona un sector para revisar las acciones disponibles y los insumos que alimentan el sistema recomendador FinPUC.</p>
+      </div>
     </div>
   </div>
 </div>
 
-<script src="/static/app.js"></script>
+<script>
+  window.MathJax = {
+    tex: {
+      // Evitamos "$...$" porque la UI incluye montos con "$" (moneda) y puede romper el parseo de MathJax.
+      inlineMath: [["\\(", "\\)"]],
+      displayMath: [["\\[", "\\]"]],
+      processEscapes: true,
+      // Asegura soporte para \mathbb, \operatorname, \text, etc.
+      packages: { "[+]": ["ams"] }
+    },
+    svg: {
+      fontCache: "global"
+    }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="/static/app.js?v={{ static_version }}"></script>
 </body>
 </html>
