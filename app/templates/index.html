@@ -1306,6 +1306,57 @@
       color: #b86a1a;
       border: 1px solid rgba(180,100,20,.20);
     }
+    .formula-legend {
+      margin-top: 12px;
+      border: 1px solid rgba(15,76,129,.10);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .formula-legend-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      background: rgba(15,76,129,.04);
+      border-bottom: 1px solid rgba(15,76,129,.08);
+    }
+    .formula-legend-row {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 0;
+      border-bottom: 1px solid rgba(15,76,129,.06);
+      padding: 7px 12px;
+      align-items: start;
+    }
+    .formula-legend-row:last-child { border-bottom: none; }
+    .formula-legend-sym {
+      font-family: "Space Grotesk", monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--azul);
+      padding-top: 1px;
+    }
+    .formula-legend-body {}
+    .formula-legend-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .formula-legend-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-top: 2px;
+    }
+    .formula-legend-source {
+      font-size: 10px;
+      color: var(--azul);
+      margin-top: 3px;
+      opacity: .75;
+    }
     .method-card p {
       font-size: 13px;
       color: var(--text-muted);

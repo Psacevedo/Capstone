@@ -2980,6 +2980,26 @@ function renderFormulaBlock(latex, fallback) {
   return `<div class="formula-box">${esc(fallback || "—")}</div>`;
 }
 
+function renderFormulaLegend(legend) {
+  if (!legend || legend.length === 0) return "";
+  const rows = legend.map(item => `
+    <div class="formula-legend-row">
+      <div class="formula-legend-sym">${esc(item.symbol)}</div>
+      <div class="formula-legend-body">
+        <div class="formula-legend-name">${esc(item.name)}</div>
+        <div class="formula-legend-desc">${esc(item.description)}</div>
+        <div class="formula-legend-source">📂 ${esc(item.source)}</div>
+      </div>
+    </div>
+  `).join("");
+  return `
+    <div class="formula-legend">
+      <div class="formula-legend-title">Glosario de simbolos</div>
+      ${rows}
+    </div>
+  `;
+}
+
 function renderReportVisuals() {
   const visuals = PF.reportOutline?.visual_assets || [];
   if (!visuals.length) {
@@ -3389,6 +3409,7 @@ function renderMethodologies() {
             </div>
             <p>${esc(method.description)}</p>
             ${renderFormulaBlock(method.formula_latex, method.formula_summary)}
+            ${renderFormulaLegend(method.formula_legend)}
             <div class="reference-chip-row">
               ${(method.report_references || []).map(ref => `<span class="reference-chip">${esc(ref)}</span>`).join("")}
             </div>

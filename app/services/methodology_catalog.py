@@ -101,6 +101,32 @@ CATALOG = {
             "formula_latex": r"\max_{\mathbf{w}} \frac{\mathbf{w}^{\top}\mu - r_f}{\sqrt{\mathbf{w}^{\top}\Sigma\mathbf{w}}}",
             "report_references": ["Seccion 3", "Seccion 4", "Ecuacion 4.7"],
             "implementation_status": "Operativa",
+            "formula_legend": [
+                {
+                    "symbol": "w",
+                    "name": "Pesos del portafolio",
+                    "description": "Vector de decision del optimizador. Cada w_i in [0, 0.4] y sum(w_i) = 1. Resuelto por SLSQP (scipy.optimize).",
+                    "source": "Variable calculada — no proviene de datos externos",
+                },
+                {
+                    "symbol": "mu",
+                    "name": "Retornos esperados anualizados",
+                    "description": "Media de retornos diarios * 252 para cada accion del sub-universo. Usa 8 anios de precios ajustados.",
+                    "source": "Historical_Stocks/ — precios diarios ajustados por dividendos y splits",
+                },
+                {
+                    "symbol": "r_f",
+                    "name": "Tasa libre de riesgo",
+                    "description": "Retorno garantizado anual de referencia. Mide el exceso de retorno del portafolio sobre un activo sin riesgo.",
+                    "source": "Parametro de entrada del usuario (default 5% anual)",
+                },
+                {
+                    "symbol": "Sigma",
+                    "name": "Matriz de covarianza",
+                    "description": "Covarianza anualizada N*N de retornos diarios: np.cov(retornos.T) * 252. Incluye regularizacion Tikhonov 1e-8 para garantizar definicion positiva.",
+                    "source": "Historical_Stocks/ — calculada sobre el mismo periodo que mu",
+                },
+            ],
             "notes": [
                 "Usa el CAGR historico y retornos diarios del universo F5 como insumos base.",
                 "La restriccion de riesgo por perfil se reporta mediante CVaR historico.",
@@ -144,6 +170,20 @@ CATALOG = {
             "formula_latex": r"\min_{\mathbf{w}} \mathbf{w}^{\top}\Sigma\mathbf{w}",
             "report_references": ["Seccion 3", "Seccion 4", "Tabla 0.10"],
             "implementation_status": "Operativa",
+            "formula_legend": [
+                {
+                    "symbol": "w",
+                    "name": "Pesos del portafolio",
+                    "description": "Vector de decision. Restricciones identicas a Markowitz: w_i in [0, 0.4], sum = 1. El optimizador ignora mu y solo minimiza riesgo.",
+                    "source": "Variable calculada — no proviene de datos externos",
+                },
+                {
+                    "symbol": "Sigma",
+                    "name": "Matriz de covarianza",
+                    "description": "Misma covarianza anualizada N*N que Markowitz. El modelo privilegia acciones con baja volatilidad propia y baja correlacion entre si.",
+                    "source": "Historical_Stocks/ — np.cov(retornos_diarios.T) * 252",
+                },
+            ],
             "notes": [
                 "Se alinea con perfiles conservadores y muy conservadores del informe.",
             ],
@@ -173,6 +213,20 @@ CATALOG = {
             "formula_latex": r"\max_{\mathbf{w}} \mathbf{w}^{\top}\mu",
             "report_references": ["Seccion 2.3.2", "Seccion 3"],
             "implementation_status": "Operativa",
+            "formula_legend": [
+                {
+                    "symbol": "w",
+                    "name": "Pesos del portafolio",
+                    "description": "Vector de decision. El optimizador concentra peso (hasta 40%) en las acciones de mayor mu_i. Ignora completamente la covarianza.",
+                    "source": "Variable calculada — no proviene de datos externos",
+                },
+                {
+                    "symbol": "mu",
+                    "name": "Retornos esperados anualizados",
+                    "description": "Media de retornos diarios * 252. Al ignorar riesgo, el modelo favorece acciones de alto CAGR historico, tipicamente de alta volatilidad.",
+                    "source": "Historical_Stocks/ — mismo calculo que Markowitz media-varianza",
+                },
+            ],
             "notes": [
                 "Favorece perfiles muy arriesgados del universo F5.",
             ],
@@ -208,6 +262,56 @@ CATALOG = {
             "formula_latex": r"\mu_{BL}=\left[(\tau\Sigma)^{-1}+P^{\top}\Omega^{-1}P\right]^{-1}\left[(\tau\Sigma)^{-1}\pi + P^{\top}\Omega^{-1}Q\right]",
             "report_references": ["Seccion 4", "Ecuacion 4.7", "Black-Litterman (1990)"],
             "implementation_status": "Avance inicial — en desarrollo en paralelo",
+            "formula_legend": [
+                {
+                    "symbol": "mu_BL",
+                    "name": "Retornos esperados bayesianos",
+                    "description": "Vector N de retornos ajustados que combina la prior historica con las views del analista. Reemplaza a mu en el paso de Markowitz.",
+                    "source": "Calculado por el modelo — combina datos historicos y views del usuario",
+                },
+                {
+                    "symbol": "tau",
+                    "name": "Escala de incertidumbre de la prior",
+                    "description": "Controla cuanto peso tiene la prior de mercado vs. las views. tau pequeno -> prior domina; tau grande -> views dominan. Tipicamente tau = 0.01 a 0.10.",
+                    "source": "Parametro de entrada del usuario (default 0.05)",
+                },
+                {
+                    "symbol": "Sigma",
+                    "name": "Matriz de covarianza historica",
+                    "description": "Covarianza anualizada N*N identica a los otros modelos. Se usa tanto para construir la prior pi como en el paso final de asignacion Markowitz.",
+                    "source": "Historical_Stocks/ — np.cov(retornos_diarios.T) * 252",
+                },
+                {
+                    "symbol": "P",
+                    "name": "Matriz de views (K x N)",
+                    "description": "Matriz binaria construida automaticamente desde views_json. Cada fila k indica que accion tiene view activa (P_ki = 1) y cuales no (P_ki = 0).",
+                    "source": "Construida internamente desde las views_json ingresadas por el usuario",
+                },
+                {
+                    "symbol": "Omega",
+                    "name": "Incertidumbre de las views",
+                    "description": "Matriz diagonal K*K donde cada elemento = omega_diag. Omega mayor -> views con menos influencia. Permite calibrar la confianza en cada view individualmente.",
+                    "source": "Parametro de entrada del usuario (default 0.05 por view)",
+                },
+                {
+                    "symbol": "pi",
+                    "name": "Prior de equilibrio del mercado",
+                    "description": "Retornos implicitos del mercado: pi = lambda * Sigma * w_mkt. w_mkt son los pesos por market cap del universo F5. Representa lo que el mercado ya tiene 'descontado'.",
+                    "source": "Calculado desde market cap del universo F5 (columna market_cap de la BD local)",
+                },
+                {
+                    "symbol": "Q",
+                    "name": "Vector de views del analista",
+                    "description": "Vector K con los retornos anualizados que el analista espera para cada accion con view. Ingresado como view_return_pct en views_json.",
+                    "source": "Parametro de entrada del usuario via views_json (view_return_pct por ticker)",
+                },
+                {
+                    "symbol": "lambda",
+                    "name": "Aversion al riesgo del mercado",
+                    "description": "Escala global de aversion al riesgo usada para derivar pi = lambda * Sigma * w_mkt. Tipicamente estimada en 2.0 a 3.0 para mercados desarrollados.",
+                    "source": "Parametro de entrada del usuario (default 2.5)",
+                },
+            ],
             "notes": [
                 "Prior de equilibrio pi derivada de los pesos de mercado del universo F5.",
                 "tau controla cuanto peso tiene la prior vs. las views del analista.",
