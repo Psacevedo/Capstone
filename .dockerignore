@@ -1,0 +1,16 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+Data/
+tests/
+solver_agent/
+webapp/
+*.db
+.codex_graficos_review.png

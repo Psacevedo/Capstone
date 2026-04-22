@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.gzip import GZipMiddleware
 
 from .db import build_db_if_needed
-from .routers import sectors, stocks, portfolio
+from .routers import portfolio, report, sectors, stocks
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,7 +31,7 @@ _HERE = Path(__file__).parent
 TEMPLATES_DIR = _HERE / "templates"
 STATIC_DIR    = _HERE.parent / "static"
 
-app = FastAPI(title="P4 — Visualizador de Acciones", version="1.0")
+app = FastAPI(title="P4 — Sistema recomendador", version="1.0")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Archivos estáticos
@@ -43,6 +43,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.include_router(sectors.router)
 app.include_router(stocks.router)
 app.include_router(portfolio.router)
+app.include_router(report.router)
 
 
 @app.on_event("startup")
@@ -55,4 +56,13 @@ async def startup_event():
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_spa(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    static_version = 1
+    try:
+        static_version = int((STATIC_DIR / "app.js").stat().st_mtime)
+    except Exception:
+        static_version = 1
+
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "static_version": static_version},
+    )

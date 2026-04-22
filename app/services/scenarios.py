@@ -4,10 +4,10 @@ scenarios.py — Proyección de retornos futuros bajo tres escenarios.
 Épica 1: el cliente visualiza escenarios favorable, neutro y desfavorable
 antes de comprometer su dinero.
 
-Metodología:
-  - Favorable:    retorno_anual = E[r] + 1.5 · σ
+Metodología (aprox. percentiles bajo normalidad):
+  - Favorable (p90): retorno_anual = E[r] + z · σ
   - Neutro:       retorno_anual = E[r]
-  - Desfavorable: retorno_anual = E[r] - 1.5 · σ
+  - Desfavorable (p10): retorno_anual = E[r] - z · σ
 
   El capital al final del año t es: C_t = C_0 · (1 + r_neto)^t
   donde r_neto = r_escenario - comisión_anual.
@@ -16,9 +16,10 @@ from typing import Dict
 
 
 SCENARIO_SIGMAS = {
-    "favorable":    1.5,   # +1.5σ  ≈ 87th percentile under normality
-    "neutro":       0.0,   # mean scenario
-    "desfavorable": -1.5,  # -1.5σ  ≈ 13th percentile under normality
+    # z para percentiles 10/50/90 bajo normalidad (z≈1.2816)
+    "favorable":    1.2815515655446004,   # p90
+    "neutro":       0.0,                  # p50
+    "desfavorable": -1.2815515655446004,  # p10
 }
 
 

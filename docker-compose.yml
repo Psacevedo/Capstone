@@ -1,19 +1,25 @@
 services:
-  webapp:
+  finpuc:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: finpuc-app
     ports:
-      - "8080:8000"
-    volumes:
-      # Datos históricos (solo lectura dentro del contenedor)
-      - ./Data/Historical_Stocks:/data/Historical_Stocks:ro
-      # Volumen nombrado para la DB SQLite (persiste entre reinicios)
-      - webapp_cache:/data
+      - "${FINPUC_PORT:-8080}:8000"
     environment:
-      - DATA_DIR=/data/Historical_Stocks
-      - DB_PATH=/data/webapp_cache.db
+      DATA_DIR: /data/Historical_Stocks
+      DB_PATH: /data/finpuc_cache.db
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./Data/Historical_Stocks:/data/Historical_Stocks:ro
+      - finpuc_cache:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
     restart: unless-stopped
 
 volumes:
-  webapp_cache:
+  finpuc_cache:

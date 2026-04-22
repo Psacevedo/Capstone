@@ -29,6 +29,7 @@ def simulate_client_behavior(
     n_simulations: int = 500,
     rebalance_freq_weeks: int = 4,
     rebalance_return_boost: float = 0.001,
+    withdraw_eval_freq_weeks: int = 4,
     random_seed: int = 42,
 ) -> Dict:
     """
@@ -56,6 +57,8 @@ def simulate_client_behavior(
         Cada cuántas semanas se emite una recomendación de rebalanceo.
     rebalance_return_boost : float
         Mejora incremental en retorno cuando el cliente acepta el rebalanceo.
+    withdraw_eval_freq_weeks : int
+        Cada cuántas semanas el cliente evalúa retiro (por defecto mensual ≈ 4 semanas).
     random_seed : int
         Semilla para reproducibilidad.
 
@@ -110,17 +113,18 @@ def simulate_client_behavior(
         # Actualizar pico de capital
         peak_capitals = np.maximum(peak_capitals, new_cap)
 
-        # Probabilidad de retiro según drawdown excedente
-        drawdown = np.where(
-            peak_capitals > 0,
-            (peak_capitals - new_cap) / peak_capitals,
-            0.0,
-        )
-        excess = drawdown - max_loss_pct
-        withdraw_prob = np.clip(excess / max_loss_pct, 0.0, 1.0)
+        # Probabilidad de retiro (P1) evaluada con cadencia mensual por defecto.
+        if withdraw_eval_freq_weeks > 0 and t % withdraw_eval_freq_weeks == 0:
+            drawdown = np.where(
+                peak_capitals > 0,
+                (peak_capitals - new_cap) / peak_capitals,
+                0.0,
+            )
+            excess = drawdown - max_loss_pct
+            withdraw_prob = np.clip(excess / max_loss_pct, 0.0, 1.0)
 
-        newly_withdrawn = (~withdrew) & (rng.random(n_simulations) < withdraw_prob)
-        withdrew |= newly_withdrawn
+            newly_withdrawn = (~withdrew) & (rng.random(n_simulations) < withdraw_prob)
+            withdrew |= newly_withdrawn
 
         # Clientes que retiraron congelan su capital en el valor previo
         new_cap[withdrew] = prev[withdrew]

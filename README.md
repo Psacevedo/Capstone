@@ -1,94 +1,54 @@
-# FinPUC Stock Explorer
+# P4 FinPUC
 
-Dashboard web para visualización y análisis de acciones del mercado estadounidense, organizado por sectores GICS. Desarrollado como parte del proyecto capstone P4 — PUC Chile.
+Sistema recomendador de portafolios desarrollado para el proyecto capstone P4 de la PUC Chile.
+La aplicacion combina un explorador del universo F5 con un flujo principal de recomendacion,
+escenarios y simulacion del cliente.
 
-## Características
+## Capacidades principales
 
-- **1.400+ acciones** organizadas por sector (Technology, Financial Services, Healthcare, etc.)
-- **Gráficos interactivos** de precios históricos, retornos y volatilidad por acción
-- **Tabla paginada** (100 acciones por página) con filtro de búsqueda y ordenamiento por columna
-- **Métricas financieras**: CAGR, volatilidad anualizada, Beta, P/E, Dividend Yield, Market Cap
-- **Carga incremental**: base de datos SQLite en caché — el primer arranque procesa los CSVs, los siguientes son instantáneos
-- Desplegado como contenedor Docker (FastAPI + Uvicorn + SQLite)
+- Recomendacion automatica por perfil de riesgo con 5 perfiles FinPUC.
+- Filtros del universo F5: historia minima, precio minimo, market cap, volatilidad y calidad sectorial.
+- Motor base honesto con la implementacion actual: media-varianza / minima varianza / maximo retorno + CVaR + escenarios + simulacion cliente.
+- Escenarios favorable, neutro y desfavorable para revisar capital proyectado.
+- Simulacion semanal del cliente con aceptacion simplificada, comisiones y retiro por drawdown.
+- Exploracion por sector del universo operativo con metricas historicas por accion.
 
-## Requisitos
+## Estructura del producto
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (incluye Docker Compose)
-- Los archivos de datos históricos (ver [`data/Historical_Stocks/README_DATA.md`](data/Historical_Stocks/README_DATA.md))
+- `Universo F5`: exploracion de sectores y acciones disponibles.
+- `Sistema FinPUC > Recomendacion`: flujo principal para perfilar y optimizar.
+- `Sistema FinPUC > Escenarios`: proyeccion de capital del portafolio recomendado.
+- `Sistema FinPUC > Simulacion cliente`: dinamica semanal simplificada del sistema.
+- `Sistema FinPUC > Metodologia`: explicacion tecnica y limites de la version actual.
 
-## Instalación rápida
+## Stack
+
+- Backend: Python 3.11, FastAPI, Uvicorn
+- Base de datos: SQLite local
+- Frontend: HTML, CSS, Vanilla JS, Plotly
+- Contenedores: Docker, Docker Compose
+
+## Ejecucion local
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/<tu-usuario>/finpuc-stock-explorer.git
-cd finpuc-stock-explorer
-
-# 2. Colocar los datos en la carpeta correcta
-#    Ver data/Historical_Stocks/README_DATA.md para el formato esperado
-cp /ruta/a/tus/datos/*.csv data/Historical_Stocks/
-cp /ruta/a/tus/datos/stocks_info.txt data/Historical_Stocks/
-
-# 3. Levantar el contenedor
-docker compose up --build -d
-
-# 4. Abrir en el navegador
-#    http://localhost:8080
+docker compose up --build
 ```
 
-> **Primera vez:** el contenedor procesa ~1.400 CSVs y construye la caché SQLite.
-> Esto tarda 3–5 minutos. La pantalla de carga muestra el progreso en tiempo real.
-> Las siguientes veces arranca en segundos.
+La app queda disponible en `http://localhost:8080`.
+El servicio principal de Compose es `finpuc` y la cache SQLite persiste en el volumen `finpuc_cache`.
+Si `8080` ya esta ocupado, puedes levantarla en otro puerto con `FINPUC_PORT=8081 docker compose up --build`.
 
-## Estructura del proyecto
+## Datos esperados
 
-```
-finpuc-stock-explorer/
-├── app/
-│   ├── main.py          ← Aplicación FastAPI, endpoints y startup
-│   ├── config.py        ← Variables de entorno y lista de sectores
-│   ├── db.py            ← Construcción y consultas a SQLite
-│   ├── routers/         ← Rutas de la API REST
-│   ├── services/        ← Lógica de negocio (carga de CSVs, métricas)
-│   └── templates/       ← HTML base (Jinja2)
-├── static/
-│   └── app.js           ← SPA vanilla JS (routing, render, charts)
-├── data/
-│   └── Historical_Stocks/
-│       ├── .gitkeep
-│       └── README_DATA.md  ← Formato y ubicación esperada de los datos
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-└── README.md
-```
+El contenedor monta los historicos desde `./Data/Historical_Stocks`.
+En el primer arranque se construye la cache SQLite y luego las lecturas son directas.
+La imagen empaqueta la app consolidada en la raiz y el informe (`Informe/`) para mantener trazabilidad en "Datos y referencias"; `webapp/` y `Data/` quedan fuera del build mediante `.dockerignore`.
 
-## API endpoints principales
+## Estado metodologico
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `GET` | `/api/sectors` | Lista de sectores con conteo de acciones |
-| `GET` | `/api/sectors/{sector}/stocks` | Acciones de un sector con métricas |
-| `GET` | `/api/stocks/{ticker}` | Detalle completo de una acción |
-| `GET` | `/api/stocks/{ticker}/history` | Serie histórica de precios |
-| `GET` | `/api/status` | Estado de la carga inicial |
+- Implementado: perfiles FinPUC, filtros F5, constructor por perfil, CVaR historico, escenarios y simulacion del cliente.
+- No implementado aun: Black-Litterman (`mu_BL`, `tau`, `Omega`, `views`) y la escalarizacion final multiobjetivo con `lambda`.
 
-## Stack tecnológico
+## Contexto academico
 
-| Capa | Tecnología |
-|------|-----------|
-| Backend | Python 3.11, FastAPI, Uvicorn |
-| Base de datos | SQLite (caché local) |
-| Frontend | Vanilla JS, Chart.js |
-| Contenedor | Docker, Docker Compose |
-
-## Variables de entorno
-
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| `DATA_DIR` | `/data/Historical_Stocks` | Ruta a los CSVs históricos |
-| `DB_PATH` | `/data/webapp_cache.db` | Ruta de la base de datos SQLite |
-
-## Contexto académico
-
-Proyecto capstone del programa ICI + TI — Pontificia Universidad Católica de Chile.
-Supervisor: Prof. Agustín Chiu.
+Proyecto capstone del programa ICI + TI de la Pontificia Universidad Catolica de Chile.
