@@ -687,6 +687,26 @@ function renderEfficientFrontierChart(result, targetId = "frontier-chart") {
     },
   ];
 
+  const frontierMarkers = result.frontier_markers || {};
+  [
+    { key: "gmv_point", name: "Minima varianza global", color: "#2f6f6d", symbol: "diamond" },
+    { key: "max_sharpe_point", name: "Markowitz maximo Sharpe", color: "#0f4c81", symbol: "circle" },
+    { key: "max_return_point", name: "Maximo retorno", color: "#b34a3c", symbol: "triangle-up" },
+  ].forEach(markerDef => {
+    const point = frontierMarkers[markerDef.key] || result[markerDef.key];
+    if (point?.volatility_pct != null && point?.expected_return_pct != null) {
+      traces.push({
+        x: [point.volatility_pct],
+        y: [point.expected_return_pct],
+        type: "scatter",
+        mode: "markers",
+        name: point.label || markerDef.name,
+        marker: { size: 10, color: markerDef.color, symbol: markerDef.symbol, line: { color: "#ffffff", width: 1 } },
+        hovertemplate: `${esc(point.label || markerDef.name)}<br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>`,
+      });
+    }
+  });
+
   if (metrics.volatility_pct != null && metrics.expected_return_pct != null) {
     traces.push({
       x: [metrics.volatility_pct],
@@ -1963,9 +1983,9 @@ function renderPfResult(result, capital) {
         </div>
       </div>
       <div class="pf-card">
-        <div class="pf-section-title">Ciclo semanal y supuestos</div>
+        <div class="pf-section-title">Ciclo mensual y supuestos</div>
         <div class="data-list">
-          <div><span>Cadencia</span><strong>${esc(weeklyCycle.cadence || "Semanal")}</strong></div>
+          <div><span>Cadencia</span><strong>${esc(weeklyCycle.cadence || "Mensual")}</strong></div>
           <div><span>Recomendacion</span><strong>${esc(weeklyCycle.rebalancing || "—")}</strong></div>
           <div><span>Aceptacion cliente</span><strong>${esc(weeklyCycle.client_acceptance || "—")}</strong></div>
           <div><span>Retiro</span><strong>${esc(weeklyCycle.client_withdrawal || "—")}</strong></div>
@@ -2681,8 +2701,8 @@ function renderSimulation() {
     <div class="pf-section">
       <div class="hero-card">
         <div class="hero-eyebrow">Simulacion del cliente</div>
-        <h2 class="hero-title">Ciclo semanal de aceptacion, comisiones y retiro</h2>
-        <p class="hero-copy">Aproximacion operacional del sistema: recomendacion semanal, aceptacion, cobro de comisiones y retiro por drawdown.</p>
+        <h2 class="hero-title">Ciclo mensual de aceptacion, comisiones y retiro</h2>
+        <p class="hero-copy">Aproximacion operacional del sistema: recomendacion mensual, aceptacion, cobro de comisiones y retiro por drawdown.</p>
       </div>
       <div class="pf-card">
         <div class="pf-section-title" style="border:none;padding:0;margin-bottom:12px">Parametros de simulacion</div>
@@ -2804,7 +2824,7 @@ function renderSimulationResult(result, initialCapital) {
       </div>
       <div class="pf-card">
         <div class="pf-section-title">Resumen</div>
-        <div class="methodology-copy">Capital inicial de referencia: ${fmtUSD(initialCapital)}. La simulacion resume la dinamica semanal, no una implementacion exacta de las funciones logisticas P1 y P2.</div>
+        <div class="methodology-copy">Capital inicial de referencia: ${fmtUSD(initialCapital)}. La simulacion resume la dinamica mensual, no una implementacion exacta de las funciones logisticas P1 y P2.</div>
       </div>
     </div>
   `;
@@ -2885,8 +2905,8 @@ function renderMethodology() {
         </div>
       </details>
       <details class="details-card">
-        <summary>Ciclo semanal y comportamiento del cliente</summary>
-        <div class="details-body">El sistema emite una recomendacion semanal, cobra comision sobre el capital gestionado y aproxima P1 y P2 en la simulacion del cliente. Los dividendos existen en los datos pero la caja chica no se separa aun dentro del optimizador.</div>
+        <summary>Ciclo mensual y comportamiento del cliente</summary>
+        <div class="details-body">El sistema emite una recomendacion mensual, cobra comision sobre el capital gestionado y aproxima P1 y P2 en la simulacion del cliente. Los dividendos existen en los datos pero la caja chica no se separa aun dentro del optimizador.</div>
       </details>
       <details class="details-card">
         <summary>Black-Litterman como fase futura</summary>
@@ -2923,6 +2943,7 @@ const PF_NAV_ITEMS = [
   { id: "methodologies", label: "Metodologias" },
   { id: "parameters", label: "Parametros" },
   { id: "results", label: "Resultados" },
+  { id: "proyecciones", label: "Proyecciones" },
   { id: "scenarios", label: "Escenarios" },
   { id: "simulate", label: "Simulacion cliente" },
   { id: "references", label: "Datos y referencias" },
@@ -2931,7 +2952,7 @@ const PF_NAV_ITEMS = [
 Object.assign(PF, {
   activeNav: "introduction",
   currentModule: PF.currentModule || "acciones",
-  selectedMethodologyId: PF.selectedMethodologyId || "finpuc_hibrido",
+  selectedMethodologyId: PF.selectedMethodologyId || "markowitz_media_varianza",
   catalog: null,
   reportOutline: null,
   formState: PF.formState || {},
@@ -3001,6 +3022,17 @@ function renderFormulaLegend(legend) {
 }
 
 function renderReportVisuals() {
+  const previewAvailable = PF.reportOutline?.preview_available !== false;
+  if (!previewAvailable) {
+    const note = PF.reportOutline?.preview_note || "Las vistas previas del informe no estan disponibles en este entorno.";
+    return `
+      <div class="results-empty">
+        <div style="margin-bottom:10px">${esc(note)}</div>
+        <a class="inline-link" href="/api/report/file/pdf" target="_blank" rel="noopener noreferrer">Abrir informe PDF</a>
+      </div>
+    `;
+  }
+
   const visuals = PF.reportOutline?.visual_assets || [];
   if (!visuals.length) {
     return `<div class="results-empty">No hay vistas previas del informe disponibles en este entorno.</div>`;
@@ -3039,7 +3071,7 @@ function getCatalogProfile(profileId = PF.formState.profile || "neutro") {
 }
 
 function getDefaultMethodologyId() {
-  return PF.catalog?.default_methodology_id || "finpuc_hibrido";
+  return PF.catalog?.default_methodology_id || "markowitz_media_varianza";
 }
 
 function basePortfolioDefaults() {
@@ -3237,7 +3269,7 @@ function renderIntroduction() {
       <div class="hero-card">
         <div class="hero-eyebrow">Portada academica</div>
         <h2 class="hero-title">Sistema recomendador FinPUC</h2>
-        <p class="hero-copy">FinPUC genera recomendaciones semanales de portafolio para cinco perfiles de riesgo, utilizando un universo F5 filtrado, metodologias de optimizacion y una capa de analisis de escenarios y simulacion del cliente. Esta portada resume el funcionamiento del sistema y lo conecta explicitamente con las secciones y tablas del informe.</p>
+        <p class="hero-copy">FinPUC genera recomendaciones mensuales de portafolio para cinco perfiles de riesgo, utilizando un universo F5 filtrado, metodologias de optimizacion y una capa de analisis de escenarios y simulacion del cliente. Esta portada resume el funcionamiento del sistema y lo conecta explicitamente con las secciones y tablas del informe.</p>
         <div class="link-row">
           ${renderReferenceLinks()}
         </div>
@@ -3275,7 +3307,7 @@ function renderIntroduction() {
           </div>
           <div class="timeline-step">
             <strong>4. Escenarios y simulacion del cliente</strong>
-            <p>El sistema reporta escenarios p10/p50/p90 y modela la aceptacion o abandono del cliente bajo el ciclo semanal. Basado en Seccion 2.2.1 y Ecuaciones 4.5 y 4.6.</p>
+            <p>El sistema reporta escenarios p10/p50/p90 y modela la aceptacion o abandono del cliente bajo el ciclo mensual definido para Entrega 2. Basado en Seccion 2.2.1 y Ecuaciones 4.5 y 4.6.</p>
           </div>
         </div>
       </div>
@@ -3313,15 +3345,15 @@ function renderSystemProfiles() {
       <div class="hero-card">
         <div class="hero-eyebrow">Sistema y perfiles</div>
         <h2 class="hero-title">Ciclo operacional y tolerancia de perdida</h2>
-        <p class="hero-copy">Esta vista resume el funcionamiento semanal del sistema y la relacion entre cada perfil de riesgo, alpha_p y el sub-universo sugerido por el informe.</p>
+        <p class="hero-copy">Esta vista resume el funcionamiento mensual del sistema y la relacion entre cada perfil de riesgo, alpha_p y el sub-universo sugerido por el informe.</p>
       </div>
 
       <div class="pf-card">
-        <div class="pf-section-title">Ciclo operacional semanal</div>
+        <div class="pf-section-title">Ciclo operacional mensual</div>
         <div class="timeline">
           <div class="timeline-step">
-            <strong>Recomendacion semanal</strong>
-            <p>El optimizador genera un portafolio recomendado cada semana para el perfil seleccionado. Referencia: Seccion 2.2.1.</p>
+            <strong>Recomendacion mensual</strong>
+            <p>El optimizador genera un portafolio recomendado cada mes para el perfil seleccionado. Referencia: Seccion 2.2.1.</p>
           </div>
           <div class="timeline-step">
             <strong>Aceptacion o rechazo</strong>
@@ -3366,7 +3398,7 @@ function renderSystemProfiles() {
         <div class="pf-card">
           <div class="pf-section-title">Lectura operacional de la ultima corrida</div>
           <div class="data-list">
-            <div><span>Cadencia</span><strong>${esc(lastCycle.cadence || "Semanal")}</strong></div>
+            <div><span>Cadencia</span><strong>${esc(lastCycle.cadence || "Mensual")}</strong></div>
             <div><span>Aceptacion</span><strong>${esc(lastCycle.client_acceptance || "—")}</strong></div>
             <div><span>Retiro</span><strong>${esc(lastCycle.client_withdrawal || "—")}</strong></div>
             <div><span>Comisiones</span><strong>${esc(lastCycle.commissions || "—")}</strong></div>
@@ -3755,9 +3787,9 @@ function renderResultsView() {
           </div>
         </div>
         <div class="pf-card">
-          <div class="pf-section-title">Ciclo semanal reportado</div>
+          <div class="pf-section-title">Ciclo operacional reportado</div>
           <div class="data-list">
-            <div><span>Cadencia</span><strong>${esc(weeklyCycle.cadence || "Semanal")}</strong></div>
+            <div><span>Cadencia</span><strong>${esc(weeklyCycle.cadence || "Mensual")}</strong></div>
             <div><span>Aceptacion</span><strong>${esc(weeklyCycle.client_acceptance || "—")}</strong></div>
             <div><span>Retiro</span><strong>${esc(weeklyCycle.client_withdrawal || "—")}</strong></div>
             <div><span>Dividendos</span><strong>${esc(weeklyCycle.dividends || "—")}</strong></div>
@@ -3824,6 +3856,11 @@ function renderResultsView() {
         </div>
         <div id="benchmark-comparison"></div>
       </div>
+
+      <div class="action-row" style="padding:0 0 8px 0">
+        <button class="btn-primary" type="button" onclick="pfNavGo('proyecciones')">Ver proyecciones 2026–2031</button>
+        <button class="btn-secondary" type="button" onclick="pfNavGo('scenarios')">Ver escenarios p10/p50/p90</button>
+      </div>
     </div>
   `;
   renderEfficientFrontierChart(result);
@@ -3873,6 +3910,7 @@ function renderBenchmarkComparison(benchmark, baseCase, targetId = "benchmark-co
   const target = document.getElementById(targetId);
   if (!target || !PF.lastResult) return;
   const base = PF.lastResult.metrics || {};
+  const basePolicy = baseCase?.rebalance_policy?.summary || baseCase?.metrics?.rebalance_policy || baseCase?.metrics?.method_label || "—";
   const simId = `${targetId}-base-sim`;
   target.innerHTML = `
     <div class="comparison-card">
@@ -3901,8 +3939,14 @@ function renderBenchmarkComparison(benchmark, baseCase, targetId = "benchmark-co
           <tr>
             <td>Constructor</td>
             <td>${esc(base.method_label || "—")}</td>
-            <td>${esc(baseCase?.metrics?.rebalance_policy || baseCase?.metrics?.method_label || "—")}</td>
+            <td>${esc(basePolicy)}</td>
             <td>${esc(benchmark?.metrics?.method_label || "—")}</td>
+          </tr>
+          <tr>
+            <td>Simulacion cliente</td>
+            <td>${PF.lastSimulation?.final_capital_mean ? fmtUSD(PF.lastSimulation.final_capital_mean) : "Ejecutable en pestaña Simulacion cliente"}</td>
+            <td>${baseCase?.simulation?.final_capital_mean ? fmtUSD(baseCase.simulation.final_capital_mean) : "—"}</td>
+            <td>Comparacion secundaria</td>
           </tr>
         </tbody>
       </table>
@@ -4012,8 +4056,8 @@ function renderSimulation() {
     <div class="pf-section">
       <div class="hero-card">
         <div class="hero-eyebrow">Simulacion del cliente</div>
-        <h2 class="hero-title">P1, P2, comisiones y ciclo semanal</h2>
-        <p class="hero-copy">La simulacion operacional resume el comportamiento del cliente frente a recomendaciones semanales, aceptacion, comisiones y abandono por drawdown. Referencia: Seccion 2.2.1 y Ecuaciones 4.5 y 4.6.</p>
+        <h2 class="hero-title">P1, P2, comisiones y ciclo mensual</h2>
+        <p class="hero-copy">La simulacion operacional resume el comportamiento del cliente frente a recomendaciones mensuales, aceptacion, comisiones y abandono por drawdown. Referencia: Seccion 2.2.1 y Ecuaciones 4.5 y 4.6.</p>
       </div>
 
       <div class="parameter-group">
@@ -4059,7 +4103,7 @@ function renderSimulation() {
           <div class="field-card">
             <label>Probabilidad base P2</label>
             <input id="sim-accept-pct" type="number" min="0" max="100" step="1" value="${esc(String(accept))}">
-            <div class="field-help">Probabilidad base de aceptar una recomendacion semanal.</div>
+            <div class="field-help">Probabilidad base de aceptar una recomendacion mensual.</div>
             <span class="field-ref">Ecuacion 4.6</span>
           </div>
           <div class="field-card">
@@ -4070,9 +4114,9 @@ function renderSimulation() {
           </div>
           <div class="field-card">
             <label>Frecuencia de rebalanceo</label>
-            <input id="sim-rebalance-weeks" type="number" min="1" max="52" step="1" value="${esc(String(defaults.rebalance_freq_weeks ?? 1))}">
-            <div class="field-help">Cantidad de semanas entre recomendaciones.</div>
-            <span class="field-ref">Ciclo semanal FinPUC</span>
+            <input id="sim-rebalance-weeks" type="number" min="1" max="52" step="1" value="${esc(String(defaults.rebalance_freq_weeks ?? 4))}">
+            <div class="field-help">Cantidad aproximada de semanas entre recomendaciones. Use 4 para frecuencia mensual.</div>
+            <span class="field-ref">Ciclo mensual FinPUC</span>
           </div>
           <div class="field-card">
             <label>Mejora por rebalanceo</label>
@@ -4105,7 +4149,7 @@ async function submitSimulation() {
     n_simulations: parseInt(document.getElementById("sim-n")?.value, 10) || 500,
     p2_acceptance_prob_pct: parseFloat(document.getElementById("sim-accept-pct")?.value) || 70,
     commission_rate_pct: parseFloat(document.getElementById("sim-commission-pct")?.value) || 1,
-    rebalance_freq_weeks: parseInt(document.getElementById("sim-rebalance-weeks")?.value, 10) || 1,
+    rebalance_freq_weeks: parseInt(document.getElementById("sim-rebalance-weeks")?.value, 10) || 4,
     rebalance_return_boost_pct: parseFloat(document.getElementById("sim-rebalance-boost-pct")?.value) || 0.1,
   };
 
@@ -4176,7 +4220,7 @@ function renderSimulationResult(result, initialCapital) {
       </div>
       <div class="pf-card">
         <div class="pf-section-title">Lectura academica</div>
-        <div class="methodology-copy">Capital inicial de referencia: ${fmtUSD(initialCapital)}. La simulacion operacional no reemplaza el modelo teorico completo, pero permite visualizar de forma ejecutable la dinamica semanal del sistema descrita en el informe.</div>
+        <div class="methodology-copy">Capital inicial de referencia: ${fmtUSD(initialCapital)}. La simulacion operacional no reemplaza el modelo teorico completo, pero permite visualizar de forma ejecutable la dinamica mensual del sistema para Entrega 2.</div>
       </div>
     </div>
   `;
@@ -4185,7 +4229,8 @@ function renderSimulationResult(result, initialCapital) {
 
 function renderSimulationChart(result, initialCapital) {
   if (typeof Plotly === "undefined") return;
-  const x = result.periods.map(period => `Semana ${period}`);
+  const label = result.period_label || "Mes";
+  const x = result.periods.map(period => `${label} ${period}`);
   const traces = [
     { x, y: result.capital_p90, name: "P90", mode: "lines", line: { color: "#1f6f52", width: 1 } },
     { x, y: result.capital_mean, name: "Media", mode: "lines", line: { color: "#0f4c81", width: 2 } },
@@ -4205,6 +4250,7 @@ function renderReferencesView() {
   const sections = PF.reportOutline?.sections || [];
   const tables = PF.reportOutline?.tables || [];
   const formulas = PF.reportOutline?.formulae || [];
+  const previewAvailable = PF.reportOutline?.preview_available !== false;
 
   document.getElementById("content").innerHTML = `
     <div class="pf-section">
@@ -4244,7 +4290,7 @@ function renderReferencesView() {
               <div class="academic-list-item">
                 <strong>${esc(table.label)}</strong>
                 <p>${esc(table.summary)}</p>
-                <p><a class="inline-link" href="${table.image_url}" target="_blank" rel="noopener noreferrer">Ver pagina ${esc(String(table.page_number || "—"))}</a></p>
+                <p><a class="inline-link" href="${previewAvailable ? table.image_url : `/api/report/file/pdf#page=${Number(table.page_number) || 1}`}" target="_blank" rel="noopener noreferrer">${previewAvailable ? "Ver pagina " : "Abrir PDF (pagina "}${esc(String(table.page_number || "—"))}${previewAvailable ? "" : ")"}</a></p>
               </div>
             `).join("")}
           </div>
@@ -4297,7 +4343,259 @@ async function pfNavGo(section) {
   else if (section === "methodologies") renderMethodologies();
   else if (section === "parameters") renderParametersView();
   else if (section === "results") renderResultsView();
+  else if (section === "proyecciones") renderProjections();
   else if (section === "scenarios") renderScenarioView();
   else if (section === "simulate") renderSimulation();
   else if (section === "references") renderReferencesView();
+}
+
+// ============================================================
+// Proyecciones 2026–2031 (Sección 6 del informe)
+// ============================================================
+
+function _boxMullerRandn() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function _computeProjections(mu_annual, sigma_annual, v0 = 1000, weeks = 260, nSim = 1000) {
+  const mu_w = Math.pow(1 + mu_annual, 1 / 52) - 1;
+  const sigma_w = sigma_annual / Math.sqrt(52);
+
+  // Deterministic trajectory
+  const det = Array.from({ length: weeks }, (_, t) => v0 * Math.pow(1 + mu_w, t + 1));
+
+  // Bootstrap: nSim paths
+  const sums = Array.from({ length: weeks }, () => ({ p5: [], p50: [], p95: [] }));
+  const allPaths = [];
+  for (let sim = 0; sim < nSim; sim++) {
+    let v = v0;
+    const path = [];
+    for (let t = 0; t < weeks; t++) {
+      v = v * (1 + mu_w + sigma_w * _boxMullerRandn());
+      path.push(v);
+    }
+    allPaths.push(path);
+  }
+
+  const p5 = [], p50 = [], p95 = [];
+  for (let t = 0; t < weeks; t++) {
+    const col = allPaths.map(path => path[t]).sort((a, b) => a - b);
+    p5.push(col[Math.floor(nSim * 0.05)]);
+    p50.push(col[Math.floor(nSim * 0.50)]);
+    p95.push(col[Math.floor(nSim * 0.95)]);
+  }
+
+  return { det, p5, p50, p95 };
+}
+
+function renderProjections() {
+  const contentEl = document.getElementById("content");
+
+  if (!PF.lastResult) {
+    contentEl.innerHTML = `
+      <div class="pf-section">
+        <div class="results-empty">
+          Ejecuta primero una metodologia para construir las proyecciones 2026–2031.
+          <div class="action-row" style="margin-top:14px">
+            <button class="btn-primary" type="button" onclick="pfNavGo('parameters')">Ir a parametros</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const result   = PF.lastResult;
+  const metrics  = result.metrics || {};
+  const mu_a     = (metrics.expected_return_pct || 0) / 100;
+  const sigma_a  = (metrics.volatility_pct || 0) / 100;
+  const v0       = parseFloat(PF.formState.initial_capital || 1000);
+  const weeks    = 260; // 5 años
+
+  // Fechas semanales 2026-2031
+  const startDate = new Date(2026, 0, 5); // 5 ene 2026
+  const xDates    = Array.from({ length: weeks }, (_, i) => {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i * 7);
+    return d.toISOString().slice(0, 10);
+  });
+
+  const proj = _computeProjections(mu_a, sigma_a, v0, weeks, 1000);
+
+  const expectedFinal  = fmtUSD(proj.det[weeks - 1]);
+  const p5final        = fmtUSD(proj.p5[weeks - 1]);
+  const p50final       = fmtUSD(proj.p50[weeks - 1]);
+  const p95final       = fmtUSD(proj.p95[weeks - 1]);
+  const retAnn         = (metrics.expected_return_pct || 0).toFixed(1);
+  const volAnn         = (metrics.volatility_pct || 0).toFixed(1);
+  const profileLabel   = result.profile_label || "—";
+
+  contentEl.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Seccion 6 — Valorizacion esperada futura</div>
+        <h2 class="hero-title">Proyeccion 2026–2031</h2>
+        <p class="hero-copy">
+          Proyeccion de capital sobre un horizonte de cinco años para el perfil <strong>${esc(profileLabel)}</strong>
+          con capital inicial ${fmtUSD(v0)}.
+          La trayectoria deterministica aplica el retorno semanal esperado compuesto.
+          La banda bootstrap se obtiene remuestreando retornos semanales sobre la distribucion historica.
+          Referencia: Seccion 6.1 y 6.2 del informe.
+        </p>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">Retorno anual</div>
+          <div class="summary-value">${retAnn}%</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Volatilidad anual</div>
+          <div class="summary-value">${volAnn}%</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Esperado 2031</div>
+          <div class="summary-value">${expectedFinal}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">P5 2031</div>
+          <div class="summary-value" style="color:var(--color-danger)">${p5final}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">P50 2031</div>
+          <div class="summary-value">${p50final}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">P95 2031</div>
+          <div class="summary-value" style="color:var(--color-success)">${p95final}</div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">6.1 Proyeccion deterministica — V<sub>t</sub> = V<sub>0</sub>(1 + µ<sub>p</sub>)<sup>t</sup></div>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:12px">
+          Trayectoria esperada aplicando el retorno semanal compuesto μ<sub>p</sub> = (1 + μ<sub>anual</sub>)<sup>1/52</sup> − 1.
+          El capital inicial de ${fmtUSD(v0)} creceria hasta ${expectedFinal} en 2031 bajo retorno constante.
+        </p>
+        <div id="proj-det-chart" style="height:320px"></div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">6.2 Proyeccion bootstrap — Bandas P5 / P50 / P95</div>
+        <p style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:12px">
+          1 000 trayectorias generadas remuestreando retornos semanales desde la distribucion normal
+          N(μ<sub>sem</sub>, σ<sub>sem</sub>). La amplitud de las bandas crece con el tiempo y con el nivel de riesgo del perfil.
+        </p>
+        <div id="proj-boot-chart" style="height:340px"></div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Tabla 5 — Resumen de proyeccion futura 2026–2031</div>
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>Portafolio</th>
+              <th>Ret. anual</th>
+              <th>Vol. anual</th>
+              <th>Esperado 2031</th>
+              <th>P5 2031</th>
+              <th>P50 2031</th>
+              <th>P95 2031</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:rgba(15,76,129,0.12)">
+              <td><strong>${esc(profileLabel)}</strong> <span class="note-chip" style="margin-left:6px">activo</span></td>
+              <td>${retAnn}%</td>
+              <td>${volAnn}%</td>
+              <td>${expectedFinal}</td>
+              <td>${p5final}</td>
+              <td>${p50final}</td>
+              <td>${p95final}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
+          Capital base: ${fmtUSD(v0)}. Horizonte: 2026–2031 (260 semanas). Bootstrap: 1 000 simulaciones.
+          Para ver todos los perfiles simultáneamente, ejecuta cada metodología con su perfil correspondiente.
+        </p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Interpretacion metodologica</div>
+        <div class="methodology-copy">
+          La valorización esperada bajo retorno constante supone que μ<sub>p</sub> se mantiene estable a lo largo del horizonte,
+          lo que omite cambios de régimen y ciclos de mercado. La proyección bootstrap complementa este supuesto
+          mostrando la dispersión real de trayectorias futuras: la amplitud entre P5 y P95 captura la incertidumbre
+          distribucional del portafolio sin asumir normalidad perfecta de los retornos anuales.
+        </div>
+        <div class="methodology-copy" style="margin-top:8px">
+          La lectura directa de la Tabla 5 del informe indica que perfiles con mayor retorno esperado
+          (arriesgado, muy arriesgado) superan al benchmark en valor esperado final, pero con bandas de
+          incertidumbre significativamente más amplias. El perfil neutro representa el equilibrio:
+          mayor retorno que el benchmark con menor volatilidad histórica.
+          Referencia: Secciones 6.1 y 6.2 del informe.
+        </div>
+      </div>
+
+      <div class="action-row" style="padding:0 0 8px 0">
+        <button class="btn-secondary" type="button" onclick="pfNavGo('scenarios')">Ver escenarios p10/p50/p90</button>
+        <button class="btn-secondary" type="button" onclick="pfNavGo('simulate')">Ir a simulacion cliente</button>
+      </div>
+    </div>
+  `;
+
+  _renderProjDetChart(xDates, proj.det, v0);
+  _renderProjBootChart(xDates, proj.det, proj.p5, proj.p50, proj.p95, v0);
+}
+
+function _renderProjDetChart(x, det, v0) {
+  if (typeof Plotly === "undefined") return;
+  const traces = [
+    {
+      x, y: det, name: "Trayectoria deterministica",
+      mode: "lines", line: { color: "#0f4c81", width: 2.5 },
+    },
+    {
+      x, y: Array(x.length).fill(v0), name: "Capital inicial",
+      mode: "lines", line: { color: "#b48a2c", width: 1, dash: "dash" },
+    },
+  ];
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 12, r: 20, b: 64, l: 90 },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Capital (USD)", tickformat: ",.0f" },
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: "Fecha" },
+    legend: { orientation: "h", y: -0.22 },
+  };
+  Plotly.newPlot("proj-det-chart", traces, layout, PLOTLY_CONFIG);
+}
+
+function _renderProjBootChart(x, det, p5, p50, p95, v0) {
+  if (typeof Plotly === "undefined") return;
+  const traces = [
+    {
+      x: [...x, ...x.slice().reverse()],
+      y: [...p95, ...p5.slice().reverse()],
+      fill: "toself", fillcolor: "rgba(15,76,129,0.15)",
+      line: { color: "transparent" }, name: "Banda P5–P95",
+      showlegend: true, type: "scatter",
+    },
+    { x, y: p95, name: "P95", mode: "lines", line: { color: "#1f6f52", width: 1, dash: "dot" } },
+    { x, y: p50, name: "P50 (mediana)", mode: "lines", line: { color: "#0f4c81", width: 2 } },
+    { x, y: p5,  name: "P5",  mode: "lines", line: { color: "#b34a3c", width: 1, dash: "dot" } },
+    { x, y: det, name: "Deterministica", mode: "lines", line: { color: "#b48a2c", width: 1.5, dash: "dash" } },
+    { x, y: Array(x.length).fill(v0), name: "Capital inicial", mode: "lines", line: { color: "#666", width: 1, dash: "dash" } },
+  ];
+  const layout = {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 12, r: 20, b: 64, l: 90 },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: "Capital (USD)", tickformat: ",.0f" },
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: "Fecha" },
+    legend: { orientation: "h", y: -0.22 },
+  };
+  Plotly.newPlot("proj-boot-chart", traces, layout, PLOTLY_CONFIG);
 }

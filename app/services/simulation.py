@@ -77,10 +77,13 @@ def simulate_client_behavior(
     """
     rng = np.random.default_rng(random_seed)
 
-    n_periods = years * 52          # semanas totales
-    weekly_return = expected_return / 52
-    weekly_vol = volatility / np.sqrt(52)
-    weekly_commission = commission_rate / 52
+    rebalance_freq_months = max(1, int(round(rebalance_freq_weeks / 4))) if rebalance_freq_weeks else 1
+    withdraw_eval_freq_months = max(1, int(round(withdraw_eval_freq_weeks / 4))) if withdraw_eval_freq_weeks else 1
+
+    n_periods = years * 12
+    monthly_return = (1.0 + expected_return) ** (1.0 / 12.0) - 1.0 if expected_return > -1.0 else expected_return / 12.0
+    monthly_vol = volatility / np.sqrt(12)
+    monthly_commission = commission_rate / 12
 
     # Matrices de estado: filas=simulaciones, cols=períodos
     capitals = np.full((n_simulations, n_periods + 1), initial_capital, dtype=float)
@@ -94,16 +97,16 @@ def simulate_client_behavior(
         prev = capitals[:, t - 1]
 
         # Retornos estocásticos del período
-        period_returns = rng.normal(weekly_return, weekly_vol, n_simulations)
+        period_returns = rng.normal(monthly_return, monthly_vol, n_simulations)
 
         # Recomendación de rebalanceo periódica
-        if t % rebalance_freq_weeks == 0:
+        if t % rebalance_freq_months == 0:
             accepted = rng.random(n_simulations) < accept_prob
             accepted_recs += accepted
             period_returns += accepted * rebalance_return_boost
 
         # Comisión del período
-        commission = prev * weekly_commission
+        commission = prev * monthly_commission
         total_commissions += commission
 
         # Nuevo capital
@@ -114,7 +117,7 @@ def simulate_client_behavior(
         peak_capitals = np.maximum(peak_capitals, new_cap)
 
         # Probabilidad de retiro (P1) evaluada con cadencia mensual por defecto.
-        if withdraw_eval_freq_weeks > 0 and t % withdraw_eval_freq_weeks == 0:
+        if t % withdraw_eval_freq_months == 0:
             drawdown = np.where(
                 peak_capitals > 0,
                 (peak_capitals - new_cap) / peak_capitals,
@@ -130,8 +133,8 @@ def simulate_client_behavior(
         new_cap[withdrew] = prev[withdrew]
         capitals[:, t] = new_cap
 
-    # ---- Submuestreo para la respuesta (≤53 puntos) ----
-    step = max(1, n_periods // 52)
+    # ---- Submuestreo para la respuesta (<=61 puntos) ----
+    step = max(1, n_periods // 60)
     idx = list(range(0, n_periods + 1, step))
     if n_periods not in idx:
         idx.append(n_periods)
@@ -140,6 +143,8 @@ def simulate_client_behavior(
 
     return {
         "periods": idx,
+        "period_unit": "month",
+        "period_label": "Mes",
         "capital_mean": [round(float(v), 2) for v in sampled.mean(axis=0)],
         "capital_p10":  [round(float(v), 2) for v in np.percentile(sampled, 10, axis=0)],
         "capital_p90":  [round(float(v), 2) for v in np.percentile(sampled, 90, axis=0)],
@@ -149,5 +154,9 @@ def simulate_client_behavior(
         "total_commissions_mean": round(float(total_commissions.mean()), 2),
         "withdrawal_rate": round(float(withdrew.mean() * 100), 2),
         "accepted_recommendations_mean": round(float(accepted_recs.mean()), 1),
-        "total_recommendations": int(n_periods / rebalance_freq_weeks),
+        "total_recommendations": int(n_periods / rebalance_freq_months),
+        "rebalance_frequency": "monthly",
+        "withdrawal_frequency": "monthly",
+        "rebalance_freq_months": rebalance_freq_months,
+        "withdraw_eval_freq_months": withdraw_eval_freq_months,
     }

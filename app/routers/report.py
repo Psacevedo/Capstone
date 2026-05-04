@@ -1,6 +1,7 @@
 """
 report.py - Metadatos, archivos y vistas previas del informe academico FinPUC.
 """
+import copy
 from functools import lru_cache
 from pathlib import Path
 
@@ -41,8 +42,8 @@ VISUAL_ASSETS = [
         "label": "Figura 2.1",
         "kind": "Figura",
         "page_number": 33,
-        "summary": "Flujo del ciclo semanal del sistema recomendador FinPUC.",
-        "caption": "Resume el ciclo operacional semanal citado en la seccion 2.2.1.",
+        "summary": "Flujo operacional del sistema recomendador FinPUC.",
+        "caption": "Resume el ciclo operacional citado en la seccion 2.2.1; para Entrega 2 se parametriza con rebalanceo y retiro mensual.",
         "image_url": _page_image_url(33),
         "reference": "Seccion 2.2.1",
     },
@@ -113,8 +114,8 @@ REPORT_OUTLINE = {
     "sections": [
         {
             "id": "2.2.1",
-            "label": "2.2.1 Ciclo operacional semanal",
-            "summary": "Describe la recomendacion semanal, la aceptacion del cliente, el cobro de comisiones y el retiro por perdida excedida.",
+            "label": "2.2.1 Ciclo operacional",
+            "summary": "Describe la recomendacion del sistema, la aceptacion del cliente, el cobro de comisiones y el retiro por perdida excedida. Para Entrega 2 se usa cadencia mensual.",
         },
         {
             "id": "2.2.2",
@@ -246,7 +247,18 @@ def _render_page_png(page_number: int, dpi: int) -> bytes:
 
 @router.get("/outline")
 def get_report_outline():
-    return JSONResponse(content=REPORT_OUTLINE, headers=_CACHE_HEADERS)
+    outline = copy.deepcopy(REPORT_OUTLINE)
+    pymupdf_available = fitz is not None
+    pdf_available = _PDF_PATH.exists()
+    preview_available = bool(pymupdf_available and pdf_available)
+    outline["preview_available"] = preview_available
+    outline["pymupdf_available"] = pymupdf_available
+    outline["pdf_available"] = pdf_available
+    if not preview_available:
+        outline["preview_note"] = (
+            "Las vistas previas requieren PyMuPDF (fitz) y el PDF local del informe."
+        )
+    return JSONResponse(content=outline, headers=_CACHE_HEADERS)
 
 
 @router.get("/page/{page_number}")

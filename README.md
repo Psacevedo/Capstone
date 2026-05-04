@@ -10,7 +10,7 @@ escenarios y simulacion del cliente.
 - Filtros del universo F5: historia minima, precio minimo, market cap, volatilidad y calidad sectorial.
 - Motor base honesto con la implementacion actual: media-varianza / minima varianza / maximo retorno + CVaR + escenarios + simulacion cliente.
 - Escenarios favorable, neutro y desfavorable para revisar capital proyectado.
-- Simulacion semanal del cliente con aceptacion simplificada, comisiones y retiro por drawdown.
+- Simulacion mensual del cliente con aceptacion simplificada, comisiones y retiro por drawdown.
 - Exploracion por sector del universo operativo con metricas historicas por accion.
 
 ## Estructura del producto
@@ -18,7 +18,7 @@ escenarios y simulacion del cliente.
 - `Universo F5`: exploracion de sectores y acciones disponibles.
 - `Sistema FinPUC > Recomendacion`: flujo principal para perfilar y optimizar.
 - `Sistema FinPUC > Escenarios`: proyeccion de capital del portafolio recomendado.
-- `Sistema FinPUC > Simulacion cliente`: dinamica semanal simplificada del sistema.
+- `Sistema FinPUC > Simulacion cliente`: dinamica mensual simplificada del sistema.
 - `Sistema FinPUC > Metodologia`: explicacion tecnica y limites de la version actual.
 
 ## Stack
@@ -46,8 +46,8 @@ La imagen empaqueta la app consolidada en la raiz y el informe (`Informe/`) para
 
 ## Estado metodologico
 
-- Implementado: perfiles FinPUC, filtros F5, constructor por perfil, CVaR historico, escenarios y simulacion del cliente.
-- No implementado aun: Black-Litterman (`mu_BL`, `tau`, `Omega`, `views`) y la escalarizacion final multiobjetivo con `lambda`.
+- Implementado: caso base top market cap, perfiles FinPUC, filtros F5, Markowitz, minima varianza, maximo retorno, CVaR historico, frontera eficiente, escenarios y simulacion mensual del cliente.
+- Avance inicial: Black-Litterman con `mu_BL`, `tau`, `Omega` diagonal y `views_json` manuales; la escalarizacion final multiobjetivo con `lambda` queda como fase posterior.
 
 ## Contexto academico
 

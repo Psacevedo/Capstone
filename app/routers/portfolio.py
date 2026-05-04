@@ -12,8 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from solver.fallback import ScipyPortfolioSolver
-from solver.validators import PortfolioValidator
+from ..services.optimizer import ScipyPortfolioSolver
+from ..services.portfolio_validator import PortfolioValidator
 
 from ..db import get_db
 from ..services.markowitz import (
@@ -410,6 +410,70 @@ def _portfolio_metrics(
         "volatility_pct": round(volatility * 100, 2),
         "sharpe_ratio": round(sharpe, 3),
     }
+
+
+def _frontier_metric_point(
+    label: str,
+    weights: Sequence[float],
+    returns_matrix: np.ndarray,
+    ann_returns: np.ndarray,
+    risk_free_rate: float,
+) -> Optional[Dict[str, object]]:
+    weights_arr = np.array(weights, dtype=float)
+    if weights_arr.size != returns_matrix.shape[1] or weights_arr.sum() <= 0:
+        return None
+    weights_arr = np.clip(weights_arr, 0.0, 1.0)
+    weights_arr = weights_arr / weights_arr.sum()
+    point: Dict[str, object] = _portfolio_metrics(weights_arr, returns_matrix, ann_returns, risk_free_rate)
+    point["label"] = label
+    return point
+
+
+def _build_frontier_markers(
+    tickers: Sequence[str],
+    returns_matrix: np.ndarray,
+    ann_returns: np.ndarray,
+    risk_free_rate: float,
+    selected_weights_full: Sequence[float],
+) -> Dict[str, Dict[str, object]]:
+    marker_specs = {
+        "selected_point": ("Portafolio seleccionado", selected_weights_full),
+    }
+
+    try:
+        gmv = minimum_variance_portfolio(list(tickers), returns_matrix, risk_free_rate)
+        marker_specs["gmv_point"] = ("Minima varianza global", gmv.get("weights", []))
+    except Exception as exc:  # pragma: no cover - marcador no critico para la optimizacion
+        log.warning("No se pudo calcular marcador GMV: %s", exc)
+
+    try:
+        sharpe = compute_markowitz_portfolio(
+            list(tickers),
+            returns_matrix,
+            risk_free_rate,
+            custom_ann_returns=ann_returns,
+        )
+        marker_specs["max_sharpe_point"] = ("Markowitz maximo Sharpe", sharpe.get("weights", []))
+    except Exception as exc:  # pragma: no cover
+        log.warning("No se pudo calcular marcador Markowitz: %s", exc)
+
+    try:
+        max_ret = maximum_return_portfolio(
+            list(tickers),
+            returns_matrix,
+            risk_free_rate,
+            custom_ann_returns=ann_returns,
+        )
+        marker_specs["max_return_point"] = ("Maximo retorno", max_ret.get("weights", []))
+    except Exception as exc:  # pragma: no cover
+        log.warning("No se pudo calcular marcador maximo retorno: %s", exc)
+
+    markers: Dict[str, Dict[str, object]] = {}
+    for key, (label, weights) in marker_specs.items():
+        point = _frontier_metric_point(label, weights, returns_matrix, ann_returns, risk_free_rate)
+        if point is not None:
+            markers[key] = point
+    return markers
 
 
 def _trim_portfolio(
@@ -952,11 +1016,11 @@ def _build_weekly_cycle(parameter_values: Optional[Dict[str, object]] = None) ->
     p1_drawdown_pct = _normalize_numeric(params.get("p1_withdrawal_drawdown_pct"), 20.0) or 20.0
     cash_buffer_pct = _normalize_numeric(params.get("cash_buffer_pct"), 5.0)
     return {
-        "cadence": "Semanal",
-        "trigger": "Cada lunes",
-        "rebalancing": "El sistema emite una recomendacion semanal y rebalancea si el cliente acepta.",
+        "cadence": "Mensual",
+        "trigger": "Cierre mensual de cartera",
+        "rebalancing": "El sistema evalua una recomendacion mensual y rebalancea si el cliente acepta.",
         "client_acceptance": f"Aproximacion operacional de P2 con probabilidad base {round(p2_acceptance_prob_pct, 2)}%.",
-        "client_withdrawal": f"Aproximacion operacional de P1 por drawdown sobre {round(p1_drawdown_pct, 2)}%.",
+        "client_withdrawal": f"Aproximacion operacional mensual de P1 por drawdown sobre {round(p1_drawdown_pct, 2)}%.",
         "commissions": f"Comision anual k = {round(commission_rate_pct, 2)}%.",
         "dividends": (
             "Los dividendos del dataset alimentan la logica de caja chica; "
@@ -964,6 +1028,10 @@ def _build_weekly_cycle(parameter_values: Optional[Dict[str, object]] = None) ->
             if cash_buffer_pct is not None
             else "Los dividendos del dataset alimentan la logica de caja chica."
         ),
+        "rebalance_frequency": "monthly",
+        "withdrawal_frequency": "monthly",
+        "rebalance_freq_weeks": DEFAULT_REBALANCE_FREQ_WEEKS,
+        "horizon_years_default": 3,
         "time_budget_seconds": 10,
     }
 
@@ -1089,7 +1157,10 @@ def _run_primary_optimizer(
     ann_returns: np.ndarray,
     risk_free_rate: float,
 ) -> np.ndarray:
-    if methodology_id == "minima_varianza_global":
+    if methodology_id == "equiponderado":
+        n = len(tickers)
+        return np.ones(n, dtype=float) / n
+    elif methodology_id == "minima_varianza_global":
         optimized = minimum_variance_portfolio(list(tickers), returns_matrix, risk_free_rate)
     elif methodology_id == "maximo_retorno":
         optimized = maximum_return_portfolio(
@@ -1205,26 +1276,90 @@ def _base_case_payload(
     if not candidates:
         raise HTTPException(status_code=404, detail="No se encontraron acciones para construir el caso base.")
 
-    selected = candidates[:n_holdings]
-    selected_tickers = [item["ticker"] for item in selected]
-    selected_weights = np.ones(len(selected_tickers), dtype=float) / len(selected_tickers)
-
     metadata = {candidate["ticker"]: candidate for candidate in candidates}
+    requested = candidates[:n_holdings]
+    requested_tickers = [item["ticker"] for item in requested]
     splits = _get_split_dates()
-    series = _fetch_price_series(db, selected_tickers, splits["calibration_start"], splits["calibration_end"])
-    close_map = _closes_from_series(series)
-    min_len = min(len(close_map[ticker]) for ticker in selected_tickers)
-    returns_matrix = np.column_stack([_daily_returns(close_map[ticker][-min_len:]) for ticker in selected_tickers])
+    series = _fetch_price_series(db, requested_tickers, splits["calibration_start"], splits["calibration_end"])
+    selected_tickers, returns_matrix = _align_return_matrix(series, requested_tickers)
+    selected_weights = np.ones(len(selected_tickers), dtype=float) / len(selected_tickers)
     ann_returns = _historical_ann_returns(selected_tickers, metadata, returns_matrix)
     metrics = _portfolio_metrics(selected_weights, returns_matrix, ann_returns, DEFAULT_RISK_FREE_RATE)
+    cvar_level = 0.90
+    cvar_value = compute_cvar(selected_weights, returns_matrix, confidence_level=cvar_level)
+    cvar_pct = round(cvar_value * 100, 2)
+    commission_rate = DEFAULT_COMMISSION_RATE
+    scenarios = project_scenarios(
+        initial_capital=100000,
+        expected_return=metrics["expected_return_pct"] / 100.0,
+        volatility=metrics["volatility_pct"] / 100.0,
+        years=3,
+        commission_rate=commission_rate,
+    )
+    scenario_timeseries = project_scenarios_timeseries(
+        initial_capital=100000,
+        expected_return=metrics["expected_return_pct"] / 100.0,
+        volatility=metrics["volatility_pct"] / 100.0,
+        years=3,
+        commission_rate=commission_rate,
+    )
+    simulation = simulate_client_behavior(
+        initial_capital=100000,
+        expected_return=metrics["expected_return_pct"] / 100.0,
+        volatility=metrics["volatility_pct"] / 100.0,
+        max_loss_pct=0.15,
+        years=3,
+        commission_rate=commission_rate,
+        accept_prob=0.70,
+        n_simulations=500,
+        rebalance_freq_weeks=DEFAULT_REBALANCE_FREQ_WEEKS,
+        rebalance_return_boost=0.0,
+        withdraw_eval_freq_weeks=DEFAULT_REBALANCE_FREQ_WEEKS,
+    )
+    validation = _validation_summary(db, selected_tickers, selected_weights, splits)
+    rebalance_policy = {
+        "summary": f"Top {len(selected_tickers)} por capitalizacion de mercado, pesos iguales y rebalanceo mensual.",
+        "selection_criterion": "Empresas F5 de mayor capitalizacion de mercado.",
+        "weighting_rule": "Pesos iguales al inicio de cada rebalanceo.",
+        "rebalance_frequency": "monthly",
+        "rebalance_freq_weeks": DEFAULT_REBALANCE_FREQ_WEEKS,
+        "horizon_years": 3,
+        "withdrawal_frequency": "monthly",
+        "report_reference": "Entrega 2 / Caso base de comparacion",
+    }
     metrics["method"] = "base_case"
-    metrics["method_label"] = "Caso base top market cap"
-    metrics["rebalance_policy"] = "Rebalanceo mensual a pesos iguales."
+    metrics["method_label"] = f"Caso base top {len(selected_tickers)} market cap"
+    metrics["rebalance_policy"] = rebalance_policy["summary"]
+    metrics["cvar_pct"] = cvar_pct
+    metrics["commission_rate_pct"] = round(commission_rate * 100, 2)
+    metrics["horizon_years"] = 3
 
     return {
         "methodology_id": "base_case",
+        "methodology": {
+            "label": metrics["method_label"],
+            "description": "Punto de comparacion obligatorio: empresas F5 de mayor capitalizacion, pesos iguales, rebalanceo mensual y simulacion del cliente.",
+            "report_references": ["Entrega 2", "Seccion 2.5", "Tabla 0.10"],
+        },
         "portfolio": _portfolio_rows(selected_tickers, selected_weights, metadata),
         "metrics": metrics,
+        "cvar_pct": cvar_pct,
+        "cvar_level_pct": round(cvar_level * 100, 2),
+        "cvar_compliant": bool(cvar_value <= 0.15),
+        "scenarios": scenarios,
+        "scenario_timeseries": scenario_timeseries,
+        "simulation": simulation,
+        "validation": validation,
+        "data_split": splits,
+        "rebalance_policy": rebalance_policy,
+        "weekly_cycle": _build_weekly_cycle(
+            {
+                "commission_rate_pct": 1.0,
+                "p2_acceptance_prob_pct": 70.0,
+                "p1_withdrawal_drawdown_pct": 15.0,
+                "cash_buffer_pct": 5.0,
+            }
+        ),
         "simulation_defaults": {
             "initial_capital": 100000,
             "expected_return_pct": metrics["expected_return_pct"],
@@ -1242,7 +1377,9 @@ def _base_case_payload(
             "screened_candidate_count": len(candidates),
             "optimizer_universe_size": len(selected_tickers),
             "target_holdings": n_holdings,
+            "actual_holdings": len(selected_tickers),
             "sector_filter": sector,
+            "selection": "Orden descendente por market_cap dentro del universo F5.",
         },
     }
 
@@ -1408,6 +1545,7 @@ def optimize_portfolio(
     validation = _validation_summary(db, selected_tickers, selected_weights, splits)
 
     efficient_frontier = None
+    frontier_markers = None
     if methodology_id != "finpuc_hibrido":
         frontier_points = compute_efficient_frontier(
             list(valid_tickers),
@@ -1419,6 +1557,13 @@ def optimize_portfolio(
             {"volatility_pct": vol, "expected_return_pct": ret}
             for vol, ret in frontier_points
         ]
+        frontier_markers = _build_frontier_markers(
+            valid_tickers,
+            returns_matrix,
+            ann_returns,
+            risk_free_rate,
+            optimized_weights,
+        )
 
     response = {
         "methodology_id": methodology_id,
@@ -1457,6 +1602,10 @@ def optimize_portfolio(
             sector_filter=req.sector,
         ),
         "weekly_cycle": _build_weekly_cycle(methodology_params),
+        "frontier_markers": frontier_markers,
+        "gmv_point": frontier_markers.get("gmv_point") if frontier_markers else None,
+        "max_sharpe_point": frontier_markers.get("max_sharpe_point") if frontier_markers else None,
+        "max_return_point": frontier_markers.get("max_return_point") if frontier_markers else None,
         "simulation_defaults": {
             "initial_capital": req.initial_capital,
             "expected_return_pct": metrics["expected_return_pct"],
@@ -1937,7 +2086,10 @@ def simulate_portfolio(req: SimulateRequest):
         "commission_rate_pct": round(req.commission_rate_pct, 2),
         "acceptance_model": f"Aproximacion operacional de P2 con probabilidad base {round(req.p2_acceptance_prob_pct, 2)}%.",
         "withdrawal_model": f"Aproximacion operacional mensual de P1 por drawdown sobre {round(req.max_loss_pct * 100, 2)}%.",
+        "rebalance_frequency": "Mensual",
+        "withdrawal_frequency": "Mensual",
         "rebalance_freq_weeks": req.rebalance_freq_weeks,
+        "rebalance_freq_months": result.get("rebalance_freq_months"),
         "rebalance_return_boost_pct": round(req.rebalance_return_boost_pct, 2),
     }
     return JSONResponse(content=result)
