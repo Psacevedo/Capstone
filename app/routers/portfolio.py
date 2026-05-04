@@ -12,6 +12,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+try:
+    from solver.black_litterman_views import (
+        compute_bl_posterior as _bl_posterior,
+        generate_momentum_views as _gen_momentum_views,
+    )
+    _BL_VIEWS_AVAILABLE = True
+except ImportError:
+    _BL_VIEWS_AVAILABLE = False
+
 from ..services.optimizer import ScipyPortfolioSolver
 from ..services.portfolio_validator import PortfolioValidator
 
@@ -796,6 +805,7 @@ def _black_litterman_ann_returns(
     lambda_risk = _normalize_numeric(parameter_values.get("lambda_risk_aversion"), 2.5) or 2.5
     tau = _normalize_numeric(parameter_values.get("tau"), 0.05) or 0.05
     omega_diag = _normalize_numeric(parameter_values.get("omega_diag"), 0.05) or 0.05
+    views_source = str(parameter_values.get("views_source") or "auto_momentum").strip().lower()
 
     if tau <= 0 or omega_diag <= 0:
         raise HTTPException(status_code=400, detail="Tau y Omega deben ser positivos para Black-Litterman.")
@@ -807,26 +817,71 @@ def _black_litterman_ann_returns(
         [max(float(metadata.get(ticker, {}).get("market_cap") or 1.0), 1.0) for ticker in tickers],
         dtype=float,
     )
-    market_weights = market_caps / market_caps.sum()
-    prior = np.full(len(tickers), risk_free_rate, dtype=float) + lambda_risk * (ann_cov @ market_weights)
 
-    p_matrix, q_vector, views_used = _parse_views_json(parameter_values.get("views_json"), tickers)
-    omega = np.eye(len(q_vector), dtype=float) * omega_diag
+    if views_source == "manual":
+        # Camino original: views ingresadas manualmente por el analista
+        p_matrix, q_vector, views_used = _parse_views_json(parameter_values.get("views_json"), tickers)
+        omega = np.eye(len(q_vector), dtype=float) * omega_diag
+        views_mode = "manual"
+    else:
+        # Camino automático: views generadas desde señal de momentum 12-1
+        if not _BL_VIEWS_AVAILABLE:
+            raise HTTPException(
+                status_code=500,
+                detail="El módulo solver.black_litterman_views no está disponible. "
+                       "Usa views_source='manual' o revisa la instalación.",
+            )
+        top_k = max(1, int(_normalize_numeric(parameter_values.get("top_k_views"), 20) or 20))
+        bottom_k = max(1, int(_normalize_numeric(parameter_values.get("bottom_k_views"), 20) or 20))
+        mu_historical = _historical_ann_returns(tickers, metadata, returns_matrix)
+        p_matrix, q_vector, omega, views_used = _gen_momentum_views(
+            tickers=tickers,
+            daily_returns=returns_matrix,
+            mu_historical=mu_historical,
+            ann_cov=ann_cov,
+            tau=tau,
+            top_k=top_k,
+            bottom_k=bottom_k,
+        )
+        views_mode = "auto_momentum"
 
-    tau_sigma = tau * ann_cov
-    tau_sigma_inv = np.linalg.pinv(tau_sigma)
-    omega_inv = np.linalg.pinv(omega)
-    posterior_matrix = np.linalg.pinv(tau_sigma_inv + p_matrix.T @ omega_inv @ p_matrix)
-    posterior_vector = tau_sigma_inv @ prior + p_matrix.T @ omega_inv @ q_vector
-    mu_bl = posterior_matrix @ posterior_vector
+    # Posterior bayesiano BL (unificado para ambos caminos)
+    if _BL_VIEWS_AVAILABLE:
+        mu_bl, _pi_prior, bl_info = _bl_posterior(
+            tickers=tickers,
+            ann_cov=ann_cov,
+            market_caps=market_caps,
+            p_matrix=p_matrix,
+            q_vector=q_vector,
+            omega=omega,
+            risk_free=risk_free_rate,
+            lambda_risk=lambda_risk,
+            tau=tau,
+        )
+        pi_mean = float(bl_info["pi_mean"])
+        mu_bl_mean = float(bl_info["mu_bl_mean"])
+    else:
+        # Fallback inline cuando el módulo no está disponible (solo path manual)
+        market_weights = market_caps / market_caps.sum()
+        pi = risk_free_rate + lambda_risk * (ann_cov @ market_weights)
+        tau_sigma_inv = np.linalg.pinv(tau * ann_cov)
+        omega_inv = np.linalg.pinv(omega)
+        M = np.linalg.pinv(tau_sigma_inv + p_matrix.T @ omega_inv @ p_matrix)
+        mu_bl = M @ (tau_sigma_inv @ pi + p_matrix.T @ omega_inv @ q_vector)
+        pi_mean = float(np.mean(pi))
+        mu_bl_mean = float(np.mean(mu_bl))
 
     return np.array(mu_bl, dtype=float), {
         "estimation_model": "Black-Litterman",
+        "views_source": views_mode,
         "risk_free_rate_pct": round(risk_free_rate * 100, 4),
         "lambda_risk_aversion": round(lambda_risk, 6),
         "tau": round(tau, 6),
-        "omega_diag": round(omega_diag, 6),
+        "omega_diag": round(omega_diag, 6) if views_mode == "manual" else "He-Litterman (tau * P Sigma P^T)",
+        "n_views": int(len(q_vector)),
         "views_used": views_used,
+        "pi_mean_pct": round(pi_mean * 100, 4),
+        "mu_bl_mean_pct": round(mu_bl_mean * 100, 4),
         "market_weighting": "Pesos de mercado aproximados con market cap del universo operativo.",
     }
 

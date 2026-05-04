@@ -207,16 +207,16 @@ CATALOG = {
             "label": "Black-Litterman",
             "family": "Estimacion bayesiana",
             "recommended": False,
-            "wip": True,
             "description": (
                 "Construye retornos esperados mu_BL combinando la prior de equilibrio del mercado "
-                "con vistas subjetivas del analista mediante actualizacion bayesiana. "
-                "Requiere la matriz de views P, el vector Q, y los parametros tau y Omega."
+                "con views de momentum 12-1 generadas automaticamente (o views manuales del analista) "
+                "mediante actualizacion bayesiana. La matriz P y el vector Q se construyen desde "
+                "solver/black_litterman_views.py usando la senal de momentum 12-1 meses."
             ),
             "formula_summary": "mu_BL = [(tau Sigma)^-1 + P^T Omega^-1 P]^-1 [(tau Sigma)^-1 pi + P^T Omega^-1 Q]",
             "formula_latex": r"\mu_{BL}=\left[(\tau\Sigma)^{-1}+P^{\top}\Omega^{-1}P\right]^{-1}\left[(\tau\Sigma)^{-1}\pi + P^{\top}\Omega^{-1}Q\right]",
             "report_references": ["Seccion 4", "Ecuacion 4.7", "Black-Litterman (1990)"],
-            "implementation_status": "En desarrollo — no disponible en esta version",
+            "implementation_status": "Operativo",
             "formula_legend": [
                 {
                     "symbol": "mu_BL",
@@ -275,6 +275,43 @@ CATALOG = {
             ],
             "parameters": [
                 _parameter(
+                    "views_source",
+                    "Fuente de views (auto_momentum / manual)",
+                    "Estimacion",
+                    "Modo de construccion de la matriz P y el vector Q. "
+                    "auto_momentum: genera views desde la senal de momentum 12-1 (recomendado). "
+                    "manual: usa el campo views_json ingresado por el analista.",
+                    "Black-Litterman / Seccion 4",
+                    default="auto_momentum",
+                    required=True,
+                    input_type="text",
+                    placeholder="auto_momentum",
+                ),
+                _parameter(
+                    "top_k_views",
+                    "Ganadores con view (top_k)",
+                    "Estimacion",
+                    "Numero de activos con mayor momentum 12-1 que reciben una view positiva. Solo aplica cuando views_source=auto_momentum.",
+                    "Black-Litterman / Seccion 4",
+                    default=20,
+                    required=False,
+                    step=1,
+                    minimum=1,
+                    maximum=100,
+                ),
+                _parameter(
+                    "bottom_k_views",
+                    "Perdedores con view (bottom_k)",
+                    "Estimacion",
+                    "Numero de activos con menor momentum 12-1 que reciben una view negativa. Solo aplica cuando views_source=auto_momentum.",
+                    "Black-Litterman / Seccion 4",
+                    default=20,
+                    required=False,
+                    step=1,
+                    minimum=1,
+                    maximum=100,
+                ),
+                _parameter(
                     "risk_free_rate_pct",
                     "Tasa libre de riesgo",
                     "Estimacion",
@@ -313,24 +350,26 @@ CATALOG = {
                 ),
                 _parameter(
                     "omega_diag",
-                    "Omega diagonal — confianza en views",
+                    "Omega diagonal — confianza en views (solo manual)",
                     "Estimacion",
-                    "Incertidumbre de las vistas del analista. Omega mayor implica views con menos influencia sobre mu_BL.",
+                    "Incertidumbre plana de cada view. Solo se usa cuando views_source=manual. "
+                    "En modo auto_momentum la incertidumbre se calibra automaticamente (He-Litterman: tau * P Sigma P^T).",
                     "Discusion metodologica / Seccion 4",
                     default=0.05,
-                    required=True,
+                    required=False,
                     step=0.01,
                     minimum=0.001,
                     maximum=1,
                 ),
                 _parameter(
                     "views_json",
-                    "Views del analista (matriz Q)",
+                    "Views manuales del analista (solo cuando views_source=manual)",
                     "Estimacion",
-                    "Vistas absolutas por ticker: retorno anualizado esperado segun el analista. Alimentan el vector Q del modelo.",
+                    "Vistas absolutas por ticker: retorno anualizado esperado segun el analista. "
+                    "Solo se usa cuando views_source=manual. Ignorado en modo auto_momentum.",
                     "Black-Litterman / Seccion 4",
                     default='[\n  {"ticker": "MSFT", "view_return_pct": 14.0},\n  {"ticker": "JNJ", "view_return_pct": 9.0}\n]',
-                    required=True,
+                    required=False,
                     input_type="textarea",
                     placeholder='[{"ticker":"MSFT","view_return_pct":14.0}]',
                 ),

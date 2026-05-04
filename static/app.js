@@ -3496,9 +3496,15 @@ function parameterRoleText(key, methodologyId) {
     case "tau":
       return "Parámetro τ de Black-Litterman: controla cuánto pesa la prior del mercado vs. las views del analista.";
     case "omega_diag":
-      return "Parámetro Ω (diagonal) de Black-Litterman: controla la confianza en las views; Ω mayor ⇒ views pesan menos.";
+      return "Parámetro Ω (diagonal) de Black-Litterman: controla la confianza en las views; Ω mayor ⇒ views pesan menos. Solo activo cuando views_source=manual.";
     case "views_json":
-      return "Define las views Q por ticker para ajustar μ_BL (input clave del avance Black-Litterman).";
+      return "Define las views Q por ticker para ajustar μ_BL. Solo se usa cuando views_source=manual; en modo auto_momentum se ignora.";
+    case "views_source":
+      return "Controla cómo se construyen P y Q: 'auto_momentum' genera views desde la señal momentum 12-1; 'manual' usa el campo views_json.";
+    case "top_k_views":
+      return "Número de activos ganadores (mayor momentum 12-1) que reciben una view positiva en modo auto_momentum.";
+    case "bottom_k_views":
+      return "Número de activos perdedores (menor momentum 12-1) que reciben una view negativa en modo auto_momentum.";
     case "prob_desfavorable_pct":
     case "prob_neutro_pct":
     case "prob_favorable_pct":
