@@ -2,7 +2,8 @@
 markowitz.py - Optimizacion base para seleccion de portafolios FinPUC.
 
 Implementacion con scipy.optimize (SLSQP):
-  - compute_markowitz_portfolio: maximiza Sharpe
+  - compute_markowitz_portfolio: maximiza utilidad cuadratica mu'w - 0.5*gamma*w'Sigma*w
+    (alineado con el solver academico del Informe 1, Seccion 3-4)
   - minimum_variance_portfolio: minimiza varianza
   - maximum_return_portfolio: maximiza retorno esperado
   - compute_efficient_frontier: genera puntos de la frontera eficiente
@@ -26,8 +27,25 @@ except ImportError:  # pragma: no cover
     log.warning("scipy no disponible; se usara fallback a pesos iguales")
 
 
-MAX_WEIGHT = 0.40
+DEFAULT_MAX_WEIGHT = 0.40
 TRADING_DAYS_PER_YEAR = 252
+
+# Gammas por perfil del solver academico (Informe 1 / notebooks)
+PROFILE_GAMMA = {
+    "muy_conservador": 60.0,
+    "conservador": 35.0,
+    "neutro": 18.0,
+    "arriesgado": 8.0,
+    "muy_arriesgado": 4.0,
+}
+
+PROFILE_MAX_WEIGHT = {
+    "muy_conservador": 0.05,
+    "conservador": 0.07,
+    "neutro": 0.10,
+    "arriesgado": 0.15,
+    "muy_arriesgado": 0.20,
+}
 
 
 def _annualize(
@@ -102,17 +120,15 @@ def _equal_weights_fallback(
     )
 
 
-def _neg_sharpe(
+def _neg_quadratic_utility(
     weights: np.ndarray,
     ann_returns: np.ndarray,
     ann_cov: np.ndarray,
-    risk_free_rate: float,
+    gamma: float,
 ) -> float:
     port_return = float(np.dot(weights, ann_returns))
-    port_vol = float(np.sqrt(weights @ ann_cov @ weights))
-    if port_vol < 1e-10:
-        return 1e10
-    return -(port_return - risk_free_rate) / port_vol
+    port_variance = float(weights @ ann_cov @ weights)
+    return -(port_return - 0.5 * gamma * port_variance)
 
 
 def _portfolio_variance(weights: np.ndarray, ann_cov: np.ndarray) -> float:
@@ -147,8 +163,12 @@ def compute_markowitz_portfolio(
     daily_returns: np.ndarray,
     risk_free_rate: float = 0.05,
     custom_ann_returns: Optional[np.ndarray] = None,
+    profile: str = "neutro",
+    max_weight: Optional[float] = None,
+    gamma: Optional[float] = None,
 ) -> Dict:
-    """Portafolio de maximo Sharpe con restricciones de presupuesto y no-short."""
+    """Portafolio Markowitz: maximiza utilidad cuadratica mu'w - 0.5*gamma*w'Sigma*w
+    con restricciones de presupuesto y no-short. Alineado con el solver academico del Informe 1."""
     n_assets = len(tickers)
     if n_assets == 0:
         return {}
@@ -162,22 +182,26 @@ def compute_markowitz_portfolio(
         )
 
     ann_returns, ann_cov = _annualize(daily_returns, custom_ann_returns)
+    _gamma = gamma if gamma is not None else PROFILE_GAMMA.get(str(profile), 18.0)
+    _max_weight = max_weight if max_weight is not None else PROFILE_MAX_WEIGHT.get(str(profile), 0.10)
+    upper = min(_max_weight, 1.0)
+
     constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
-    bounds = [(0.0, MAX_WEIGHT)] * n_assets
+    bounds = [(0.0, upper)] * n_assets
     w0 = np.ones(n_assets) / n_assets
 
     result = minimize(
-        _neg_sharpe,
+        _neg_quadratic_utility,
         w0,
-        args=(ann_returns, ann_cov, risk_free_rate),
+        args=(ann_returns, ann_cov, _gamma),
         method="SLSQP",
         bounds=bounds,
         constraints=constraints,
-        options={"ftol": 1e-9, "maxiter": 1000},
+        options={"ftol": 1e-10, "maxiter": 1000},
     )
 
     weights = result.x if result.success else w0
-    weights = np.clip(weights, 0.0, 1.0)
+    weights = np.clip(weights, 0.0, upper)
     weights /= weights.sum()
     return _portfolio_stats(
         weights,
@@ -192,6 +216,7 @@ def minimum_variance_portfolio(
     tickers: List[str],
     daily_returns: np.ndarray,
     risk_free_rate: float = 0.05,
+    max_weight: Optional[float] = None,
 ) -> Dict:
     """Portafolio de minima varianza global."""
     n_assets = len(tickers)
@@ -202,9 +227,10 @@ def minimum_variance_portfolio(
             tickers, daily_returns, risk_free_rate, "minimum_variance_portfolio"
         )
 
+    upper = min(max_weight if max_weight is not None else DEFAULT_MAX_WEIGHT, 1.0)
     _, ann_cov = _annualize(daily_returns)
     constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
-    bounds = [(0.0, MAX_WEIGHT)] * n_assets
+    bounds = [(0.0, upper)] * n_assets
     w0 = np.ones(n_assets) / n_assets
 
     result = minimize(
@@ -214,11 +240,11 @@ def minimum_variance_portfolio(
         method="SLSQP",
         bounds=bounds,
         constraints=constraints,
-        options={"ftol": 1e-9, "maxiter": 1000},
+        options={"ftol": 1e-10, "maxiter": 1000},
     )
 
     weights = result.x if result.success else w0
-    weights = np.clip(weights, 0.0, 1.0)
+    weights = np.clip(weights, 0.0, upper)
     weights /= weights.sum()
     return _portfolio_stats(weights, daily_returns, risk_free_rate, tickers)
 
@@ -228,6 +254,7 @@ def maximum_return_portfolio(
     daily_returns: np.ndarray,
     risk_free_rate: float = 0.05,
     custom_ann_returns: Optional[np.ndarray] = None,
+    max_weight: Optional[float] = None,
 ) -> Dict:
     """Portafolio que maximiza el retorno esperado sujeto a las mismas restricciones."""
     n_assets = len(tickers)
@@ -242,9 +269,10 @@ def maximum_return_portfolio(
             ann_returns_override=custom_ann_returns,
         )
 
+    upper = min(max_weight if max_weight is not None else DEFAULT_MAX_WEIGHT, 1.0)
     ann_returns, _ = _annualize(daily_returns, custom_ann_returns)
     constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
-    bounds = [(0.0, MAX_WEIGHT)] * n_assets
+    bounds = [(0.0, upper)] * n_assets
     w0 = np.ones(n_assets) / n_assets
 
     result = minimize(
@@ -254,11 +282,11 @@ def maximum_return_portfolio(
         method="SLSQP",
         bounds=bounds,
         constraints=constraints,
-        options={"ftol": 1e-9, "maxiter": 1000},
+        options={"ftol": 1e-10, "maxiter": 1000},
     )
 
     weights = result.x if result.success else w0
-    weights = np.clip(weights, 0.0, 1.0)
+    weights = np.clip(weights, 0.0, upper)
     weights /= weights.sum()
     return _portfolio_stats(
         weights,
@@ -274,74 +302,77 @@ def compute_efficient_frontier(
     daily_returns: np.ndarray,
     risk_free_rate: float = 0.05,
     n_points: int = 25,
+    max_weight: Optional[float] = None,
+    gmv_weights: Optional[np.ndarray] = None,
+    max_return_weights: Optional[np.ndarray] = None,
+    custom_ann_returns: Optional[np.ndarray] = None,
 ) -> List[Tuple[float, float]]:
-    """Genera puntos de la frontera eficiente sobre el universo dado."""
+    """Genera puntos de la frontera eficiente sobre el universo dado.
+    
+    Si se proveen gmv_weights y max_return_weights, se usan como extremos
+    de la frontera en vez de recalcularlos, garantizando consistencia con
+    los markers del grafico.
+    
+    Si se provee custom_ann_returns, se usa en vez de mean*252 (permite
+    alinear con CAGR del endpoint)."""
     n_assets = len(tickers)
     if n_assets == 0 or not _SCIPY:
         return []
 
-    ann_returns, ann_cov = _annualize(daily_returns)
-    bounds = [(0.0, MAX_WEIGHT)] * n_assets
+    upper = min(max_weight if max_weight is not None else DEFAULT_MAX_WEIGHT, 1.0)
+    ann_returns, ann_cov = _annualize(daily_returns, custom_ann_returns)
+    bounds = [(0.0, upper)] * n_assets
+
+    if gmv_weights is not None and max_return_weights is not None:
+        gmv_w = np.array(gmv_weights, dtype=float)
+        max_w = np.array(max_return_weights, dtype=float)
+    else:
+        w0 = np.ones(n_assets) / n_assets
+        constraints_budget = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
+        gmv = minimize(_portfolio_variance, w0, args=(ann_cov,), method="SLSQP",
+                        bounds=bounds, constraints=constraints_budget,
+                        options={"ftol": 1e-10, "maxiter": 1000})
+        max_ret = minimize(_neg_return, w0, args=(ann_returns,), method="SLSQP",
+                            bounds=bounds, constraints=constraints_budget,
+                            options={"ftol": 1e-10, "maxiter": 1000})
+        if not gmv.success:
+            log.warning("GMV no convergio para frontera eficiente")
+            return []
+        gmv_w = np.clip(gmv.x, 0.0, upper)
+        if gmv_w.sum() > 1e-10:
+            gmv_w = gmv_w / gmv_w.sum()
+        max_w = np.clip(max_ret.x if max_ret.success else gmv.x, 0.0, upper)
+        if max_w.sum() > 1e-10:
+            max_w = max_w / max_w.sum()
+
+    gmv_return = float(np.dot(gmv_w, ann_returns))
+    max_ret_return = float(np.dot(max_w, ann_returns))
+    gmv_vol = float(np.sqrt(gmv_w @ ann_cov @ gmv_w))
+
+    if max_ret_return <= gmv_return + 1e-6:
+        return [(round(gmv_vol * 100, 4), round(gmv_return * 100, 4))]
+
     w0 = np.ones(n_assets) / n_assets
-    constraints_budget = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
-
-    gmv = minimize(
-        _portfolio_variance,
-        w0,
-        args=(ann_cov,),
-        method="SLSQP",
-        bounds=bounds,
-        constraints=constraints_budget,
-        options={"ftol": 1e-9, "maxiter": 1000},
-    )
-    max_ret = minimize(
-        _neg_return,
-        w0,
-        args=(ann_returns,),
-        method="SLSQP",
-        bounds=bounds,
-        constraints=constraints_budget,
-        options={"ftol": 1e-9, "maxiter": 1000},
-    )
-    if not gmv.success or not max_ret.success:
-        return []
-
-    gmv_weights = np.clip(gmv.x, 0.0, 1.0)
-    gmv_weights /= gmv_weights.sum()
-    max_weights = np.clip(max_ret.x, 0.0, 1.0)
-    max_weights /= max_weights.sum()
-
-    min_return = float(np.dot(gmv_weights, ann_returns))
-    max_return = float(np.dot(max_weights, ann_returns))
-    if max_return <= min_return:
-        return []
-
     frontier: List[Tuple[float, float]] = []
-    for target_return in np.linspace(min_return, max_return, n_points):
+    for target_return in np.linspace(gmv_return, max_ret_return, n_points):
         constraints = [
             {"type": "eq", "fun": lambda w: np.sum(w) - 1.0},
-            {
-                "type": "eq",
-                "fun": lambda w, target=target_return: float(np.dot(w, ann_returns)) - target,
-            },
+            {"type": "eq",
+             "fun": lambda w, target=target_return: float(np.dot(w, ann_returns)) - target},
         ]
         result = minimize(
-            _portfolio_variance,
-            w0,
-            args=(ann_cov,),
-            method="SLSQP",
-            bounds=bounds,
-            constraints=constraints,
-            options={"ftol": 1e-9, "maxiter": 1000},
+            _portfolio_variance, gmv_w.copy(), args=(ann_cov,),
+            method="SLSQP", bounds=bounds, constraints=constraints,
+            options={"ftol": 1e-10, "maxiter": 2000},
         )
         if not result.success:
             continue
-
-        weights = np.clip(result.x, 0.0, 1.0)
-        weights /= weights.sum()
-        volatility = float(np.sqrt(weights @ ann_cov @ weights))
-        expected_return = float(np.dot(weights, ann_returns))
-        frontier.append((round(volatility * 100, 4), round(expected_return * 100, 4)))
+        w = np.clip(result.x, 0.0, upper)
+        if w.sum() > 1e-10:
+            w = w / w.sum()
+        vol = float(np.sqrt(w @ ann_cov @ w))
+        ret = float(np.dot(w, ann_returns))
+        frontier.append((round(vol * 100, 4), round(ret * 100, 4)))
 
     frontier.sort(key=lambda point: point[0])
     return frontier

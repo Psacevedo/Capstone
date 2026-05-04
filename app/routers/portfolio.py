@@ -170,6 +170,10 @@ RISK_PROFILES = {
         "sectors": ["Utilities", "Consumer Defensive"],
         "cvar_level": 0.99,
         "dividend_bias": True,
+        "gamma": 60.0,
+        "max_weight": 0.05,
+        "n_assets": 40,
+        "max_sector_fraction": 0.30,
     },
     "conservador": {
         "alpha_p": 0.05,
@@ -182,6 +186,10 @@ RISK_PROFILES = {
         "sectors": None,
         "cvar_level": 0.95,
         "dividend_bias": True,
+        "gamma": 35.0,
+        "max_weight": 0.07,
+        "n_assets": 60,
+        "max_sector_fraction": 0.30,
     },
     "neutro": {
         "alpha_p": 0.15,
@@ -194,6 +202,10 @@ RISK_PROFILES = {
         "sectors": None,
         "cvar_level": 0.90,
         "dividend_bias": False,
+        "gamma": 18.0,
+        "max_weight": 0.10,
+        "n_assets": 80,
+        "max_sector_fraction": 0.25,
     },
     "arriesgado": {
         "alpha_p": 0.30,
@@ -206,6 +218,10 @@ RISK_PROFILES = {
         "sectors": None,
         "cvar_level": 0.85,
         "dividend_bias": False,
+        "gamma": 8.0,
+        "max_weight": 0.15,
+        "n_assets": 100,
+        "max_sector_fraction": 0.30,
     },
     "muy_arriesgado": {
         "alpha_p": 0.40,
@@ -218,6 +234,10 @@ RISK_PROFILES = {
         "sectors": None,
         "cvar_level": 0.80,
         "dividend_bias": False,
+        "gamma": 4.0,
+        "max_weight": 0.20,
+        "n_assets": 120,
+        "max_sector_fraction": 0.35,
     },
 }
 
@@ -227,6 +247,7 @@ LEGACY_METHOD_MAP = {
     "simple": "maximo_retorno",
     "propio": "minima_varianza_global",
     "benchmark": "benchmark",
+    "equiponderado": "equiponderado",
     # Backward compat: IDs eliminados en entrega 2 caen a Markowitz
     "finpuc_hibrido": "markowitz_media_varianza",
     "capm_markowitz": "markowitz_media_varianza",
@@ -426,6 +447,7 @@ def _frontier_metric_point(
     weights_arr = weights_arr / weights_arr.sum()
     point: Dict[str, object] = _portfolio_metrics(weights_arr, returns_matrix, ann_returns, risk_free_rate)
     point["label"] = label
+    point["weights"] = weights_arr.tolist()
     return point
 
 
@@ -435,13 +457,14 @@ def _build_frontier_markers(
     ann_returns: np.ndarray,
     risk_free_rate: float,
     selected_weights_full: Sequence[float],
+    max_weight: Optional[float] = None,
 ) -> Dict[str, Dict[str, object]]:
     marker_specs = {
         "selected_point": ("Portafolio seleccionado", selected_weights_full),
     }
 
     try:
-        gmv = minimum_variance_portfolio(list(tickers), returns_matrix, risk_free_rate)
+        gmv = minimum_variance_portfolio(list(tickers), returns_matrix, risk_free_rate, max_weight=max_weight)
         marker_specs["gmv_point"] = ("Minima varianza global", gmv.get("weights", []))
     except Exception as exc:  # pragma: no cover - marcador no critico para la optimizacion
         log.warning("No se pudo calcular marcador GMV: %s", exc)
@@ -463,6 +486,7 @@ def _build_frontier_markers(
             returns_matrix,
             risk_free_rate,
             custom_ann_returns=ann_returns,
+            max_weight=max_weight,
         )
         marker_specs["max_return_point"] = ("Maximo retorno", max_ret.get("weights", []))
     except Exception as exc:  # pragma: no cover
@@ -815,7 +839,7 @@ def _estimate_returns(
     parameter_values: Dict[str, object],
 ) -> Tuple[np.ndarray, Dict]:
     historical = _historical_ann_returns(tickers, metadata, returns_matrix)
-    if methodology_id in {"markowitz_media_varianza", "minima_varianza_global", "maximo_retorno"}:
+    if methodology_id in {"markowitz_media_varianza", "minima_varianza_global", "maximo_retorno", "equiponderado"}:
         return historical, {
             "estimation_model": "Historico",
             "historical_source": "CAGR local con fallback a media anualizada del periodo de calibracion.",
@@ -1068,6 +1092,24 @@ def _build_parameter_groups(
                 "report_reference": "Seccion 2.2.2 / Ecuacion 4.4",
             },
             {
+                "key": "gamma",
+                "label": "Gamma (aversion al riesgo)",
+                "value": profile_cfg.get("gamma"),
+                "value_display": str(profile_cfg.get("gamma", "—")),
+                "unit": "",
+                "meaning": "Coeficiente de aversion al riesgo en la utilidad cuadratica mu'w - 0.5*gamma*w'Sigma*w.",
+                "report_reference": "Informe 1 / solver academico",
+            },
+            {
+                "key": "max_weight",
+                "label": "Peso maximo por activo",
+                "value": profile_cfg.get("max_weight"),
+                "value_display": f"{round(profile_cfg.get('max_weight', 0.0) * 100)}%",
+                "unit": "%",
+                "meaning": "Limite superior de peso por accion impuesto por el perfil de riesgo.",
+                "report_reference": "Informe 1 / solver academico",
+            },
+            {
                 "key": "candidate_pool_size",
                 "label": "Tamano del sub-universo",
                 "value": candidate_pool_size,
@@ -1156,18 +1198,28 @@ def _run_primary_optimizer(
     returns_matrix: np.ndarray,
     ann_returns: np.ndarray,
     risk_free_rate: float,
+    profile_key: str = "neutro",
+    profile_cfg: Optional[Dict] = None,
 ) -> np.ndarray:
+    profile = str(profile_key) if profile_key else "neutro"
+    max_weight = (profile_cfg or {}).get("max_weight") if profile_cfg else None
+    gamma = (profile_cfg or {}).get("gamma") if profile_cfg else None
+
     if methodology_id == "equiponderado":
         n = len(tickers)
         return np.ones(n, dtype=float) / n
     elif methodology_id == "minima_varianza_global":
-        optimized = minimum_variance_portfolio(list(tickers), returns_matrix, risk_free_rate)
+        optimized = minimum_variance_portfolio(
+            list(tickers), returns_matrix, risk_free_rate,
+            max_weight=max_weight,
+        )
     elif methodology_id == "maximo_retorno":
         optimized = maximum_return_portfolio(
             list(tickers),
             returns_matrix,
             risk_free_rate,
             custom_ann_returns=ann_returns,
+            max_weight=max_weight,
         )
     else:
         optimized = compute_markowitz_portfolio(
@@ -1175,6 +1227,9 @@ def _run_primary_optimizer(
             returns_matrix,
             risk_free_rate,
             custom_ann_returns=ann_returns,
+            profile=profile,
+            max_weight=max_weight,
+            gamma=gamma,
         )
 
     if not optimized or not optimized.get("weights"):
@@ -1397,6 +1452,8 @@ def get_portfolio_catalog():
             "candidate_pool_default": value["candidate_pool_default"],
             "candidate_pool_range": value["candidate_pool_range"],
             "forced_sectors": value["sectors"],
+            "gamma": value["gamma"],
+            "max_weight": value["max_weight"],
         }
         for key, value in RISK_PROFILES.items()
     ]
@@ -1435,7 +1492,10 @@ def optimize_portfolio(
         sector_filter=req.sector,
     )
     candidate_pool_size = _resolve_candidate_pool_size(profile_cfg, req.candidate_pool_size, total_f5_count)
-    candidates = prelim_candidates[:candidate_pool_size]
+    if methodology_id == "equiponderado":
+        candidates = sorted(prelim_candidates, key=lambda c: float(c.get("market_cap") or 0), reverse=True)[:candidate_pool_size]
+    else:
+        candidates = prelim_candidates[:candidate_pool_size]
     if not candidates:
         raise HTTPException(status_code=404, detail="No se encontraron acciones que cumplan el universo F5.")
 
@@ -1477,6 +1537,14 @@ def optimize_portfolio(
             profile_key,
             alpha_p,
         )
+        # Hibrido: metricas sobre pesos completos, trimming para display
+        metrics = _portfolio_metrics(optimized_weights, returns_matrix, ann_returns, risk_free_rate)
+        metrics["method"] = methodology_id
+        metrics["method_label"] = methodology["label"]
+        metrics["cash_weight_pct"] = round(cash_weight * 100, 2)
+        cvar_value = compute_cvar(optimized_weights, returns_matrix, confidence_level=cvar_level)
+        cvar_pct = round(cvar_value * 100, 2)
+        cvar_compliant = bool(cvar_value <= alpha_p) if alpha_p > 0 else True
         selected_tickers, selected_weights, selected_returns, selected_ann_returns = _trim_portfolio(
             valid_tickers,
             optimized_weights,
@@ -1493,7 +1561,19 @@ def optimize_portfolio(
             returns_matrix,
             ann_returns,
             risk_free_rate,
+            profile_key=profile_key,
+            profile_cfg=profile_cfg,
         )
+        # Metricas sobre pesos COMPLETOS del optimizador (como en el solver academico)
+        # Asi el punto del portafolio cae sobre la frontera eficiente
+        metrics = _portfolio_metrics(optimized_weights, returns_matrix, ann_returns, risk_free_rate)
+        metrics["method"] = methodology_id
+        metrics["method_label"] = methodology["label"]
+        metrics["cash_weight_pct"] = 0.0
+        cvar_value = compute_cvar(optimized_weights, returns_matrix, confidence_level=cvar_level)
+        cvar_pct = round(cvar_value * 100, 2)
+        cvar_compliant = bool(cvar_value <= alpha_p) if alpha_p > 0 else True
+        # Recortar solo para la tabla de display
         selected_tickers, selected_weights, selected_returns, selected_ann_returns = _trim_portfolio(
             valid_tickers,
             optimized_weights,
@@ -1505,15 +1585,6 @@ def optimize_portfolio(
 
     if len(selected_tickers) == 0:
         raise HTTPException(status_code=400, detail="No fue posible construir el portafolio solicitado.")
-
-    metrics = _portfolio_metrics(selected_weights, selected_returns, selected_ann_returns, risk_free_rate)
-    metrics["method"] = methodology_id
-    metrics["method_label"] = methodology["label"]
-    metrics["cash_weight_pct"] = round(cash_weight * 100, 2)
-
-    cvar_value = compute_cvar(selected_weights, selected_returns, confidence_level=cvar_level)
-    cvar_pct = round(cvar_value * 100, 2)
-    cvar_compliant = bool(cvar_value <= alpha_p) if alpha_p > 0 else True
 
     commission_rate_pct = _normalize_numeric(methodology_params.get("commission_rate_pct"), DEFAULT_COMMISSION_RATE * 100) or DEFAULT_COMMISSION_RATE * 100
     commission_rate = commission_rate_pct / 100.0
@@ -1547,23 +1618,46 @@ def optimize_portfolio(
     efficient_frontier = None
     frontier_markers = None
     if methodology_id != "finpuc_hibrido":
-        frontier_points = compute_efficient_frontier(
-            list(valid_tickers),
-            returns_matrix,
-            risk_free_rate,
-            n_points=25,
-        )
-        efficient_frontier = [
-            {"volatility_pct": vol, "expected_return_pct": ret}
-            for vol, ret in frontier_points
-        ]
+        profile_max_w = (profile_cfg or {}).get("max_weight")
+        # Calcular markers primero para obtener pesos GMV y max-return
+        # que usaremos como extremos de la frontera
         frontier_markers = _build_frontier_markers(
             valid_tickers,
             returns_matrix,
             ann_returns,
             risk_free_rate,
             optimized_weights,
+            max_weight=profile_max_w,
         )
+        # Extraer pesos de los markers para pasarlos a la frontera
+        gmv_w = None
+        max_ret_w = None
+        if frontier_markers:
+            gmv_pt = frontier_markers.get("gmv_point")
+            max_pt = frontier_markers.get("max_return_point")
+            if gmv_pt and gmv_pt.get("weights"):
+                gmv_w = np.array(gmv_pt["weights"], dtype=float)
+            if max_pt and max_pt.get("weights"):
+                max_ret_w = np.array(max_pt["weights"], dtype=float)
+        frontier_points = compute_efficient_frontier(
+            list(valid_tickers),
+            returns_matrix,
+            risk_free_rate,
+            n_points=25,
+            max_weight=profile_max_w,
+            gmv_weights=gmv_w,
+            max_return_weights=max_ret_w,
+            custom_ann_returns=ann_returns,
+        )
+        efficient_frontier = [
+            {"volatility_pct": vol, "expected_return_pct": ret}
+            for vol, ret in frontier_points
+        ]
+        # Inyectar punto del portafolio en la frontera
+        port_vol = metrics["volatility_pct"]
+        port_ret = metrics["expected_return_pct"]
+        efficient_frontier.append({"volatility_pct": port_vol, "expected_return_pct": port_ret})
+        efficient_frontier.sort(key=lambda pt: pt["volatility_pct"])
 
     response = {
         "methodology_id": methodology_id,

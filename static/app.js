@@ -3234,6 +3234,12 @@ function updateFormValue(key, value) {
 
 function setMethodology(methodologyId, navigateToParameters = false) {
   PF.selectedMethodologyId = methodologyId;
+  const method = getCatalogMethod(methodologyId);
+  if (method) {
+    for (const def of method.parameters || []) {
+      delete PF.formState[def.key];
+    }
+  }
   seedMethodologyState(methodologyId);
   if (navigateToParameters) {
     pfNavGo("parameters");
@@ -3517,6 +3523,10 @@ function renderBaseFieldCards(method) {
   const profiles = PF.catalog?.profiles || [];
   const selectedProfile = PF.formState.profile || "neutro";
   const methodId = method?.id || PF.selectedMethodologyId || "";
+  const profileInfo = PF.lastResult?.profile_label ? {
+    alpha_p: (PF.lastResult.alpha_p * 100).toFixed(0),
+    profile: PF.lastResult.risk_level,
+  } : null;
 
   return `
     <div class="field-grid">
@@ -3536,6 +3546,20 @@ function renderBaseFieldCards(method) {
         <div class="field-help">Funcion en el metodo: ${parameterRoleText("profile", methodId)}</div>
         <span class="field-ref">Tabla 2.1 / Seccion 2.2.2</span>
       </div>
+      ${method.id === "markowitz_media_varianza" ? `
+        <div class="field-card">
+          <label>Gamma (aversion al riesgo)</label>
+          <input type="text" disabled value="${esc(String((PF.catalog?.profiles || []).find(p => p.id === selectedProfile)?.gamma ?? "Determinado por perfil"))}">
+          <div class="field-help">Coeficiente gamma del perfil: controla el trade-off entre retorno y riesgo en la utilidad cuadratica. Fijado por perfil segun Informe 1.</div>
+          <span class="field-ref">Informe 1 / solver academico</span>
+        </div>
+        <div class="field-card">
+          <label>Max weight (peso maximo)</label>
+          <input type="text" disabled value="${esc(String(((PF.catalog?.profiles || []).find(p => p.id === selectedProfile)?.max_weight || 0.10) * 100) + "%")}">
+          <div class="field-help">Peso maximo por activo: fijado por perfil. Muy conservador=5%, Conservador=7%, Neutro=10%, Arriesgado=15%, Muy arriesgado=20%.</div>
+          <span class="field-ref">Informe 1 / solver academico</span>
+        </div>
+      ` : ""}
       <div class="field-card">
         <label>Tamano del sub-universo</label>
         <input type="number" min="10" max="636" step="1" value="${esc(String(PF.formState.candidate_pool_size ?? ""))}" oninput="updateFormValue('candidate_pool_size', this.value)">
@@ -3595,6 +3619,8 @@ function renderParametersView() {
 
   seedMethodologyState(method.id);
   const groups = ["Estimacion", "Riesgo y escenarios", "Cliente y negocio"];
+  const profile = getCatalogProfile(PF.formState.profile || "neutro");
+  const selectedProfile = PF.formState.profile || "neutro";
 
   document.getElementById("content").innerHTML = `
     <div class="pf-section">
@@ -4050,95 +4076,90 @@ function renderScenarioChart(ts) {
 }
 
 function renderSimulation() {
-  const defaults = PF.lastResult?.simulation_defaults || {};
-  const commission = defaults.commission_rate_pct ?? 1.0;
-  const accept = defaults.p2_acceptance_prob_pct ?? 70.0;
+  const result = PF.lastResult;
+  const defaults = result?.simulation_defaults || {};
+  const alphaPct = result ? Math.round((result.alpha_p || 0.15) * 100) : 15;
+  const profileLabel = result?.profile_label || "Neutro";
+  const expRet = result?.metrics?.expected_return_pct || 10;
+  const vol = result?.metrics?.volatility_pct || 20;
+  const capital = defaults.initial_capital || 100000;
+
   const contentEl = document.getElementById("content");
   contentEl.innerHTML = `
     <div class="pf-section">
       <div class="hero-card">
         <div class="hero-eyebrow">Simulacion del cliente</div>
-        <h2 class="hero-title">P1, P2, comisiones y ciclo mensual</h2>
-        <p class="hero-copy">La simulacion operacional resume el comportamiento del cliente frente a recomendaciones mensuales, aceptacion, comisiones y abandono por drawdown. Referencia: Seccion 2.2.1 y Ecuaciones 4.5 y 4.6.</p>
-      </div>
-
-      <div class="parameter-group">
-        <h3>Entradas de simulacion</h3>
-        <p>La simulacion utiliza los resultados del portafolio recomendado como base, pero permite ajustar explicitamente P2, la comision k, el horizonte y la frecuencia de rebalanceo.</p>
-        <div class="field-grid">
-          <div class="field-card">
-            <label>Capital inicial</label>
-            <input id="sim-capital" type="number" value="${esc(String(defaults.initial_capital ?? 100000))}">
-            <div class="field-help">Capital de partida del cliente.</div>
-            <span class="field-ref">Seccion 2.2.1</span>
-          </div>
-          <div class="field-card">
-            <label>Retorno esperado anual</label>
-            <input id="sim-exp-ret" type="number" step="0.1" value="${esc(String(defaults.expected_return_pct ?? 10))}">
-            <div class="field-help">Retorno anual del portafolio que alimenta la simulacion.</div>
-            <span class="field-ref">Resultados metodologicos</span>
-          </div>
-          <div class="field-card">
-            <label>Volatilidad anual</label>
-            <input id="sim-vol" type="number" step="0.1" value="${esc(String(defaults.volatility_pct ?? 20))}">
-            <div class="field-help">Volatilidad anual usada para las trayectorias de capital.</div>
-            <span class="field-ref">Resultados metodologicos</span>
-          </div>
-          <div class="field-card">
-            <label>Horizonte</label>
-            <input id="sim-years" type="number" min="3" max="5" value="3">
-            <div class="field-help">Numero de anos simulados.</div>
-            <span class="field-ref">Seccion 2.2.1</span>
-          </div>
-          <div class="field-card">
-            <label>Numero de simulaciones</label>
-            <input id="sim-n" type="number" min="100" max="2000" step="100" value="500">
-            <div class="field-help">Cantidad de trayectorias Monte Carlo generadas.</div>
-            <span class="field-ref">Seccion 4 / Monte Carlo</span>
-          </div>
-          <div class="field-card">
-            <label>Umbral P1 de retiro</label>
-            <input id="sim-loss-pct" type="number" min="0" max="100" step="1" value="${esc(String(defaults.max_loss_pct ?? 15))}">
-            <div class="field-help">Drawdown porcentual a partir del cual se activa la aproximacion operacional de P1.</div>
-            <span class="field-ref">Ecuacion 4.5</span>
-          </div>
-          <div class="field-card">
-            <label>Probabilidad base P2</label>
-            <input id="sim-accept-pct" type="number" min="0" max="100" step="1" value="${esc(String(accept))}">
-            <div class="field-help">Probabilidad base de aceptar una recomendacion mensual.</div>
-            <span class="field-ref">Ecuacion 4.6</span>
-          </div>
-          <div class="field-card">
-            <label>Comision anual k</label>
-            <input id="sim-commission-pct" type="number" min="0" max="10" step="0.1" value="${esc(String(commission))}">
-            <div class="field-help">Comision anual cobrada sobre el capital gestionado.</div>
-            <span class="field-ref">Seccion 2.2.1</span>
-          </div>
-          <div class="field-card">
-            <label>Frecuencia de rebalanceo</label>
-            <input id="sim-rebalance-weeks" type="number" min="1" max="52" step="1" value="${esc(String(defaults.rebalance_freq_weeks ?? 4))}">
-            <div class="field-help">Cantidad aproximada de semanas entre recomendaciones. Use 4 para frecuencia mensual.</div>
-            <span class="field-ref">Ciclo mensual FinPUC</span>
-          </div>
-          <div class="field-card">
-            <label>Mejora por rebalanceo</label>
-            <input id="sim-rebalance-boost-pct" type="number" min="0" max="5" step="0.1" value="${esc(String(defaults.rebalance_return_boost_pct ?? 0.1))}">
-            <div class="field-help">Ajuste adicional en retorno al aceptar un rebalanceo.</div>
-            <span class="field-ref">Aproximacion operacional del sistema</span>
-          </div>
+        <h2 class="hero-title">P1, P2, comisiones y ciclo mensual
+          <span style="font-size:14px;font-weight:600;color:#9C27B0;background:rgba(156,39,176,.12);padding:3px 10px;border-radius:6px;margin-left:10px;vertical-align:middle;">beta</span>
+        </h2>
+        <p class="hero-copy">Esta seccion esta en fase beta. A continuacion se presentan las formulas del informe asociadas al comportamiento del cliente (P1, P2, comisiones). La simulacion ejecutable estara disponible en una version futura.</p>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px;padding:10px 14px;background:rgba(156,39,176,.08);border-radius:8px;border:1px solid rgba(156,39,176,.2);">
+          <span style="font-size:18px;">🔬</span>
+          <span style="font-size:13px;color:#7b3f8c;"><strong>Simulacion en desarrollo.</strong>
+          Las formulas del informe se documentan aqui como referencia. La ejecucion Monte Carlo completa estara disponible en la proxima version.</span>
         </div>
       </div>
+
+      <div class="academic-grid">
+        <div class="academic-card">
+          <h4>P1 — Retiro del cliente (Ecuacion 4.5)</h4>
+          <div class="formula-box">
+            <div class="latex-block">\\[P_1(x_1)=\\frac{x_1^{\\lambda_1}}{x_1^{\\lambda_1}+\\theta_1^{\\lambda_1}}\\]</div>
+            <div class="formula-caption">x₁ = drawdown observado (%), λ₁ = sensibilidad, θ₁ = umbral de retiro</div>
+          </div>
+          <p>El cliente abandona la plataforma si el drawdown acumulado excede su tolerancia. La funcion logistica P1 modela esta probabilidad de retiro en funcion del drawdown observado.</p>
+        </div>
+        <div class="academic-card">
+          <h4>P2 — Aceptacion de recomendacion (Ecuacion 4.6)</h4>
+          <div class="formula-box">
+            <div class="latex-block">\\[P_2(x_2)=\\frac{x_2^{\\lambda_2}}{x_2^{\\lambda_2}+\\theta_2^{\\lambda_2}}\\]</div>
+            <div class="formula-caption">x₂ = exceso de retorno sobre benchmark (%), λ₂ = sensibilidad, θ₂ = umbral de aceptacion</div>
+          </div>
+          <p>El cliente acepta una recomendacion de rebalanceo con probabilidad P2, que depende del atractivo del portafolio propuesto respecto del benchmark de referencia.</p>
+        </div>
+        <div class="academic-card">
+          <h4>Ciclo mensual (Seccion 2.2.1)</h4>
+          <div class="formula-box">
+            <div class="latex-block">\\[V_{t+1}=V_t\\cdot(1+r_t) - k\\cdot V_t\\]</div>
+            <div class="formula-caption">V_t = capital en mes t, r_t = retorno del portafolio, k = comision anual/12</div>
+          </div>
+          <p>Cada mes: (1) el sistema emite recomendacion, (2) el cliente acepta/rechaza via P2, (3) se cobra comision k/12 si hay rebalanceo, (4) el capital evoluciona con retornos de mercado, (5) el cliente evalua retiro via P1.</p>
+        </div>
+      </div>
+
+      ${result ? `
+        <div class="pf-card">
+          <div class="pf-section-title">Parametros asociados al portafolio actual</div>
+          <div class="data-list">
+            <div><span>Perfil</span><strong>${esc(profileLabel)} (alpha_p = ${alphaPct}%)</strong></div>
+            <div><span>Retorno esperado anual</span><strong>${expRet > 0 ? "+" : ""}${expRet}%</strong></div>
+            <div><span>Volatilidad anual</span><strong>${vol}%</strong></div>
+            <div><span>Capital de referencia</span><strong>${fmtUSD(capital)}</strong></div>
+            <div><span>Umbral P1 (drawdown)</span><strong>${alphaPct}%</strong></div>
+            <div><span>Probabilidad base P2</span><strong>70%</strong></div>
+            <div><span>Comision anual k</span><strong>1%</strong></div>
+            <div><span>Horizonte de simulacion</span><strong>3 anos</strong></div>
+          </div>
+        </div>
+      ` : `
+        <div class="pf-card">
+          <div class="pf-section-title">Sin portafolio asociado</div>
+          <p style="font-size:13px;color:var(--text-muted);">Ejecuta primero una metodologia en <strong>Parametros</strong> para asociar estos valores al portafolio recomendado.</p>
+        </div>
+      `}
 
       <div class="pf-card">
-        <div class="action-row">
-          <button class="btn-primary" id="sim-btn" onclick="submitSimulation()">Ejecutar simulacion</button>
-          <span id="sim-loading" class="subtle-status" style="display:none">Simulando trayectorias de capital y rebalanceos...</span>
+        <div class="pf-section-title">Referencias</div>
+        <div class="reference-chip-row">
+          <span class="note-chip">Seccion 2.2.1</span>
+          <span class="note-chip">Ecuacion 4.5</span>
+          <span class="note-chip">Ecuacion 4.6</span>
+          <span class="note-chip">Informe 1</span>
         </div>
       </div>
-
-      <div id="sim-result"></div>
     </div>
   `;
+  queueMathTypeset();
 }
 
 async function submitSimulation() {
@@ -4545,8 +4566,6 @@ function renderProjections() {
       </div>
 
       <div class="action-row" style="padding:0 0 8px 0">
-        <button class="btn-secondary" type="button" onclick="pfNavGo('scenarios')">Ver escenarios p10/p50/p90</button>
-        <button class="btn-secondary" type="button" onclick="pfNavGo('simulate')">Ir a simulacion cliente</button>
       </div>
     </div>
   `;
