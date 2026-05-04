@@ -2944,6 +2944,7 @@ const PF_NAV_ITEMS = [
   { id: "parameters", label: "Parametros" },
   { id: "results", label: "Resultados" },
   { id: "proyecciones", label: "Proyecciones" },
+  { id: "views", label: "Views", beta: true },
   { id: "scenarios", label: "Escenarios" },
   { id: "simulate", label: "Simulacion cliente" },
   { id: "references", label: "Datos y referencias" },
@@ -2957,6 +2958,7 @@ Object.assign(PF, {
   reportOutline: null,
   formState: PF.formState || {},
   bootstrapError: null,
+  blViews: PF.blViews || [],
 });
 
 let mathTypesetToken = null;
@@ -3450,7 +3452,7 @@ function renderMethodologies() {
               ${isWip ? `<span class="note-chip wip">Trabajo en paralelo</span>` : ""}
             </div>
             <div class="action-row" style="margin-top:14px">
-              <button class="btn-secondary" type="button" onclick="event.stopPropagation(); setMethodology('${esc(method.id)}', true)">${isWip ? "Ver avance" : "Configurar parametros"}</button>
+              <button class="btn-secondary" type="button" onclick="event.stopPropagation(); ${isWip ? "pfNavGo('views')" : `setMethodology('${esc(method.id)}', true)`}">${isWip ? "Ver avance (beta)" : "Configurar parametros"}</button>
             </div>
           </div>`;
         }).join("")}
@@ -4344,6 +4346,7 @@ async function pfNavGo(section) {
   else if (section === "parameters") renderParametersView();
   else if (section === "results") renderResultsView();
   else if (section === "proyecciones") renderProjections();
+  else if (section === "views") renderViewsSection();
   else if (section === "scenarios") renderScenarioView();
   else if (section === "simulate") renderSimulation();
   else if (section === "references") renderReferencesView();
@@ -4598,4 +4601,156 @@ function _renderProjBootChart(x, det, p5, p50, p95, v0) {
     legend: { orientation: "h", y: -0.22 },
   };
   Plotly.newPlot("proj-boot-chart", traces, layout, PLOTLY_CONFIG);
+}
+
+// ============================================================
+// Views — Beta UI para vistas Black-Litterman
+// ============================================================
+
+function renderViewsSection() {
+  const views = PF.blViews || [];
+
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Seccion 6 — Valorizacion esperada futura</div>
+        <h2 class="hero-title">Views del analista
+          <span style="font-size:14px;font-weight:600;color:#9C27B0;background:rgba(156,39,176,.12);padding:3px 10px;border-radius:6px;margin-left:10px;vertical-align:middle;">beta</span>
+        </h2>
+        <p class="hero-copy">
+          Las <strong>views</strong> son estimaciones subjetivas del analista sobre el retorno anualizado esperado
+          de acciones especificas. Se ingresan como pares (ticker, retorno esperado %) y alimentan el vector
+          <strong>Q</strong> del modelo Black-Litterman. Esta funcionalidad esta en desarrollo —
+          las views se guardan y estaran disponibles cuando Black-Litterman se active en la Entrega 2.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px;padding:10px 14px;background:rgba(156,39,176,.08);border-radius:8px;border:1px solid rgba(156,39,176,.2);">
+          <span style="font-size:18px;">🔬</span>
+          <span style="font-size:13px;color:#7b3f8c;"><strong>Black-Litterman en desarrollo.</strong>
+          Puedes ingresar y guardar tus views ahora. Se aplicaran automaticamente cuando el modelo se active.</span>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Agregar view</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
+          Ingresa el ticker (del universo F5) y el retorno anualizado que esperas para esa accion.
+          El retorno puede ser positivo o negativo.
+        </p>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);">Ticker</label>
+            <input id="bl-view-ticker" type="text" placeholder="MSFT, AAPL, JNJ…"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:130px;background:var(--bg-card);color:var(--text);"
+              onkeydown="if(event.key==='Enter') addBlView()">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);">Retorno esperado (% anual)</label>
+            <input id="bl-view-return" type="number" placeholder="14.0" step="0.1"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:150px;background:var(--bg-card);color:var(--text);"
+              onkeydown="if(event.key==='Enter') addBlView()">
+          </div>
+          <button class="btn-primary" type="button" onclick="addBlView()" style="height:36px;">
+            + Agregar view
+          </button>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Views registradas</div>
+        <div id="bl-views-list">
+          ${_renderBlViewsList(views)}
+        </div>
+        ${views.length > 0 ? `
+          <div style="margin-top:16px;padding:12px 16px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">VISTA PREVIA JSON (vector Q)</div>
+            <pre style="font-size:12px;color:var(--text-muted);overflow-x:auto;margin:0;">${esc(JSON.stringify(views, null, 2))}</pre>
+          </div>` : ""}
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Referencia metodologica</div>
+        <div class="academic-grid" style="margin-top:0;">
+          <div class="academic-card">
+            <h4>Vector Q</h4>
+            <p>Cada view define un elemento de Q: el retorno anualizado que el analista espera para el ticker dado. Q alimenta la formula bayesiana mu_BL.</p>
+          </div>
+          <div class="academic-card">
+            <h4>Matriz P</h4>
+            <p>P se construye automaticamente: una fila por view, con 1 en la columna del ticker con view y 0 en el resto. Dimension K x N.</p>
+          </div>
+          <div class="academic-card">
+            <h4>Parametro Omega</h4>
+            <p>La incertidumbre de cada view se controla con Omega (diagonal). Un Omega mayor da menos peso a la view respecto de la prior de mercado.</p>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <span class="note-chip">Black-Litterman (1990)</span>
+          <span class="note-chip">Seccion 4</span>
+          <span class="note-chip">Ecuacion 4.7</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function _renderBlViewsList(views) {
+  if (!views.length) {
+    return `<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">
+      No hay views registradas. Agrega una view arriba para comenzar.
+    </div>`;
+  }
+  return `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:8px 12px;font-weight:600;color:var(--text-muted);">Ticker</th>
+          <th style="text-align:right;padding:8px 12px;font-weight:600;color:var(--text-muted);">Retorno esperado</th>
+          <th style="text-align:center;padding:8px 12px;font-weight:600;color:var(--text-muted);">Accion</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${views.map((v, i) => `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 12px;font-weight:700;">${esc(v.ticker)}</td>
+            <td style="padding:10px 12px;text-align:right;color:${v.view_return_pct >= 0 ? "#1f6f52" : "#b34a3c"};font-weight:600;">
+              ${v.view_return_pct >= 0 ? "+" : ""}${v.view_return_pct.toFixed(1)}%
+            </td>
+            <td style="padding:10px 12px;text-align:center;">
+              <button class="btn-secondary" type="button" onclick="removeBlView(${i})"
+                style="padding:3px 10px;font-size:11px;">Eliminar</button>
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function addBlView() {
+  const tickerEl = document.getElementById("bl-view-ticker");
+  const returnEl = document.getElementById("bl-view-return");
+  const ticker = (tickerEl?.value || "").trim().toUpperCase();
+  const ret = parseFloat(returnEl?.value);
+
+  if (!ticker) { tickerEl?.focus(); return; }
+  if (isNaN(ret)) { returnEl?.focus(); return; }
+
+  if (!PF.blViews) PF.blViews = [];
+  const existing = PF.blViews.findIndex(v => v.ticker === ticker);
+  if (existing >= 0) {
+    PF.blViews[existing].view_return_pct = ret;
+  } else {
+    PF.blViews.push({ ticker, view_return_pct: ret });
+  }
+
+  if (tickerEl) tickerEl.value = "";
+  if (returnEl) returnEl.value = "";
+  renderViewsSection();
+  tickerEl?.focus();
+}
+
+function removeBlView(index) {
+  if (!PF.blViews) return;
+  PF.blViews.splice(index, 1);
+  renderViewsSection();
 }

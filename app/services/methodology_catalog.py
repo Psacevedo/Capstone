@@ -219,6 +219,7 @@ CATALOG = {
             "label": "Black-Litterman",
             "family": "Estimacion bayesiana",
             "recommended": False,
+            "wip": True,
             "description": (
                 "Construye retornos esperados mu_BL combinando la prior de equilibrio del mercado "
                 "con vistas subjetivas del analista mediante actualizacion bayesiana. "
@@ -227,7 +228,7 @@ CATALOG = {
             "formula_summary": "mu_BL = [(tau Sigma)^-1 + P^T Omega^-1 P]^-1 [(tau Sigma)^-1 pi + P^T Omega^-1 Q]",
             "formula_latex": r"\mu_{BL}=\left[(\tau\Sigma)^{-1}+P^{\top}\Omega^{-1}P\right]^{-1}\left[(\tau\Sigma)^{-1}\pi + P^{\top}\Omega^{-1}Q\right]",
             "report_references": ["Seccion 4", "Ecuacion 4.7", "Black-Litterman (1990)"],
-            "implementation_status": "Implementado — calibracion en validacion",
+            "implementation_status": "En desarrollo — no disponible en esta version",
             "formula_legend": [
                 {
                     "symbol": "mu_BL",
