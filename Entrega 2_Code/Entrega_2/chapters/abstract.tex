@@ -1,0 +1,25 @@
+This report documents the development and implementation of an investment
+recommendation system for FinPUC, a fictitious financial advisory platform
+that generates personalized portfolios for clients in the US stock market.
+The system serves five risk profiles and pursues a dual objective: maximizing
+client expected returns and maximizing firm revenue from transaction fees.
+
+The investment universe comprises 601 stocks filtered from 1,406 tickers.
+Three methodological layers of increasing complexity were implemented and
+compared: Markowitz mean-variance optimization with semiannual rebalancing,
+Black-Litterman with four quantitative view variants (general momentum,
+6-month and 1-year capitalization-weighted momentum, and an assumed
+macroeconomic unemployment scenario), and a Monte Carlo simulation of 5,000
+trajectories over 260 weeks modeling client acceptance, withdrawal, and firm
+commissions across six techniques.
+
+Results show that the Black-Litterman variant with 6-month
+capitalization-weighted momentum dominates the recommender ranking, achieving
+an expected terminal wealth of USD~8,974 and a P4 score of 9,417 for the
+most aggressive risk profile with pandemic training data. Including
+pandemic data (2020 - 2022) in training deteriorates aggressive Markowitz
+portfolios by up to 1.1 Sharpe points, while Black-Litterman variants
+exhibit greater stability across regimes.
+
+\textbf{Keywords:} portfolio optimization, Markowitz, Black-Litterman, Monte
+Carlo simulation, recommender system, semiannual rebalancing, CVXPY.

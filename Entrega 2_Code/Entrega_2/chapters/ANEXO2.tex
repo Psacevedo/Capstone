@@ -1,0 +1,760 @@
+Este anexo presenta la fuente de datos, la estructura de los archivos,
+los criterios de clasificación sectorial, los niveles de filtrado aplicados
+y la caracterización del universo final de acciones utilizado en el modelo P4.
+Además, incorpora la metodología actual de análisis con pandemia, en la cual
+la pandemia no se elimina como única definición de base, sino que se compara
+explícitamente el desempeño de los modelos con y sin las observaciones de
+2020--2022 dentro del entrenamiento. \href{https://uccll0.sharepoint.com/:b:/s/uc365_ics2122_g13/IQC6DdeUo4z_Rasgvtcqt8K_AU8x_53YNQQFx14ckIB1xdY?e=DNEyTn}{Ver documento completo}
+
+% ============================================================
+\section*{Descripción de la Fuente de Datos}
+% ============================================================
+
+Los datos históricos provienen del directorio \texttt{Data/Historical\_Stocks/}
+del repositorio del proyecto. Fueron descargados con la librería
+\texttt{yfinance} de Yahoo Finance, incluyendo precios de cierre ajustados
+por splits, volumen, dividendos y metadatos fundamentales por ticker.
+
+\subsection*{Estructura de archivos}
+
+El directorio contiene \textbf{1.407 archivos}:
+
+\begin{itemize}
+  \item \textbf{1.406 archivos CSV} individuales con el formato
+        \texttt{stock\_return\_<TICKER>.csv}
+  \item \textbf{1 archivo de metadatos} \texttt{stocks\_info.txt} con
+        información fundamental de cada ticker (sector, industria,
+        descripción, capitalización de mercado, empleados, etc.)
+\end{itemize}
+
+\subsection*{Formato de los CSV}
+
+Cada archivo contiene precios diarios con las siguientes columnas:
+
+\begin{center}
+\begin{tabular}{lll}
+  \toprule
+  \textbf{Columna} & \textbf{Tipo} & \textbf{Descripción} \\
+  \midrule
+  \texttt{Date}         & datetime & Fecha de cierre (zona horaria US/Eastern) \\
+  \texttt{Open}         & float    & Precio de apertura ajustado \\
+  \texttt{High}         & float    & Precio máximo del día \\
+  \texttt{Low}          & float    & Precio mínimo del día \\
+  \texttt{Close}        & float    & Precio de cierre ajustado por splits \\
+  \texttt{Volume}       & int      & Volumen de transacciones \\
+  \texttt{Dividends}    & float    & Dividendo distribuido ese día (USD/acción) \\
+  \texttt{Stock Splits} & float    & Factor de split (0 si no hubo split) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Nota:} Los precios están ajustados hacia atrás
+(\emph{backward-adjusted}) por splits de acciones, pero \emph{no} por
+dividendos. Los dividendos se registran explícitamente en la columna
+\texttt{Dividends} y serán usados directamente para alimentar la
+\textbf{caja chica} del modelo de optimización.
+
+\subsection*{Cobertura temporal}
+
+\begin{center}
+\begin{tabular}{lrr}
+  \toprule
+  \textbf{Indicador} & \textbf{Valor} & \textbf{Detalle} \\
+  \midrule
+  Total de tickers en archivos CSV         & 1.406      &              \\
+  Tickers con datos válidos                & 1.165      & 83\% del total \\
+  Tickers con datos vacíos o errores       & 239        & 17\% sin datos \\
+  Fecha de corte más frecuente             & 2026-03-13 & 1.158 tickers  \\
+  Mediana de filas por archivo             & 6.532      & $\approx$ 26 años \\
+  \midrule
+  Tickers con $\geq 5$ años (1.250 filas)  & 1.039      & \\
+  Tickers con $\geq 10$ años (2.500 filas) & 912        & \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+Los años de inicio más frecuentes son 1980 (100 tickers), 1999 (52),
+2021 (49) y 1973 (41), lo que refleja una mezcla de empresas consolidadas
+y listados recientes, incluyendo SPACs post-2020.
+
+\subsection*{Tratamiento temporal de la pandemia}
+
+La cobertura temporal incluye el periodo de crisis y recuperación asociado a
+COVID-19. En versiones preliminares del análisis, la pandemia se trataba
+principalmente como un periodo a excluir. En la versión actual, el criterio se
+modificó: se construyen dos escenarios comparables, uno que excluye 2020--2022
+de la ventana de entrenamiento y otro que conserva ese periodo.
+
+Esta decisión permite medir si los datos de estrés alteran las estimaciones de
+retorno, volatilidad y covarianza, sin confundir ese efecto con un cambio en el
+periodo futuro evaluado. Por lo tanto, la pandemia pasa de ser solo un filtro
+de limpieza a ser una variable metodológica explícita del diseño experimental.
+
+% ============================================================
+\section*{Clasificación Sectorial}
+% ============================================================
+
+\subsection*{Sistema de clasificación}
+
+Los tickers se clasifican usando la taxonomía sectorial de
+\textbf{GICS}\footnote{Global Industry Classification Standard,
+desarrollado por MSCI y S\&P Dow Jones Indices.}
+a través de los metadatos de Yahoo Finance, que asigna a cada empresa
+un \texttt{sector} y una \texttt{industry} (subsector).
+
+El archivo \texttt{stocks\_info.txt} contiene 1.406 entradas en formato:
+
+\begin{center}
+  \texttt{TICKER;\{`sector': `...', `industry': `...', `marketCap': ..., ...\}}
+\end{center}
+
+\subsection*{Distribución sectorial del universo completo}
+
+La Tabla~\ref{tab:sectores} muestra la distribución de los tickers con datos
+válidos por sector.
+
+\begin{table}[H]
+  \centering
+  \caption{Distribución sectorial del universo completo con datos válidos}
+  \label{tab:sectores}
+  \begin{tabular}{lrr}
+    \toprule
+    \textbf{Sector} & \textbf{Tickers} & \textbf{\% del total} \\
+    \midrule
+    Financial Services      & 716 & 61.4\% \\
+    Technology              &  81 &  6.9\% \\
+    Industrials             &  74 &  6.4\% \\
+    Healthcare              &  64 &  5.5\% \\
+    Consumer Cyclical       &  59 &  5.1\% \\
+    Consumer Defensive      &  38 &  3.3\% \\
+    Real Estate             &  32 &  2.7\% \\
+    Utilities               &  31 &  2.7\% \\
+    Basic Materials         &  22 &  1.9\% \\
+    Energy                  &  21 &  1.8\% \\
+    Communication Services  &  20 &  1.7\% \\
+    Unknown                 &   8 &  0.7\% \\
+    \midrule
+    \textbf{Total}          & \textbf{1.166} & \textbf{100\%} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\noindent\textbf{Nota:} Financial Services representa el 61\% del universo crudo
+debido a la alta presencia de bancos regionales, gestores de activos y
+shell companies (SPACs). El filtrado posterior reducirá significativamente
+este sesgo sectorial.
+
+\subsection*{Subsectores predominantes en Financial Services}
+
+\begin{center}
+\begin{tabular}{lrr}
+  \toprule
+  \textbf{Subsector (Industry)} & \textbf{Tickers} & \textbf{\%} \\
+  \midrule
+  Banks -- Regional                  & 317 & 44.3\% \\
+  Asset Management                   & 101 & 14.1\% \\
+  Capital Markets                    &  56 &  7.8\% \\
+  Credit Services                    &  45 &  6.3\% \\
+  Shell Companies                    &  42 &  5.9\% \\
+  Insurance -- Property \& Casualty  &  41 &  5.7\% \\
+  Banks -- Diversified               &  19 &  2.7\% \\
+  Insurance -- Life                  &  17 &  2.4\% \\
+  Insurance -- Specialty             &  16 &  2.2\% \\
+  Insurance Brokers                  &  16 &  2.2\% \\
+  Otros                              &  46 &  6.4\% \\
+  \midrule
+  \textbf{Total}                     & \textbf{716} & \textbf{100\%} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Tipos de instrumento}
+
+El campo \texttt{quoteType} de Yahoo Finance indica que 1.165 tickers
+corresponden a \texttt{EQUITY} (acciones individuales de empresas) y
+1 ticker es \texttt{MUTUALFUND} (excluido del análisis). El universo
+es prácticamente homogéneo en acciones individuales.
+
+% ============================================================
+\section*{Capitalización de Mercado}
+% ============================================================
+
+Se definen los siguientes rangos estándar de capitalización:
+
+\begin{center}
+\begin{tabular}{llrr}
+  \toprule
+  \textbf{Categoría} & \textbf{Rango (USD)} & \textbf{Tickers} & \textbf{\%} \\
+  \midrule
+  Mega cap   & $\geq$ 200B    &  50 &  4.3\% \\
+  Large cap  & 10B -- 200B    & 473 & 40.6\% \\
+  Mid cap    & 2B -- 10B      & 193 & 16.6\% \\
+  Small cap  & 300M -- 2B     & 234 & 20.1\% \\
+  Micro cap  & $<$ 300M       & 210 & 18.0\% \\
+  \midrule
+  Sin dato   & ---            &   6 &  0.5\% \\
+  \midrule
+  \textbf{Total con datos} & & \textbf{1.160} & \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+La capitalización de mercado se utiliza en dos niveles. Primero, permite
+filtrar empresas demasiado pequeñas o sin información suficiente, que podrían
+introducir problemas de liquidez o sesgos extremos en la estimación. Segundo,
+sirve como criterio para construir referencias de mercado, como el benchmark
+top-20 equiponderado y el prior de equilibrio de Black-Litterman.
+
+% ============================================================
+\section*{Niveles de Filtrado}
+% ============================================================
+
+Se definen cinco niveles de filtrado en cascada, cada uno más restrictivo
+que el anterior. El objetivo es obtener un universo operacional que sea
+\textbf{líquido, estable, representativo y estadísticamente válido}
+para el optimizador de Markowitz.
+
+La secuencia de filtros es la siguiente:
+
+\begin{itemize}
+  \item \textbf{F0 --- Universo crudo:} 1.406 tickers
+  \item \textbf{F1 --- Liquidez básica:} 883 tickers (precio $\geq$ 5 USD, historia $\geq$ 5 años)
+  \item \textbf{F2 --- Sin shells ni desconocidos:} 881 tickers (excluye Shell Companies y sector Unknown)
+  \item \textbf{F3 --- Large/Mega cap:} 686 tickers (capitalización $\geq$ 2B USD)
+  \item \textbf{F4 --- Historia suficiente:} 641 tickers ($\geq$ 10 años de datos)
+  \item \textbf{F5 --- Volatilidad razonable (universo final descriptivo):} 636 tickers ($5\% \leq \sigma_{ann} \leq 100\%$)
+\end{itemize}
+
+\subsection*{Razones de exclusión}
+
+La Tabla~\ref{tab:exclusion} desglosa cuántos tickers fueron eliminados
+en cada filtro y por qué razón:
+
+\begin{table}[H]
+  \centering
+  \caption{Razones de exclusión del universo final F5}
+  \label{tab:exclusion}
+  \begin{tabular}{lrr}
+    \toprule
+    \textbf{Razón de exclusión} & \textbf{Tickers} & \textbf{\%} \\
+    \midrule
+    Historial $< 10$ años             & 254 & 47.9\% \\
+    Cap.\ mkt $< 2$B o sin dato       & 233 & 43.9\% \\
+    Precio de cierre $< 5$ USD        &  37 &  7.0\% \\
+    Volatilidad fuera de rango        &   5 &  0.9\% \\
+    Datos vacíos o errores de lectura & 239 & ---    \\
+    \midrule
+    \textbf{Total excluidos (F0$\to$F5)} & \textbf{529} & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection*{Definición formal de cada filtro}
+
+\textbf{F1 --- Liquidez básica.}
+Un ticker $i$ pertenece a $\mathcal{F}_1$ si y solo si cumple:
+número de filas con precios válidos $n_i \geq 1.250$ ($\approx$ 5 años de historia),
+precio de cierre más reciente $P_i^{\text{last}} \geq 5$ USD, y
+capitalización de mercado $\text{Cap}_i \geq 300$M USD (o sin dato).
+Esto excluye penny stocks y acciones ilíquidas sin historia suficiente
+para estimar parámetros estadísticos confiables.
+
+\medskip
+
+\textbf{F2 --- Calidad de clasificación.}
+$\mathcal{F}_2 \subset \mathcal{F}_1$: adicionalmente se excluye si
+\texttt{industry} = ``Shell Companies'' o \texttt{sector} = ``Unknown''.
+Las shell companies, principalmente SPACs, no tienen operaciones reales
+ni retornos representativos, y los tickers sin sector asignado no pueden
+incluirse en análisis sectoriales.
+
+\medskip
+
+\textbf{F3 --- Large/Mega cap.}
+$\mathcal{F}_3 \subset \mathcal{F}_2$: adicionalmente se requiere
+$\text{Cap}_i \geq 2 \times 10^9$ USD.
+Las empresas de capitalización media-alta tienen mayor liquidez de mercado,
+menores spreads bid-ask, y sus precios reflejan mejor la información pública
+disponible, condición implícita del modelo de Markowitz.
+
+\medskip
+
+\textbf{F4 --- Historia suficiente.}
+$\mathcal{F}_4 \subset \mathcal{F}_3$: adicionalmente $n_i \geq 2.500$
+($\approx$ 10 años de datos diarios).
+Con 10 años de historia se captura al menos un ciclo económico completo,
+incluyendo crisis (2008--09, 2020) y expansiones, lo que es necesario
+para la estimación robusta de matrices de covarianza.
+
+\medskip
+
+\textbf{F5 --- Volatilidad razonable (universo final descriptivo).}
+$\mathcal{F}_5 \subset \mathcal{F}_4$: adicionalmente se requiere:
+\[
+  5\% \;\leq\; \hat{\sigma}_{i}^{\text{ann}} \;\leq\; 100\%
+  \qquad \text{donde} \qquad
+  \hat{\sigma}_{i}^{\text{ann}} = \hat{\sigma}_{i}^{\text{diaria}} \times \sqrt{252}
+\]
+$\sigma < 5\%$ indicaría datos incorrectos o instrumentos no bursátiles;
+$\sigma > 100\%$ corresponde a activos especulativos extremos incompatibles
+con el modelo de media-varianza.
+
+% ============================================================
+\section*{Universo Final Descriptivo: 636 Acciones}
+% ============================================================
+
+El universo final descriptivo contiene \textbf{636 acciones} con historia
+$\geq$ 10 años, capitalización $\geq$ 2B USD, precio $\geq$ 5 USD, y
+volatilidad anualizada entre 5\% y 100\%.
+
+Se denomina ``descriptivo'' porque resume el resultado completo del proceso de
+depuración sobre los datos disponibles. Para los experimentos con y sin
+pandemia se aplica una restricción adicional de comparabilidad temporal,
+explicada más adelante, que reduce el universo operacional a 601 acciones.
+
+\subsection*{Distribución sectorial del universo final}
+
+\begin{table}[H]
+  \centering
+  \caption{Estadísticas por sector --- universo F5 (636 tickers)}
+  \label{tab:sectorstats}
+  \begin{tabular}{lrrrr}
+    \toprule
+    \textbf{Sector} & \textbf{N} & \textbf{$\bar{\sigma}_{ann}$}
+                    & \textbf{$\overline{\text{CAGR}}$} & \textbf{\% con dividendos} \\
+    \midrule
+    Financial Services     & 237 & 37.5\% & 10.6\% & 95\% \\
+    Technology             &  73 & 44.6\% & 16.5\% & 70\% \\
+    Industrials            &  64 & 34.6\% & 13.2\% & 95\% \\
+    Healthcare             &  59 & 37.3\% & 13.4\% & 66\% \\
+    Consumer Cyclical      &  55 & 41.2\% & 13.9\% & 78\% \\
+    Consumer Defensive     &  33 & 29.3\% & 11.4\% & 97\% \\
+    Utilities              &  29 & 24.7\% &  9.7\% & 100\% \\
+    Real Estate            &  29 & 34.8\% & 11.3\% & 93\% \\
+    Energy                 &  20 & 37.5\% & 11.5\% & 100\% \\
+    Basic Materials        &  19 & 35.1\% & 11.5\% & 100\% \\
+    Communication Services &  18 & 36.7\% & 14.6\% & 78\% \\
+    \midrule
+    \textbf{Total}         & \textbf{636} & \textbf{36.6\%} & \textbf{11.9\%} & \textbf{90\%} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Utilities es el sector de menor volatilidad promedio (24.7\%), adecuado
+para perfiles conservadores con dividendos garantizados (100\%).
+Technology lidera en CAGR (16.5\%) pero con alta volatilidad (44.6\%).
+Consumer Defensive combina volatilidad baja (29.3\%) con dividendos casi
+universales (97\%). Financial Services sigue siendo el sector más grande
+(37\% del universo F5).
+
+\begin{table}[H]
+  \centering
+  \caption{Top subsectores por sector en el universo F5}
+  \label{tab:subsectores}
+  \scriptsize
+  \setlength{\tabcolsep}{2pt}
+  \renewcommand{\arraystretch}{0.82}
+  \begin{adjustbox}{max width=0.78\textwidth}
+  \begin{tabular}{@{}llr@{}}
+    \toprule
+    \textbf{Sector} & \textbf{Subsector (Industry)} & \textbf{N} \\
+    \midrule
+    \multirow{5}{*}{Financial Services}
+      & Banks -- Regional               & 93 \\
+      & Asset Management                & 26 \\
+      & Capital Markets                 & 19 \\
+      & Insurance -- P\&C               & 18 \\
+      & Banks -- Diversified            & 18 \\
+    \midrule
+    \multirow{5}{*}{Technology}
+      & Semiconductors                  & 14 \\
+      & Software -- Application         & 13 \\
+      & Software -- Infrastructure      & 12 \\
+      & IT Services                     & 10 \\
+      & Computer Hardware               &  5 \\
+    \midrule
+    \multirow{4}{*}{Industrials}
+      & Specialty Industrial Machinery  & 14 \\
+      & Aerospace \& Defense            & 11 \\
+      & Integrated Freight \& Logistics &  5 \\
+      & Airlines                        &  4 \\
+    \midrule
+    \multirow{4}{*}{Healthcare}
+      & Diagnostics \& Research         & 11 \\
+      & Medical Devices                 & 10 \\
+      & Drug Manufacturers -- General   &  9 \\
+      & Medical Instruments \& Supplies &  9 \\
+    \midrule
+    \multirow{4}{*}{Consumer Cyclical}
+      & Packaging \& Containers         &  6 \\
+      & Auto Parts                      &  6 \\
+      & Restaurants                     &  6 \\
+      & Travel Services                 &  5 \\
+    \midrule
+    \multirow{3}{*}{Real Estate}
+      & REIT -- Specialty               &  7 \\
+      & REIT -- Residential             &  6 \\
+      & REIT -- Retail                  &  5 \\
+    \midrule
+    \multirow{3}{*}{Energy}
+      & Oil \& Gas E\&P                 &  8 \\
+      & Oil \& Gas Midstream            &  4 \\
+      & Oil \& Gas Refining             &  3 \\
+    \midrule
+    \multirow{2}{*}{Basic Materials}
+      & Specialty Chemicals             & 10 \\
+      & Agricultural Inputs             &  2 \\
+    \midrule
+    \multirow{3}{*}{Utilities}
+      & Utilities -- Regulated Electric & 23 \\
+      & Utilities -- Diversified        &  2 \\
+      & Utilities -- Regulated Gas      &  2 \\
+    \midrule
+    \multirow{3}{*}{Communication Services}
+      & Entertainment                   &  6 \\
+      & Telecom Services                &  5 \\
+      & Internet Content \& Information &  4 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{table}
+
+\subsection*{Representantes por sector (top 5 por capitalización)}
+
+\begin{table}[H]
+  \centering
+  \caption{Top 5 Technology (por capitalización de mercado)}
+  \small
+  \begin{tabular}{llrrrr}
+    \toprule
+    \textbf{Ticker} & \textbf{Empresa} & \textbf{Cap (USD B)}
+                    & \textbf{$\sigma_{ann}$} & \textbf{CAGR} & \textbf{Inicio} \\
+    \midrule
+    NVDA & NVIDIA Corp.      & 4.381 & 59.5\% & 36.7\% & 1999 \\
+    AAPL & Apple Inc.        & 3.676 & 43.8\% & 18.9\% & 1980 \\
+    MSFT & Microsoft Corp.   & 2.940 & 33.2\% & 24.6\% & 1986 \\
+    AVGO & Broadcom Inc.     & 1.527 & 37.9\% & 40.6\% & 2009 \\
+    MU   & Micron Technology &   480 & 60.3\% & 14.8\% & 1984 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Top 5 Healthcare (por capitalización de mercado)}
+  \small
+  \begin{tabular}{llrrrr}
+    \toprule
+    \textbf{Ticker} & \textbf{Empresa} & \textbf{Cap (USD B)}
+                    & \textbf{$\sigma_{ann}$} & \textbf{CAGR} & \textbf{Inicio} \\
+    \midrule
+    LLY  & Eli Lilly \& Co.   & 882 & 27.5\% & 13.9\% & 1972 \\
+    JNJ  & Johnson \& Johnson & 582 & 22.8\% & 13.8\% & 1962 \\
+    ABBV & AbbVie Inc.        & 388 & 26.3\% & 19.6\% & 2013 \\
+    MRK  & Merck \& Co.       & 286 & 24.9\% & 12.4\% & 1962 \\
+    UNH  & UnitedHealth Group & 256 & 39.8\% & 20.9\% & 1984 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Top 5 Financial Services (por capitalización de mercado)}
+  \small
+  \begin{tabular}{llrrrr}
+    \toprule
+    \textbf{Ticker} & \textbf{Empresa} & \textbf{Cap (USD B)}
+                    & \textbf{$\sigma_{ann}$} & \textbf{CAGR} & \textbf{Inicio} \\
+    \midrule
+    JPM  & JPMorgan Chase  & 764 & 35.0\% & 13.0\% & 1980 \\
+    V    & Visa Inc.       & 592 & 28.5\% & 19.5\% & 2008 \\
+    MA   & Mastercard Inc. & 444 & 32.4\% & 27.4\% & 2006 \\
+    BAC  & Bank of America & 341 & 37.5\% &  6.7\% & 1973 \\
+    HSBC & HSBC Holdings   & 269 & 27.0\% &  5.9\% & 1999 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Top 5 Consumer Defensive + Utilities (perfiles conservadores)}
+  \small
+  \begin{tabular}{lllrrrr}
+    \toprule
+    \textbf{Ticker} & \textbf{Sector} & \textbf{Empresa} & \textbf{Cap (B)}
+                    & \textbf{$\sigma_{ann}$} & \textbf{CAGR} & \textbf{Inicio} \\
+    \midrule
+    WMT  & Cons.\ Def. & Walmart Inc.      & 1.009 & 29.1\% & 19.0\% & 1972 \\
+    COST & Cons.\ Def. & Costco Wholesale  &   447 & 31.0\% & 13.2\% & 1986 \\
+    PG   & Cons.\ Def. & Procter \& Gamble &   353 & 21.3\% & 10.5\% & 1962 \\
+    KO   & Cons.\ Def. & Coca-Cola Co.     &   333 & 22.8\% & 12.3\% & 1962 \\
+    NEE  & Utilities   & NextEra Energy    &   193 & 21.8\% & 11.1\% & 1973 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================
+\section*{Universo Operacional con Inclusión de Pandemia: 601 Acciones}
+% ============================================================
+
+Para los experimentos de portafolio no se usa directamente la totalidad del
+universo descriptivo de 636 acciones. Se requiere que los activos sean
+comparables entre los escenarios \texttt{sin\_pandemia} y \texttt{con\_pandemia}
+y que tengan datos suficientes en las ventanas de entrenamiento y evaluación.
+Al aplicar esta intersección temporal y operacional, el universo usado por los
+notebooks principales queda en \textbf{601 acciones}.
+
+Esta diferencia no contradice el universo F5. El número 636 describe el
+resultado completo del proceso de filtrado de datos; el número 601 corresponde
+al subconjunto común y operacional usado para comparar metodologías bajo el
+horizonte \texttt{h7\_f2}.
+
+\subsection*{Escenarios de datos}
+
+La metodología actual define dos escenarios:
+
+\begin{itemize}
+  \item \textbf{\texttt{sin\_pandemia}:} excluye las observaciones de 2020--2022
+        de la base usada para calibrar los modelos.
+  \item \textbf{\texttt{con\_pandemia}:} conserva las observaciones de 2020--2022
+        dentro del historial de entrenamiento.
+\end{itemize}
+
+En ambos escenarios se mantiene fijo el periodo futuro fuera de muestra:
+2024-01-29 a 2026-01-30. Por lo tanto, el experimento no compara dos futuros
+distintos. Compara dos formas de estimar los parámetros con distinta
+información histórica.
+
+\begin{table}[H]
+  \centering
+  \caption{Diagnóstico de escenarios para el universo operacional}
+  \label{tab:anexo2_escenarios_pandemia}
+  \small
+  \begin{tabular}{lrrrr}
+    \toprule
+    \textbf{Escenario} & \textbf{Activos} & \textbf{Retornos comunes}
+    & \textbf{Días pandemia train} & \textbf{Días pandemia test} \\
+    \midrule
+    Sin pandemia & 601 & 2.489 & 0 & 0 \\
+    Con pandemia & 601 & 3.245 & 756 & 0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Ventanas temporales en el experimento h7\_f2}
+  \label{tab:anexo2_ventanas_pandemia}
+  \small
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{llll}
+    \toprule
+    \textbf{Escenario} & \textbf{Retornos disponibles}
+    & \textbf{Entrenamiento} & \textbf{Evaluación futura} \\
+    \midrule
+    Sin pandemia & 2013-03-08 a 2026-01-30
+      & 2014-01-23 a 2024-01-26
+      & 2024-01-29 a 2026-01-30 \\
+    Con pandemia & 2013-03-08 a 2026-01-30
+      & 2017-01-24 a 2024-01-26
+      & 2024-01-29 a 2026-01-30 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{table}
+
+La ventana de entrenamiento del escenario sin pandemia comienza antes porque
+necesita recorrer más tiempo calendario para reunir una cantidad comparable de
+observaciones tras remover 2020--2022. En cambio, el escenario con pandemia
+conserva esos días y puede completar la muestra de entrenamiento con una
+ventana calendario más corta.
+
+\subsection*{Interpretación metodológica}
+
+El tratamiento con/sin pandemia permite separar tres efectos:
+
+\begin{itemize}
+  \item \textbf{Efecto de limpieza:} se mantiene un universo líquido,
+        clasificado y con historia suficiente.
+  \item \textbf{Efecto de calibración:} se observa cómo cambian $\mu$,
+        $\Sigma$, la frontera eficiente y los pesos cuando se incorpora un
+        periodo de estrés.
+  \item \textbf{Efecto de evaluación:} se mantiene fijo el futuro fuera de
+        muestra, por lo que las diferencias no se atribuyen a distintos
+        mercados futuros.
+\end{itemize}
+
+Así, la pandemia no se interpreta como ruido que deba eliminarse
+automáticamente. Se interpreta como información histórica extrema cuya
+inclusión puede mejorar o deteriorar la estimación, dependiendo del modelo.
+
+\subsection*{Efecto observado en resultados}
+
+La inclusión de 2020--2022 afecta principalmente a los portafolios que dependen
+de retornos esperados históricos. La Tabla~\ref{tab:anexo2_resultados_pandemia}
+resume el efecto en el experimento Markowitz vs Benchmark.
+
+\begin{table}[H]
+  \centering
+  \caption{Efecto de incluir pandemia en el entrenamiento}
+  \label{tab:anexo2_resultados_pandemia}
+  \small
+  \begin{adjustbox}{max width=\textwidth}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    \textbf{Portafolio} & \textbf{Ret. sin} & \textbf{Sharpe sin}
+    & \textbf{Ret. con} & \textbf{Sharpe con} & \textbf{$\Delta$ Sharpe} \\
+    \midrule
+    Benchmark & 101,4\% & 2,05 & 101,4\% & 2,05 & 0,00 \\
+    Mínima varianza & 56,6\% & 2,11 & 54,6\% & 2,02 & $-$0,09 \\
+    Muy conservador & 58,0\% & 2,21 & 54,5\% & 2,02 & $-$0,18 \\
+    Conservador & 67,8\% & 2,42 & 55,5\% & 1,97 & $-$0,45 \\
+    Neutro & 82,9\% & 2,41 & 60,5\% & 1,76 & $-$0,66 \\
+    Ideal de mercado & 76,5\% & 2,51 & 59,5\% & 1,40 & $-$1,11 \\
+    Arriesgado & 91,6\% & 1,73 & 58,4\% & 1,17 & $-$0,57 \\
+    Muy arriesgado & 102,7\% & 1,41 & 44,0\% & 0,55 & $-$0,86 \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+\end{table}
+
+El benchmark permanece invariante porque su regla no depende de la estimación
+de $\mu$ ni de $\Sigma$. En cambio, las carteras optimizadas sí se modifican.
+El deterioro más fuerte ocurre en Ideal de mercado ($-1,11$ puntos de Sharpe)
+y Muy arriesgado ($-0,86$), lo que muestra que los perfiles más agresivos son
+los más sensibles a la inclusión de datos de crisis. Mínima varianza cae solo
+$-0,09$ puntos de Sharpe, porque depende más de covarianzas que de retornos
+esperados individuales.
+
+% ============================================================
+\section*{Implicaciones para el Modelo de Optimización}
+% ============================================================
+
+\subsection*{Conexión con parámetros del modelo}
+
+El universo F5 alimenta directamente los parámetros del modelo
+MO-MS-SNLP descrito en la formulación matemática del P4:
+
+\begin{table}[H]
+  \centering
+  \caption{Conexión entre parámetros del modelo y fuente de datos}
+  \label{tab:parametros_modelo}
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \renewcommand{\arraystretch}{0.95}
+  \begin{tabularx}{0.92\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+    \toprule
+    \textbf{Parámetro} & \textbf{Fuente en los datos} & \textbf{Notas} \\
+    \midrule
+    $r_{i,t}^s$ (retorno escenario $s$)
+      & Columna \texttt{Close}, retornos diarios
+      & Agregado a retornos semanales \\
+    $d_{i,t}$ (dividendos)
+      & Columna \texttt{Dividends}
+      & Alimenta \texttt{CC\_t} (caja chica) \\
+    $\mu_i$ (retorno esperado)
+      & CAGR histórico o media móvil
+      & Percentil 10/50/90 por escenario \\
+    $\Sigma_{ij}$ (covarianza)
+      & Retornos diarios, ventana de 2 años
+      & Estimación rolling para rebalanceo \\
+    $\alpha_p$ (tolerancia de pérdida)
+      & Perfil de riesgo del cliente
+      & 5 niveles: 0\%, 5\%, 15\%, 30\%, 40\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+En la implementación actual, estos parámetros se calculan sobre dos bases
+comparables: una sin pandemia y otra con pandemia. Por lo tanto, el mismo
+pipeline de datos permite medir cómo la inclusión de 2020--2022 cambia los
+insumos de optimización.
+
+\subsection*{Sub-universos recomendados por perfil de riesgo}
+
+Para mantener el problema computacionalmente tratable y respetar
+la restricción de respuesta $< 10$ segundos, se sugieren los siguientes
+sub-universos:
+
+\begin{table}[H]
+  \centering
+  \caption{Sub-universos recomendados por perfil de riesgo}
+  \label{tab:subuniverse}
+  \begin{tabular}{llp{6.5cm}}
+    \toprule
+    \textbf{Perfil} & \textbf{Tamaño sugerido} & \textbf{Criterio de selección} \\
+    \midrule
+    Muy conservador (0\%)  & 30--50 acciones   & $\sigma_{ann} < 30\%$, dividendos, sectores Utilities y Cons.\ Def. \\
+    Conservador (5\%)      & 50--80 acciones   & $\sigma_{ann} < 35\%$, dividendos $\geq 50\%$ del universo sectorial \\
+    Neutro (15\%)          & 80--120 acciones  & Todos los sectores, pesos del universo F5 \\
+    Arriesgado (30\%)      & 100--150 acciones & Incluye Tech y Consumer Cyclical de alta volatilidad \\
+    Muy arriesgado (40\%)  & Sin restricción   & Universo F5 completo en descriptivo; universo operacional de 601 en experimentos con/sin pandemia \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Para el prototipo inicial se recomienda trabajar con un universo de
+\textbf{50--100 acciones} seleccionadas por sector (representantes por
+capitalización), lo que garantiza la resolución en Gurobi en $< 1$
+segundo para el LP de capas 0--2.
+
+\subsection*{Consideraciones sobre la caja chica}
+
+Los dividendos en la columna \texttt{Dividends} representan el monto
+en USD por acción en la fecha de pago. Para el modelo:
+
+\begin{align}
+  d_{i,t} &= \text{Dividends}_{i,t} \cdot \frac{w_{i,t} \cdot V_{t-1}}{P_{i,t}}
+\end{align}
+
+donde $P_{i,t}$ es el precio de cierre de la semana $t$ y $V_{t-1}$
+el valor del portafolio en la semana anterior. El 90\% del universo F5
+distribuye dividendos, lo que implica que la caja chica será activa
+para la gran mayoría de portafolios.
+
+\subsection*{Implicancia de la pandemia para los parámetros}
+
+La pandemia afecta principalmente la estimación de retornos esperados y
+covarianzas. En Markowitz, esto se traduce en cambios directos en la frontera
+eficiente y en la selección de portafolios por perfil. En Black-Litterman, el
+prior de equilibrio y las \textit{views} amortiguan parcialmente la dependencia
+de la media histórica, pero la matriz de covarianzas y la volatilidad siguen
+capturando parte del shock. En Simulación Monte Carlo, los KPIs resultantes se
+usan como insumo para proyectar riqueza, retiro del cliente y utilidad de la
+empresa.
+
+Por ello, mantener ambos escenarios es metodológicamente más informativo que
+reportar una sola base sin pandemia. Permite observar si una técnica es robusta
+cuando se entrena con datos de estrés y si el resultado depende de un supuesto
+de limpieza demasiado favorable.
+
+% ============================================================
+\section*{Conclusión}
+% ============================================================
+
+En síntesis, a partir de un universo inicial de \textbf{1.406 tickers}
+se construyó un universo final descriptivo de \textbf{636 acciones} aptas para
+alimentar el modelo de optimización del proyecto. El proceso de depuración
+permitió eliminar instrumentos con información incompleta, baja liquidez,
+escasa historia o comportamiento incompatible con el enfoque de media-varianza.
+
+El resultado es un universo más estable, representativo y utilizable
+computacionalmente, con presencia de 11 sectores económicos, una volatilidad
+promedio anualizada de 36.6\%, y una alta proporción de acciones que pagan
+dividendos. Esto permite que el conjunto final no solo sea adecuado para la
+estimación de retornos y covarianzas, sino también consistente con la lógica
+financiera del modelo, incluyendo la incorporación de caja chica vía dividendos.
+
+La metodología actual agrega una capa adicional: para los experimentos de
+Markowitz, Black-Litterman y Simulación Monte Carlo se trabaja con un universo
+operacional comparable de \textbf{601 acciones}, evaluado bajo escenarios
+\texttt{sin\_pandemia} y \texttt{con\_pandemia}. En ambos casos el periodo
+futuro se mantiene fijo, por lo que la comparación mide el efecto de incluir
+2020--2022 en la calibración, no el efecto de cambiar el mercado evaluado.
+
+\vspace{1em}
+\begin{center}
+  \small
+  Documento generado con datos al 13 de marzo de 2026.\\
+  Fuente: Yahoo Finance vía \texttt{yfinance}. Análisis: Python 3.11.
+\end{center}

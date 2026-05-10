@@ -1,0 +1,83 @@
+\section{Formulación matemática del problema}
+ 
+\subsection{Notación}
+ 
+Sean $n$ el n\'umero de activos en el universo, $w \in \mathbb{R}^n$ el vector de pesos del portafolio, $\mu \in \mathbb{R}^n$ el vector de retornos esperados diarios y $\Sigma \in \mathbb{R}^{n \times n}$ la matriz de covarianzas de retornos diarios.
+ 
+\subsection{Problema de Markowitz por perfil de riesgo}
+ 
+Para cada perfil de riesgo con par\'ametro de aversi\'on $\gamma$ y cota de volatilidad $\sigma_{\max}^2$, se resuelve:
+ 
+\begin{equation}
+\max_{w} \quad \mu^\top w - \frac{1}{2} \gamma \, w^\top \Sigma \, w
+\end{equation}
+ 
+sujeto a:
+ 
+\begin{align}
+\sum_{i=1}^{n} w_i &= 1 \\
+0 \leq w_i &\leq w_{\max} \quad \forall \, i = 1, \ldots, n \\
+w^\top \Sigma \, w &\leq \sigma_{\max}^2 \quad \text{(cuando el perfil lo requiere)}
+\end{align}
+ 
+La restricci\'on $w_i \geq 0$ impide ventas cortas; la suma igual a 1 invierte todo el capital; y la cota superior $w_{\max} = 0.20$ evita concentraci\'on extrema en un solo activo.
+ 
+\subsection{Frontera eficiente y portafolio de tangencia}
+ 
+La frontera eficiente se obtiene resolviendo, para distintos retornos objetivo $r_{\text{obj}}$:
+ 
+\begin{equation}
+\min_{w} \quad w^\top \Sigma \, w \qquad \text{s.a.} \quad \mu^\top w \geq r_{\text{obj}}, \quad \sum_i w_i = 1, \quad 0 \leq w_i \leq w_{\max}
+\end{equation}
+ 
+El portafolio de tangencia (``Ideal de mercado'') se selecciona como el punto de la frontera que maximiza el ratio de Sharpe:
+ 
+\begin{equation}
+\text{Sharpe} = \frac{R_p - R_f}{\sigma_p}
+\end{equation}
+ 
+donde $R_p$ es el retorno anualizado del portafolio, $R_f = 0.02$ la tasa libre de riesgo anual y $\sigma_p$ la volatilidad anualizada.
+ 
+\subsection{Modelo Black-Litterman}
+ 
+El prior de equilibrio de mercado se calcula como:
+ 
+\begin{equation}
+\pi = \delta \cdot \Sigma \cdot w_{\text{market}}
+\end{equation}
+ 
+donde $w_{\text{market}}$ son los pesos por capitalizaci\'on de mercado y $\delta$ es el coeficiente de aversi\'on al riesgo impl\'icito:
+ 
+\begin{equation}
+\delta = \frac{R_{\text{market}} - R_f}{\sigma_{\text{market}}^2}
+\end{equation}
+ 
+Dadas las \textit{views} representadas por la matriz de selecci\'on $P$, el vector de expectativas $Q$ y la matriz de incertidumbre $\Omega$, el retorno esperado posterior es:
+ 
+\begin{equation}
+\mu_{\text{BL}} = \pi + \tau \Sigma P^\top (P \tau \Sigma P^\top + \Omega)^{-1} (Q - P\pi)
+\end{equation}
+ 
+La covarianza posterior se calcula como:
+ 
+\begin{equation}
+\Sigma_{\text{BL}} = \Sigma + \Sigma_{\text{posterior}}
+\end{equation}
+ 
+donde $\Sigma_{\text{posterior}}$ es la covarianza del ajuste bayesiano, forzada a ser semidefinida positiva mediante la funci\'on \texttt{nearest\_psd}. Con $\mu_{\text{BL}}$ y $\Sigma_{\text{BL}}$ se resuelven los mismos problemas de optimizaci\'on que en Markowitz.
+ 
+\subsection{Funciones de comportamiento del cliente}
+ 
+Las funciones $P_1$ y $P_2$ que modelan el comportamiento del cliente se definen como funciones log\'isticas:
+ 
+\begin{equation}
+P_1(x_1) = \frac{1}{1 + \exp\left(-s(x_1 - \hat{x}_1)\right)}
+\end{equation}
+ 
+\begin{equation}
+P_2(x_2) = \frac{1}{1 + \exp\left(-s(x_2 - \hat{x}_2)\right)}
+\end{equation}
+ 
+donde $x_1$ es la p\'erdida actual del cliente, $\hat{x}_1$ es la p\'erdida m\'axima tolerada por su perfil, $x_2$ es la tasa de retorno ofrecida en la recomendaci\'on, $\hat{x}_2$ es el umbral de tolerancia al riesgo del perfil, y $s = 20$ es un par\'ametro de sensibilidad que escala las diferencias decimales para producir efectos observables.
+ 
+$P_1$ se activa \'unicamente cuando la p\'erdida actual supera la tolerancia del perfil ($x_1 > \hat{x}_1$); en caso contrario, la probabilidad de retiro es cero.

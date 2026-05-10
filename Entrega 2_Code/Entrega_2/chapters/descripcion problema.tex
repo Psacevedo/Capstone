@@ -1,0 +1,138 @@
+% ============================================================================
+% 2.1 Contexto y motivación
+% ============================================================================
+\section{Contexto y motivación}
+
+La gesti\'on de inversiones requiere asignar capital entre m\'ultiples activos considerando riesgo, horizonte y condiciones de mercado. FinPUC es una plataforma ficticia de recomendaci\'on de inversiones para clientes del mercado accionario estadounidense clasificados por perfil de riesgo. El sistema genera peri\'odicamente portafolios optimizados buscando maximizar el retorno esperado y las utilidades por comisiones, sujeto a restricciones de riesgo y tiempo computacional.
+
+% ============================================================================
+% 2.2 Ciclo operacional
+% ============================================================================
+\section{Ciclo operacional}
+
+El sistema opera en dos escalas temporales. A nivel de optimizaci\'on, los
+pesos del portafolio se recalculan cada semestre (126 d\'ias h\'abiles bursátil) mediante
+rebalanceo: se reestiman los par\'ametros $\mu$ y $\Sigma$ con la ventana
+hist\'orica acumulada hasta ese punto y se resuelve nuevamente el problema de
+optimizaci\'on.
+
+A nivel de simulaci\'on del cliente (Monte Carlo P4), el sistema eval\'ua
+semanalmente durante 260 semanas (5 a\~nos) el comportamiento del
+inversionista. Cada semana, el cliente puede aceptar la recomendaci\'on vigente
+con probabilidad $P_2(x)$ o rechazarla. Si acepta, se ejecuta la
+transacci\'on y la empresa cobra una comisi\'on proporcional $k\% = 1\%$ sobre
+el monto transado. Si la p\'erdida acumulada del cliente supera la tolerancia
+de su perfil, existe una probabilidad $P_1(x)$ de que retire sus fondos de la
+plataforma.
+
+% ============================================================================
+% 2.3 Perfiles de riesgo
+% ============================================================================
+\section{Perfiles de riesgo}
+
+Se consideran cinco perfiles de riesgo definidos por una volatilidad anual máxima de 8\%, 12\%, 18\%, 28\% y 40\%, correspondientes a perfiles muy conservador, conservador, neutro, arriesgado y muy arriesgado, respectivamente.
+
+% ============================================================================
+% 2.4 Formulación del problema
+% ============================================================================
+\section{Formulaci\'on del problema}
+
+\subsection{Decisi\'on principal}
+
+Para cada perfil de riesgo y cada punto de rebalanceo, el sistema debe
+determinar el vector de pesos $w \in \mathbb{R}^n$ que asigna una fracci\'on
+del capital a cada una de las $n = 601$ acciones del universo.
+
+\subsection{Objetivos}
+
+El problema busca maximizar simultáneamente el retorno esperado del cliente ($\mu^\top w$) y las utilidades por comisiones generadas por las transacciones aceptadas.
+    
+\subsection{Restricciones}
+\begin{itemize}
+    \item \textbf{No venta en corto:} $w_i \geq 0$ para todo $i$.
+    \item\textbf{Presupuesto completo:} $\sum_{i=1}^{n} w_i = 1$.
+    \item\textbf{Concentraci\'on m\'axima:} $w_i \leq w_{\max} = 0.20$ para todo $i$.
+    \item\textbf{Riesgo por perfil:} $w^\top \Sigma\, w \leq \sigma_{\max}^2$, donde la cota depende del perfil de riesgo.
+    \item\textbf{Tiempo de c\'omputo:} el sistema debe generar la recomendaci\'on en menos de 10 segundos.
+\end{itemize}
+
+
+% ============================================================================
+% 2.5 Datos disponibles
+% ============================================================================
+\section{Datos disponibles}
+
+\subsection{Fuente y estructura}
+
+Los datos corresponden a registros hist\'oricos del mercado accionario
+estadounidense. El dataset original comprende 1\,406 archivos CSV, uno por ticker, con precios diarios que cubren aproximadamente desde el a\~no 2000
+hasta marzo de 2026. Cada archivo incluye fecha, precio de apertura y cierre,
+m\'aximo y m\'inimo del d\'ia, volumen de transacciones, dividendos y factores
+de \textit{split}. Adicionalmente, se dispone de un archivo de metadatos con
+informaci\'on fundamental de cada empresa: sector, industria, tipo de
+instrumento y capitalizaci\'on de mercado.
+
+El retorno diario total de cada acci\'on se calcula incorporando dividendos:
+\begin{equation}
+r_{i,t}=\frac{P_{i,t}-P_{i,t-1}+D_{i,t}}{P_{i,t-1}},
+\end{equation}
+donde $P_{i,t}$ es el precio de cierre del activo $i$ en el d\'ia $t$ y
+$D_{i,t}$ el dividendo pagado en esa fecha.
+
+\subsection{Proceso de filtrado}
+
+A partir del universo crudo de 1\,406 tickers se aplic\'o un proceso de
+filtrado secuencial. La Tabla~\ref{tab:filtrado_sin} detalla la cascada del
+universo operacional comparable usado en los experimentos, que queda en
+601 activos. En paralelo, el Anexo N°2 documenta el universo F5
+descriptivo completo de 636 acciones. Esta diferencia no corresponde a dos
+universos finales distintos por escenario, sino a dos niveles de an\'alisis:
+636 acciones para caracterizaci\'on descriptiva y 601 acciones para
+comparaci\'on experimental con y sin pandemia bajo el mismo periodo futuro.
+
+\begin{table*}[h]
+\centering
+\caption{Cascada de filtrado aplicada al universo sin pandemia.}
+\label{tab:filtrado_sin}
+\small
+\begin{tabular}{@{}p{0.07\textwidth}p{0.67\textwidth}rr@{}}
+\toprule
+Filtro & Criterio operacional & Tickers & Retenci\'on F0 \\
+\midrule
+F0 & Archivos CSV encontrados & 1.406 & 100,0\% \\
+F1 & Precio $\geq$ USD 5; historia $\geq$ 5 a\~nos; cap. $\geq$ USD 300M o sin dato & 827 & 58,8\% \\
+F2 & Excluye \emph{Shell Companies}, sector desconocido y no \texttt{EQUITY} & 824 & 58,6\% \\
+F3 & Capitalizaci\'on burs\'atil $\geq$ USD 2B & 659 & 46,9\% \\
+F4 & Historia fuera de pandemia $\geq$ 10 a\~nos, aproximada por 2.500 filas & 606 & 43,1\% \\
+F5 & Volatilidad anualizada fuera de pandemia entre 5\% y 100\% & 601 & 42,7\% \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Justificaci\'on del filtrado}
+
+El proceso de filtrado busca construir un universo de activos estable e invertible para la optimizaci\'on de portafolios. F1 elimina acciones con precios muy bajos, historia insuficiente o capitalizaci\'on reducida, disminuyendo estimaciones poco robustas. F2 restringe el an\'alisis a instrumentos \texttt{EQUITY} y excluye \textit{Shell Companies} y sectores desconocidos para mantener comparabilidad entre activos.
+
+Luego, F3 exige una capitalizaci\'on m\'inima de USD 2B para reducir problemas de liquidez y volatilidad extrema. F4 requiere al menos diez a\~nos de historia fuera del periodo pandemia para estimar par\'ametros con mayor estabilidad. Finalmente, F5 elimina activos con volatilidad anualizada excesivamente alta o baja, asociados potencialmente a errores de datos o comportamientos incompatibles con un portafolio accionario tradicional.
+
+
+\subsection{Dise\~no experimental: escenarios con y sin pandemia}
+
+La evaluaci\'on del sistema se realiza bajo dos escenarios que comparten el
+mismo per\'iodo futuro de evaluaci\'on (2 a\~nos fuera de muestra) pero
+difieren en la ventana de entrenamiento. El escenario ``sin pandemia'' excluye
+las observaciones de 2020 - 2022, estimando $\mu$ y $\Sigma$ con un mercado
+relativamente normal. El escenario ``con pandemia'' las incluye, incorporando
+correlaciones de estr\'es y volatilidad extrema. Cualquier diferencia en
+resultados entre ambos escenarios se interpreta como efecto de la
+informaci\'on usada para calibrar, no como diferencias de mercado futuro.
+
+\subsection{Riesgos y limitaciones de los datos}
+
+\begin{itemize}
+    \item Posible sesgo de supervivencia por exigir historia larga y alta capitalización.
+    \item Sobrerrepresentación del sector financiero en el universo final.
+    \item Tratamiento alternativo del periodo 2020--2022 mediante escenarios con y sin pandemia.
+    \item Diferencias entre retornos usados en filtrado y análisis final.
+    \item Pérdida de observaciones por uso de \texttt{join="inner"}.
+\end{itemize}

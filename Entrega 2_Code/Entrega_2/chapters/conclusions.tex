@@ -1,0 +1,50 @@
+\section{Conclusiones principales y análisis de metodología}
+
+El proyecto implement\'o tres capas metodol\'ogicas para el recomendador de FinPUC: Markowitz, Black-Litterman con cuatro variantes de \textit{views} y simulaci\'on Monte Carlo cliente-empresa. Los resultados indican que Black-Litterman es m\'as estable cuando la estimaci\'on hist\'orica est\'a contaminada por cambios de r\'egimen: con datos de pandemia, la mejor variante BL, momentum top-20 a 6 meses, obtiene Sharpe 2,38 y supera al mejor Markowitz, con Sharpe 2,02. Sin pandemia, Markowitz alcanza Sharpe 2,51 en el portafolio Ideal de mercado, pero este caso exhibe \textit{overfitting}, pues su Sharpe te\'orico de 5,01 cae a 1,80 al evaluarse con pandemia. El benchmark equiponderado tambi\'en resulta exigente, con Sharpe 2,05 y retorno bruto de 101,4\%, por lo que funciona como piso robusto e independiente de par\'ametros estimados. En el recomendador, la \textit{view} de momentum por capitalizaci\'on a 6 meses domina el ranking P4 con score 9\,417, riqueza promedio de USD~8\,974, retiro de 3,1\% y utilidad empresa de USD~474, mostrando el mejor equilibrio entre valor para el cliente y rentabilidad para FinPUC.
+
+La inclusi\'on de pandemia deteriora especialmente los portafolios agresivos de Markowitz, con ca\'idas de hasta 1,1 puntos de Sharpe, mientras que en Black-Litterman el efecto es neutro o positivo gracias al rol estabilizador del prior de equilibrio. A su vez, el an\'alisis distribucional rechaza normalidad en todos los activos: t-Student y Johnson SU dominan el ajuste param\'etrico, con 70\% y 41\% respectivamente seg\'un BIC y AIC. Esto implica que la simulaci\'on Monte Carlo normal probablemente subestima eventos extremos, aunque sirve como aproximaci\'on inicial. La validaci\'on robusta respalda la consistencia general, ya que el Sharpe futuro cae de forma monot\'onica al acortar la ventana de entrenamiento, desde 2,32 en h7\_f2 hasta 1,35 en h2\_f7.
+
+La metodolog\'ia tiene como fortaleza evaluar incrementalmente la optimizaci\'on pura, la incorporaci\'on de \textit{views} y la respuesta del cliente. El benchmark equiponderado evita favorecer artificialmente a un modelo, los escenarios con y sin pandemia a\'islan el efecto de la informaci\'on hist\'orica, y la validaci\'on con 70 splits aleatorios y 18 ventanas m\'oviles reduce el riesgo de conclusiones dependientes de un \'unico per\'iodo. Adem\'as, las funciones $P_1$ y $P_2$ hacen trazable el comportamiento del cliente, mientras que las semillas SHA-256 garantizan reproducibilidad. Las principales mejoras para la entrega final son reemplazar la normalidad de Monte Carlo por distribuciones t-Student o Johnson SU calibradas por ticker, alimentar la \textit{view} de desempleo con series reales como BLS o FRED, incluir costos de transacci\'on como penalizaci\'on de rotaci\'on $\|w_{\text{nuevo}} - w_{\text{anterior}}\|_1 \leq \delta$, redefinir $P_1$ mediante \textit{drawdown}, sensibilizar $s \in \{5, 10, 20, 50\}$ e introducir escenarios desfavorables asim\'etricos, ya que los actuales $\pm 0{,}5\sigma$ no capturan toda la asimetr\'ia negativa observada.
+
+Las dificultades principales fueron la dimensionalidad de $n = 601$ activos, que exigi\'o \textit{shrinkage} y \texttt{nearest\_psd} para estabilizar CVXPY; la implementaci\'on de las cuatro \textit{views} de Black-Litterman, que requiri\'o construir $P$ y calibrar $\Omega$ por variante; y el costo de simular 180 combinaciones con 5\,000 trayectorias y 260 semanas, donde se optimiz\'o el uso de semillas SHA-256 para preservar reproducibilidad sin aumentar demasiado el tiempo de ejecuci\'on. 
+
+\section{Carta Gantt: avance y fases restantes}
+
+La Tabla~\ref{tab:plan_trabajo_futuro} resume la Carta Gantt de trabajo
+posterior a esta entrega, diferenciando avance ya completado y tareas
+pendientes para la fase final del proyecto.
+
+\begin{table*}[h]
+\centering
+\caption{Carta Gantt resumida: avance actual y fases restantes.}
+\label{tab:plan_trabajo_futuro}
+\scriptsize
+\begin{tabular}{@{}p{0.18\textwidth}p{0.14\textwidth}p{0.24\textwidth}p{0.34\textwidth}@{}}
+\toprule
+Fase & Periodo & Avance actual & Trabajo futuro \\
+\midrule
+Evaluaci\'on metodol\'ogica &
+12 mayo -- 15 junio 2026 &
+Markowitz, Black-Litterman, Monte Carlo y validaci\'on robusta ya implementados. &
+Realizar an\'alisis de sensibilidad sobre $s$, $\tau$ y $\lambda$, evaluando c\'omo cambian los resultados ante variaciones en los principales hiperpar\'ametros del modelo. \\
+\addlinespace
+
+Mejoras del modelo &
+12 mayo -- 15 junio 2026 &
+Se identificaron limitaciones en la normalidad de Monte Carlo, costos de transacci\'on y medici\'on de p\'erdidas. &
+Incorporar distribuciones no normales, como t-Student o Johnson SU, modelar costos de transacci\'on como restricci\'on de rotaci\'on y evaluar el uso de \textit{drawdown} como criterio de retiro del cliente. \\
+\addlinespace
+
+Integraci\'on del sistema &
+Mayo -- junio 2026 &
+Los modelos ya fueron evaluados de forma experimental y fuera de muestra. &
+Construir una interfaz de recomendaci\'on capaz de entregar resultados en menos de 10 segundos, incluyendo optimizaci\'on computacional, cach\'e de resultados y pruebas de tiempo de ejecuci\'on. \\
+\addlinespace
+
+Cierre del proyecto &
+13 -- 26 junio 2026 &
+Informe 2 en redacci\'on y principales resultados ya consolidados. &
+Preparar la presentaci\'on final, redactar el informe final, documentar el modelo definitivo, ordenar el repositorio GitHub y realizar correcciones finales antes de la entrega del 26 de junio de 2026. \\
+\bottomrule
+\end{tabular}
+\end{table*}

@@ -1,0 +1,137 @@
+2026-05-07 18:31:46,638 | INFO | Logging inicializado
+2026-05-07 18:37:30,155 | INFO | Logging inicializado
+2026-05-07 18:53:05,288 | INFO | Notebook iniciado
+2026-05-07 18:53:06,677 | INFO | Logging inicializado
+2026-05-07 18:53:06,940 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 18:53:07,488 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 18:54:07,073 | INFO | Notebook iniciado
+2026-05-07 18:54:08,387 | INFO | Logging inicializado
+2026-05-07 18:54:08,648 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 18:54:09,180 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 18:54:09,474 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 18:54:10,142 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 18:54:26,682 | INFO | Notebook iniciado
+2026-05-07 18:54:28,380 | INFO | Logging inicializado
+2026-05-07 18:54:28,714 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 18:54:29,264 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 18:54:29,865 | INFO | Escenario sin_pandemia cargado: 20 tickers, 2717 observaciones
+2026-05-07 18:54:31,398 | INFO | Escenario con_pandemia cargado: 20 tickers, 3473 observaciones
+2026-05-07 18:54:31,849 | INFO | Snapshot resuelto: vol benchmark=0.275829 | frontier=30
+2026-05-07 18:54:32,343 | INFO | Snapshot resuelto: vol benchmark=0.270281 | frontier=30
+2026-05-07 18:54:32,775 | INFO | Snapshot resuelto: vol benchmark=0.265435 | frontier=30
+2026-05-07 18:54:33,195 | INFO | Snapshot resuelto: vol benchmark=0.265268 | frontier=30
+2026-05-07 18:54:33,632 | INFO | Snapshot resuelto: vol benchmark=0.224763 | frontier=30
+2026-05-07 18:54:34,121 | INFO | Snapshot resuelto: vol benchmark=0.221793 | frontier=30
+2026-05-07 18:54:34,556 | INFO | Snapshot resuelto: vol benchmark=0.219284 | frontier=30
+2026-05-07 18:54:34,999 | INFO | Snapshot resuelto: vol benchmark=0.222086 | frontier=30
+2026-05-07 18:55:02,732 | INFO | Notebook iniciado
+2026-05-07 18:55:04,354 | INFO | Logging inicializado
+2026-05-07 18:55:04,708 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 18:55:05,479 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 18:55:25,517 | INFO | Escenario sin_pandemia cargado: 601 tickers, 2489 observaciones
+2026-05-07 18:55:50,688 | INFO | Snapshot resuelto: vol benchmark=0.275862 | frontier=30
+2026-05-07 18:56:25,808 | INFO | Notebook iniciado
+2026-05-07 18:56:27,203 | INFO | Logging inicializado
+2026-05-07 18:56:27,449 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 18:56:28,008 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 18:57:21,793 | INFO | Notebook iniciado
+2026-05-07 18:57:22,960 | INFO | Logging inicializado
+2026-05-07 18:57:41,545 | INFO | Escenario sin_pandemia cargado: 601 tickers, 2489 observaciones
+2026-05-07 18:58:06,599 | INFO | Snapshot resuelto: vol benchmark=0.275862 | frontier=30
+2026-05-07 18:58:32,402 | INFO | Snapshot resuelto: vol benchmark=0.269409 | frontier=30
+2026-05-07 18:58:59,343 | INFO | Snapshot resuelto: vol benchmark=0.264814 | frontier=29
+2026-05-07 18:59:24,884 | INFO | Snapshot resuelto: vol benchmark=0.265487 | frontier=30
+2026-05-07 19:00:22,808 | INFO | Escenario con_pandemia cargado: 601 tickers, 3245 observaciones
+2026-05-07 19:00:48,892 | INFO | Snapshot resuelto: vol benchmark=0.223946 | frontier=30
+2026-05-07 19:01:20,600 | INFO | Snapshot resuelto: vol benchmark=0.219923 | frontier=30
+2026-05-07 19:01:54,653 | INFO | Snapshot resuelto: vol benchmark=0.217782 | frontier=30
+2026-05-07 19:02:31,531 | INFO | Snapshot resuelto: vol benchmark=0.221628 | frontier=29
+2026-05-07 19:36:58,841 | INFO | Notebook iniciado
+2026-05-07 19:37:02,423 | INFO | Logging inicializado
+2026-05-07 19:37:02,803 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 19:37:03,769 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 19:37:33,925 | INFO | Escenario sin_pandemia cargado: 601 tickers, 2489 observaciones
+2026-05-07 19:38:53,378 | INFO | Escenario con_pandemia cargado: 601 tickers, 3245 observaciones
+2026-05-07 19:38:53,382 | INFO | Iniciando sin_pandemia_h7_f2_rebalance_601
+2026-05-07 19:39:31,198 | INFO | Snapshot resuelto: vol benchmark=0.275862 | frontier=30
+2026-05-07 19:40:08,324 | INFO | Snapshot resuelto: vol benchmark=0.269409 | frontier=30
+2026-05-07 19:40:47,417 | INFO | Snapshot resuelto: vol benchmark=0.264814 | frontier=29
+2026-05-07 19:41:37,736 | INFO | Snapshot resuelto: vol benchmark=0.265487 | frontier=30
+2026-05-07 19:41:37,976 | INFO | Completado sin_pandemia_h7_f2_rebalance_601: 9 segmentos rebalanceados
+2026-05-07 19:41:37,978 | INFO | Iniciando con_pandemia_h7_f2_rebalance_601
+2026-05-07 19:42:11,493 | INFO | Snapshot resuelto: vol benchmark=0.223946 | frontier=30
+2026-05-07 19:42:46,674 | INFO | Snapshot resuelto: vol benchmark=0.219923 | frontier=30
+2026-05-07 19:43:19,596 | INFO | Snapshot resuelto: vol benchmark=0.217782 | frontier=30
+2026-05-07 19:43:59,174 | INFO | Snapshot resuelto: vol benchmark=0.221628 | frontier=29
+2026-05-07 19:43:59,354 | INFO | Completado con_pandemia_h7_f2_rebalance_601: 9 segmentos rebalanceados
+2026-05-07 19:49:57,709 | INFO | Notebook iniciado
+2026-05-07 19:50:03,839 | INFO | Logging inicializado
+2026-05-07 19:50:04,668 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 19:50:06,172 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 19:50:57,789 | INFO | Escenario sin_pandemia cargado: 601 tickers, 2489 observaciones
+2026-05-07 19:52:17,311 | INFO | Escenario con_pandemia cargado: 601 tickers, 3245 observaciones
+2026-05-07 19:52:17,317 | INFO | Iniciando sin_pandemia_h7_f2_rebalance_601
+2026-05-07 19:53:01,491 | INFO | Snapshot resuelto: vol benchmark=0.275862 | frontier=30
+2026-05-07 19:53:44,639 | INFO | Snapshot resuelto: vol benchmark=0.269409 | frontier=30
+2026-05-07 19:54:37,214 | INFO | Snapshot resuelto: vol benchmark=0.264814 | frontier=29
+2026-05-07 19:55:26,583 | INFO | Snapshot resuelto: vol benchmark=0.265487 | frontier=30
+2026-05-07 19:55:26,926 | INFO | Completado sin_pandemia_h7_f2_rebalance_601: 9 segmentos rebalanceados
+2026-05-07 19:55:26,927 | INFO | Iniciando con_pandemia_h7_f2_rebalance_601
+2026-05-07 19:56:15,794 | INFO | Snapshot resuelto: vol benchmark=0.223946 | frontier=30
+2026-05-07 19:56:59,046 | INFO | Snapshot resuelto: vol benchmark=0.219923 | frontier=30
+2026-05-07 19:57:41,178 | INFO | Snapshot resuelto: vol benchmark=0.217782 | frontier=30
+2026-05-07 19:58:23,438 | INFO | Snapshot resuelto: vol benchmark=0.221628 | frontier=29
+2026-05-07 19:58:23,673 | INFO | Completado con_pandemia_h7_f2_rebalance_601: 9 segmentos rebalanceados
+2026-05-07 20:34:13,524 | INFO | Logging inicializado
+2026-05-07 20:42:22,428 | INFO | Logging inicializado
+2026-05-07 20:49:43,111 | INFO | Logging inicializado
+2026-05-07 20:50:47,605 | INFO | Iniciando sin_pandemia_h7_f2_rebalance_601
+2026-05-07 21:03:13,250 | INFO | Logging inicializado
+2026-05-07 21:03:15,051 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 21:03:16,924 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 21:04:08,429 | INFO | Logging inicializado
+2026-05-07 21:04:08,708 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 21:04:09,286 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 21:04:28,529 | INFO | Logging inicializado
+2026-05-07 21:04:28,828 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 21:04:29,459 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 21:04:48,265 | INFO | Escenario sin_pandemia cargado: 601 tickers, 2489 observaciones
+2026-05-07 21:05:28,565 | INFO | Escenario con_pandemia cargado: 601 tickers, 3245 observaciones
+2026-05-07 21:05:28,565 | INFO | Iniciando sin_pandemia_h7_f2_rebalance_601
+2026-05-07 21:05:50,122 | INFO | Snapshot resuelto: vol benchmark=0.275862 | frontier=30
+2026-05-07 21:06:10,940 | INFO | Snapshot resuelto: vol benchmark=0.269409 | frontier=30
+2026-05-07 21:06:32,754 | INFO | Snapshot resuelto: vol benchmark=0.264814 | frontier=29
+2026-05-07 21:06:54,266 | INFO | Snapshot resuelto: vol benchmark=0.265487 | frontier=30
+2026-05-07 21:06:54,362 | INFO | Completado sin_pandemia_h7_f2_rebalance_601: 9 portafolios rebalanceados
+2026-05-07 21:06:54,362 | INFO | Iniciando con_pandemia_h7_f2_rebalance_601
+2026-05-07 21:07:14,033 | INFO | Snapshot resuelto: vol benchmark=0.223946 | frontier=30
+2026-05-07 21:07:34,903 | INFO | Snapshot resuelto: vol benchmark=0.219923 | frontier=30
+2026-05-07 21:07:55,197 | INFO | Snapshot resuelto: vol benchmark=0.217782 | frontier=30
+2026-05-07 21:08:16,279 | INFO | Snapshot resuelto: vol benchmark=0.221628 | frontier=29
+2026-05-07 21:08:16,377 | INFO | Completado con_pandemia_h7_f2_rebalance_601: 9 portafolios rebalanceados
+2026-05-07 21:09:47,262 | INFO | Logging inicializado
+2026-05-07 21:09:47,549 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 21:09:48,052 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 21:14:39,670 | INFO | Logging inicializado
+2026-05-07 21:14:40,851 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 21:51:43,254 | INFO | Logging inicializado
+2026-05-07 21:51:43,690 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 21:51:44,287 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 21:52:59,030 | INFO | Logging inicializado
+2026-05-07 21:52:59,345 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 21:52:59,883 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-07 22:03:35,936 | INFO | Logging inicializado
+2026-05-07 22:03:36,198 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-07 22:03:36,710 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-08 22:17:48,491 | INFO | Logging inicializado
+2026-05-08 22:17:48,787 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-08 22:17:49,658 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-08 22:31:04,622 | INFO | Logging inicializado
+2026-05-08 22:31:05,113 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-08 22:31:05,776 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-08 22:31:46,913 | INFO | Logging inicializado
+2026-05-08 22:31:47,260 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-08 22:31:47,793 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones
+2026-05-08 22:37:13,843 | INFO | Logging inicializado
+2026-05-08 22:37:14,233 | INFO | Escenario sin_pandemia cargado: 10 tickers, 2717 observaciones
+2026-05-08 22:37:14,815 | INFO | Escenario con_pandemia cargado: 10 tickers, 3473 observaciones

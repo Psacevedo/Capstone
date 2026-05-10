@@ -1,0 +1,47 @@
+\section{Conclusiones, evaluaci\'on cr\'itica y pasos a seguir}
+El proyecto implement\'o un flujo completo para recomendar portafolios en FinPUC, partiendo desde una base Markowitz, incorporando \textit{views} mediante Black-Litterman y cerrando con una simulaci\'on Monte Carlo P4 orientada a la decisi\'on cliente-empresa. Esta estructura permite evaluar no solo el desempe\~no financiero de cada cartera, sino tambi\'en su efecto en variables operativas relevantes: permanencia del cliente, aceptaci\'on de recomendaciones y utilidad esperada para la empresa.
+
+La conclusi\'on principal es que Black-Litterman agrega valor cuando la estimaci\'on hist\'orica pura se vuelve inestable. La variante \texttt{momentum\_top20\_6m} es la m\'as consistente: con datos de pandemia alcanza Sharpe 2,38, superando a Markowitz (2,02) y al benchmark equiponderado (2,05). En la simulaci\'on P4 tambi\'en lidera el ranking, con Score 9.416,86, riqueza terminal esperada de USD 8.973,70, tasa de retiro de 3,1\% y utilidad empresa de USD 474,36. Esto la convierte en la mejor alternativa bajo el criterio combinado de valor para el cliente y rentabilidad para FinPUC.
+
+El benchmark top-20 sigue siendo una referencia exigente, porque obtiene retorno bruto de 101,4\% sin depender de par\'ametros estimados. Sin embargo, no domina en retorno ajustado por riesgo. Markowitz, por su parte, es competitivo en el escenario sin pandemia, pero muestra mayor sensibilidad a la muestra de calibraci\'on. La validaci\'on robusta confirma este punto: el Sharpe futuro cae de 2,32 en h7\_f2 a 1,35 en h2\_f7, lo que muestra que el horizonte de entrenamiento incide materialmente en los resultados.
+
+El principal punto d\'ebil est\'a en los supuestos estad\'isticos de la simulaci\'on. La normalidad se rechaza en los 601 activos, mientras que t-Student, Johnson SU y distribuciones relacionadas con colas pesadas ajustan mejor los retornos. Por eso, el Monte Carlo normal debe interpretarse como una aproximaci\'on inicial: es \'util para comparar t\'ecnicas bajo una misma regla, pero puede subestimar p\'erdidas extremas, CVaR y retiros en escenarios adversos. Tambi\'en quedan mejoras pendientes en costos de transacci\'on, calibraci\'on de la view macro de desempleo y definici\'on del gatillo de retiro del cliente.
+
+\noindent\textbf{Fortalezas y puntos de mejora.}
+\begin{center}
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabular}{@{}p{0.47\textwidth}p{0.47\textwidth}@{}}
+\toprule
+\textbf{Fortalezas} & \textbf{Puntos d\'ebiles y mejora} \\
+\midrule
+El dise\~no en tres capas permite medir el aporte de cada componente: optimizaci\'on, incorporaci\'on de views y simulaci\'on del comportamiento cliente-empresa. & El Monte Carlo usa retornos normales pese a la evidencia de colas pesadas; se propone probar t-Student o Johnson SU para capturar mejor riesgo extremo. \\
+El benchmark top-20 es simple, reproducible y exigente, por lo que evita comparar los modelos contra una referencia d\'ebil. & Los costos de transacci\'on se consideran en P4, pero no dentro de la optimizaci\'on; se propone penalizar rotaci\'on o limitar $\|w_t-w_{t-1}\|_1$. \\
+La comparaci\'on con y sin pandemia mantiene fijo el periodo fuera de muestra y a\'isla el efecto de la calibraci\'on hist\'orica. & La view de desempleo usa un supuesto fijo; debe reemplazarse por series macro observadas para evaluar capacidad predictiva real. \\
+La validaci\'on con 70 splits, 18 ventanas m\'oviles, CSV de salida y semillas deterministas fortalece la trazabilidad del experimento. & $P_1$ mide p\'erdida contra $C_0$; usar drawdown desde el m\'aximo alcanzado ser\'ia m\'as cercano al comportamiento real del cliente. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Pasos a seguir.}
+Para la etapa final, el foco debe estar en robustecer las partes que m\'as pueden cambiar la recomendaci\'on: distribuci\'on de retornos en Monte Carlo, sensibilidad de par\'ametros, costos de transacci\'on e integraci\'on operativa del recomendador. La Carta Gantt siguiente resume el plan.
+
+\begin{center}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabular}{@{}p{0.32\textwidth}ccccp{0.30\textwidth}@{}}
+\toprule
+\textbf{Actividad} & \textbf{12--19 May} & \textbf{20--31 May} & \textbf{1--15 Jun} & \textbf{16--26 Jun} & \textbf{Resultado esperado} \\
+\midrule
+Sensibilidad de $s$, $\tau$ y $\lambda$ & X & X &  &  & Identificar si el ranking cambia ante par\'ametros alternativos. \\
+Monte Carlo con distribuciones no normales &  & X & X &  & Comparar riqueza, retiro y CVaR con colas m\'as realistas. \\
+Costos de transacci\'on y rotaci\'on &  & X & X &  & Alinear optimizaci\'on y P4 mediante penalizaci\'on de turnover. \\
+Integraci\'on del recomendador $<10$s &  &  & X & X & Prototipo ejecutable con respuesta operativa. \\
+Informe, repositorio y presentaci\'on final &  &  & X & X & Documentaci\'on final y entrega del 26 de junio de 2026. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+En s\'intesis, la recomendaci\'on actual es usar Black-Litterman con view \texttt{momentum\_top20\_6m} como alternativa principal, manteniendo el benchmark como referencia y Markowitz como base metodol\'ogica. La decisi\'on final debe confirmarse con sensibilidad sobre distribuciones, costos y comportamiento del cliente, porque esos factores afectan directamente el Score P4 y la estabilidad del sistema recomendador.

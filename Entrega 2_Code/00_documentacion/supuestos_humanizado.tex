@@ -1,0 +1,66 @@
+\section{Supuestos y plan de sensibilidad}
+
+Los supuestos buscan que las t\'ecnicas sean comparables y que la decisi\'on
+final sea trazable. Se priorizan aquellos que pueden cambiar el ranking de
+carteras o el resultado del recomendador.
+
+\subsection{Supuestos principales}
+
+\begin{itemize}
+    \item \textbf{Calidad y cobertura de datos.} Se asume que precios,
+    dividendos y capitalizaci\'on de mercado reflejan correctamente la
+    informaci\'on disponible. La matriz de retornos se arma con
+    \texttt{join="inner"} para comparar activos en las mismas fechas. El riesgo
+    es eliminar observaciones o introducir sesgo de supervivencia, afectando
+    benchmark, prior de Black-Litterman y retornos estimados.
+
+    \item \textbf{Mercado invertible.} Las carteras son \textit{long-only},
+    invierten el 100\% del capital y no usan apalancamiento. Esto es coherente
+    con un recomendador para clientes no institucionales, aunque descarta
+    estrategias con posiciones cortas o caja que podr\'ian cambiar el Sharpe.
+
+    \item \textbf{Costos y tasa libre de riesgo.} En la optimizaci\'on se omiten
+    impuestos, \textit{spreads}, liquidez e impacto de mercado; en P4 se aplica
+    comisi\'on $k=1\%$ por transacci\'on. La tasa libre de riesgo se fija en
+    $R_f=2\%$ anual. Si los costos reales fueran mayores, el retorno neto y la
+    utilidad empresa estar\'ian sobreestimados.
+
+    \item \textbf{Estimaci\'on de riesgo y retorno.} Se supone que los retornos
+    hist\'oricos entregan informaci\'on parcial sobre el futuro. La covarianza
+    se estabiliza con \textit{shrinkage} de 20\%,
+    $\Sigma_{\text{shrink}}=(1-\lambda)\Sigma+\lambda\text{diag}(\Sigma)$.
+    Este supuesto puede fallar ante cambios estructurales de mercado.
+
+    \item \textbf{Distribuci\'on Monte Carlo.} Los retornos semanales se simulan
+    como normales, pese a que los retornos diarios muestran colas pesadas. Es
+    una simplificaci\'on necesaria para P4, pero puede subestimar p\'erdidas
+    extremas, tasa de retiro y CVaR.
+
+    \item \textbf{Rebalanceo y comportamiento del cliente.} El rebalanceo ocurre
+    cada 126 d\'ias h\'abiles y los pesos quedan fijos dentro del semestre. En
+    P4, cada cliente inicia con $C_0=1\,000$ USD y la p\'erdida se mide contra
+    ese capital inicial, no contra el m\'aximo alcanzado. Las probabilidades
+    $P_1$ y $P_2$ usan sensibilidad log\'istica $s=20$, por lo que retiro,
+    aceptaci\'on y utilidad dependen de ese par\'ametro.
+\end{itemize}
+
+\subsection{Plan de sensibilidad}
+
+\begin{enumerate}
+    \item \textbf{Con y sin pandemia.} Se mantiene fijo el per\'iodo fuera de
+    muestra y se cambia la muestra de entrenamiento. Se observa delta de
+    Sharpe, retorno anualizado, drawdown y CVaR para medir dependencia a datos
+    de crisis.
+
+    \item \textbf{Robustez temporal.} Se eval\'uan 70 splits aleatorios y 18
+    ventanas m\'oviles entre h2\_f7 y h7\_f2. La alternativa recomendada debe
+    mantener buen ranking y Sharpe estable, no ganar solo en una partici\'on.
+
+    \item \textbf{Escenarios P4.} Monte Carlo se corre en escenarios
+    desfavorable, neutro y favorable, ajustando el retorno esperado en
+    $\pm 0.5\sigma$. Se compara riqueza terminal, tasa de retiro, aceptaci\'on,
+    utilidad empresa y Score P4.
+\end{enumerate}
+
+La recomendaci\'on final se considera robusta si conserva buen desempe\~no
+financiero y no deteriora retiro ni utilidad bajo estas pruebas.
