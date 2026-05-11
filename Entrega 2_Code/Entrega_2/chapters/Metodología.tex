@@ -1,0 +1,385 @@
+\section{Revisi\'on bibliogr\'afica}
+
+\subsection{Modelos fundamentales de optimizaci\'on de portafolios}
+
+La optimizaci\'on de portafolios tiene su origen en el trabajo seminal de
+Markowitz \cite{markowitz1952}, que formaliz\'o el principio de
+diversificaci\'on mediante el modelo media-varianza. Su propuesta establece
+que un inversionista racional selecciona portafolios sobre la frontera
+eficiente, es decir, aquellos que maximizan el retorno esperado para un nivel
+de riesgo dado. La principal limitaci\'on del modelo es su sensibilidad a las
+estimaciones de $\mu$ y $\Sigma$: peque\~nos errores en los retornos
+esperados pueden generar portafolios concentrados o irrazonables
+\cite{michaud1989}. En el presente proyecto, esta fragilidad se observa
+emp\'iricamente: el portafolio Ideal de mercado de Markowitz exhibe un Sharpe
+te\'orico de 5,01 que colapsa a 1,80 fuera de muestra con datos de pandemia,
+confirmando el fen\'omeno de \textit{overfitting} documentado por Michaud.
+
+El modelo CAPM de Sharpe \cite{sharpe1964} extiende el trabajo de Markowitz
+introduciendo un modelo de equilibrio de mercado, donde el retorno esperado
+de un activo depende \'unicamente de su exposici\'on al riesgo sistem\'atico,
+medido por el coeficiente $\beta$. El modelo multifactorial de Fama y French
+\cite{famafrench1993} incorpora dos factores adicionales, tama\~no (SMB) y
+valor (HML), para capturar anomal\'ias emp\'iricas. Aunque estos modelos no
+se implementan directamente en FinPUC, informan la construcci\'on del prior
+de equilibrio en Black-Litterman: los retornos impl\'icitos $\pi = \delta
+\Sigma w_{\text{market}}$ asumen que el mercado est\'a en equilibrio, lo que
+es consistente con la l\'ogica del CAPM.
+
+\subsection{El modelo Black-Litterman}
+
+Black y Litterman \cite{black1992} propusieron un enfoque bayesiano que
+combina el equilibrio impl\'icito del mercado con expectativas subjetivas del
+inversionista. El prior se obtiene invirtiendo el problema de Markowitz: dado
+que el mercado est\'a en equilibrio, los retornos impl\'icitos son
+$\pi = \delta \Sigma w_{\text{market}}$. Las \textit{views} se incorporan
+mediante una actualizaci\'on bayesiana que produce estimaciones m\'as estables
+y portafolios menos extremos. He y Litterman \cite{he1999} documentaron la
+implementaci\'on pr\'actica del modelo, destacando su capacidad para generar
+portafolios intuitivamente razonables sin restricciones artificiales de peso.
+Idzorek \cite{idzorek2005} extendi\'o el marco proponiendo m\'etodos para
+calibrar la confianza de cada \textit{view}, problema que en FinPUC se aborda
+fijando $c = 0.50$ para las \textit{views} de momentum y $c = 0.35$ para la
+de desempleo.
+
+\subsection{Estimaci\'on de covarianzas y medidas de riesgo}
+
+Ledoit y Wolf \cite{ledoit2004} propusieron el m\'etodo de \textit{shrinkage}
+para la estimaci\'on de matrices de covarianza de grandes dimensiones,
+demostrando que la combinaci\'on convexa entre la covarianza muestral y un
+estimador estructurado reduce el error de estimaci\'on fuera de muestra. En
+FinPUC se implementa con $\lambda = 0.20$, valor seleccionado para
+estabilizar una matriz de $601 \times 601$ sin perder demasiada estructura de
+correlaci\'on. La elecci\'on de $\lambda$ no fue optimizada formalmente y
+constituye un supuesto del modelo.
+
+Rockafellar y Uryasev \cite{rockafellar2000} introdujeron el Valor en Riesgo
+Condicional (CVaR) como medida coherente de riesgo, superando las limitaciones
+del VaR est\'andar al cuantificar la severidad promedio de las p\'erdidas en
+la cola. En el proyecto, el CVaR al 95\% se utiliza como indicador de
+desempe\~no complementario al Sharpe, no como restricci\'on del optimizador.
+Esta decisi\'on responde a que la implementaci\'on con CVXPY utiliza cotas de
+volatilidad por perfil, que son computacionalmente m\'as eficientes para la
+restricci\'on de 10 segundos.
+
+\subsection{Sistemas de asesor\'ia financiera automatizada}
+
+En el contexto de plataformas de \textit{robo-advisory}, D'Acunto, Prabhala y
+Rossi \cite{dacunto2019} documentaron c\'omo la automatizaci\'on ha
+democratizado el acceso a estrategias de inversi\'on, permitiendo
+recomendaciones personalizadas a bajo costo operacional. FinPUC se enmarca en
+esta l\'inea, con la particularidad de que incorpora expl\'icitamente el
+comportamiento del cliente (funciones $P_1$ y $P_2$) y la utilidad de la
+empresa (comisiones $k\%$) como variables del modelo, lo que va m\'as all\'a
+de la optimizaci\'on financiera pura.
+
+\subsection{Fortalezas y debilidades de la metodolog\'ia seleccionada}
+
+La combinaci\'on de Black-Litterman con Monte Carlo resulta adecuada para el problema de FinPUC porque une dos necesidades del sistema recomendador: construir portafolios m\'as estables que Markowitz puro y evaluar su impacto en variables de decisi\'on para cliente y empresa. Black-Litterman reduce la dependencia de estimaciones hist\'oricas extremas al anclar los retornos esperados al equilibrio de mercado. Esto se observa en los resultados: con datos de pandemia, la mejor variante BL alcanza Sharpe 2,38, mientras que Markowitz cae a 2,02.
+
+Otra fortaleza es que el modelo permite incorporar \textit{views} de forma controlada. En vez de reemplazar completamente el prior de mercado, las se\~nales de momentum, desempleo o capitalizaci\'on ajustan los retornos esperados seg\'un su nivel de confianza. Luego, Monte Carlo traduce esos portafolios a escenarios desfavorable, neutro y favorable, permitiendo medir riqueza terminal, retiro del cliente y utilidad para FinPUC sin depender solo de una m\'etrica financiera.
+
+La principal debilidad es que la calidad del resultado depende directamente de la calidad de las \textit{views}. En particular, la view de desempleo se modela con un supuesto fijo y no con una serie macro observada, lo que limita su validez predictiva. Adem\'as, par\'ametros como $\tau = 0.05$ y la matriz $\Omega = P\tau\Sigma P^\top / c$ requieren sensibilidad adicional, porque cambios en la confianza asignada a las views pueden modificar el ranking final.
+
+Finalmente, la simulaci\'on Monte Carlo asume retornos normales, aunque el an\'alisis distribucional rechaza normalidad en todos los activos. Esto puede subestimar eventos extremos y generar tasas de retiro demasiado optimistas. Tambi\'en queda pendiente incorporar costos de transacci\'on en la optimizaci\'on, ya que actualmente aparecen solo como comisiones en P4. Sin esa penalizaci\'on, algunas carteras podr\'ian verse atractivas en el modelo pero ser menos eficientes en una implementaci\'on real con turnover alto.
+
+
+% ============================================================================
+% 4.1 Arquitectura general
+% ============================================================================
+\section{Arquitectura general del sistema}
+
+El sistema se estructura en tres capas metodol\'ogicas de complejidad
+creciente, ejecutadas secuencialmente. La primera capa implementa la
+optimizaci\'on media-varianza de Markowitz como l\'inea base anal\'itica. La
+segunda extiende Markowitz con el modelo Black-Litterman, que incorpora un
+prior de equilibrio de mercado y \textit{views} cuantitativas. La tercera capa
+es una simulaci\'on Monte Carlo que traduce las m\'etricas financieras de las
+capas anteriores en proyecciones de riqueza del cliente y utilidad de la
+empresa. Adicionalmente, un benchmark equiponderado funciona como caso base
+independiente de par\'ametros estimados. En total, el sistema compara seis
+t\'ecnicas: Equiponderado, Markowitz, y cuatro variantes de Black-Litterman
+(momentum general, momentum por capitalizaci\'on a 6 meses, momentum por
+capitalizaci\'on a 1 a\~no, y desempleo macro).
+
+% ============================================================================
+% 4.2 Estimación de parámetros
+% ============================================================================
+\section{Estimaci\'on de par\'ametros}
+
+\subsection{Retornos esperados}
+
+Los retornos esperados $\mu \in \mathbb{R}^n$ se estiman como promedios
+diarios hist\'oricos de los retornos totales de cada acci\'on en la ventana de
+entrenamiento.
+
+\subsection{Matriz de covarianzas con \textit{shrinkage}}
+
+La matriz de covarianzas muestral $\Sigma_{\text{muestral}}$ se estabiliza
+mediante \textit{shrinkage} lineal hacia su diagonal
+\cite{ledoit2004}:
+\begin{equation}
+\Sigma_{\text{shrink}} = (1 - \lambda)\,\Sigma_{\text{muestral}}
++ \lambda \cdot \text{diag}(\Sigma_{\text{muestral}}),
+\end{equation}
+con $\lambda = 0.20$. Esto reduce el error de estimaci\'on fuera de muestra en
+matrices de alta dimensi\'on ($n = 601$), donde la covarianza muestral tiende
+a sobreajustar correlaciones espurias. La matriz resultante se fuerza a ser
+semidefinida positiva mediante proyecci\'on espectral
+(\texttt{nearest\_psd}), truncando valores propios negativos a cero. Este paso
+es requisito para que los problemas cuadr\'aticos resueltos por CVXPY sean
+convexos.
+
+\subsection{Anualizaci\'on}
+
+Los retornos se anualizan asumiendo 252 d\'ias h\'abiles bursátil por a\~no:
+$R_{\text{anual}} = \bar{r}_{\text{diario}} \times 252$. La volatilidad se
+escala como $\sigma_{\text{anual}} = \sigma_{\text{diaria}} \times
+\sqrt{252}$. La tasa libre de riesgo se fija en $R_f = 2\%$ anual.
+
+% ============================================================================
+% 4.3 Optimización media-varianza de Markowitz
+% ============================================================================
+\section{Optimizaci\'on media-varianza de Markowitz}
+
+\subsection{Formulaci\'on por perfil de riesgo}
+
+Para cada perfil de riesgo con par\'ametro de aversi\'on $\gamma$ y cota de
+volatilidad $\sigma_{\max}^2$, se resuelve el problema cuadr\'atico:
+\begin{equation}
+\max_{w} \quad \mu^\top w - \frac{1}{2}\,\gamma\, w^\top \Sigma\, w
+\end{equation}
+sujeto a:
+\begin{align}
+\sum_{i=1}^{n} w_i &= 1 \\
+0 \leq w_i &\leq 0.20 \quad \forall\, i = 1, \ldots, n \\
+w^\top \Sigma\, w &\leq \sigma_{\max}^2
+\quad \text{(cuando el perfil lo requiere)}
+\end{align}
+
+La restricci\'on $w_i \geq 0$ impide ventas cortas; la suma igual a 1
+invierte todo el capital; y la cota superior $w_{\max} = 0.20$ evita
+concentraci\'on extrema en un solo activo. Cuando la cota de volatilidad hace
+infactible un perfil, se relaja esa cota manteniendo las dem\'as
+restricciones.
+
+\subsection{Frontera eficiente y portafolio de tangencia}
+
+La frontera eficiente se construye resolviendo, para 30 retornos objetivo
+$r_{\text{obj}}$ equiespaciados:
+\begin{equation}
+\min_{w} \quad w^\top \Sigma\, w \qquad \text{s.a.} \quad
+\mu^\top w \geq r_{\text{obj}}, \quad
+\sum_i w_i = 1, \quad
+0 \leq w_i \leq 0.20
+\end{equation}
+
+El portafolio de tangencia (``Ideal de mercado'') se selecciona como el punto
+de la frontera que maximiza el ratio de Sharpe:
+\begin{equation}
+\text{Sharpe} = \frac{R_p - R_f}{\sigma_p}
+\end{equation}
+donde $R_p$ es el retorno anualizado del portafolio y $\sigma_p$ su
+volatilidad anualizada. Este portafolio es te\'orico: asume conocimiento
+perfecto de los par\'ametros, por lo que su desempe\~no fuera de muestra mide
+el grado de \textit{overfitting} de la estimaci\'on hist\'orica.
+
+\subsubsection{Rebalanceo semestral}
+
+El per\'iodo futuro de evaluaci\'on, de 2 a\~nos o aproximadamente 504 d\'ias h\'abiles, se divide en segmentos de 126 d\'ias. Al inicio de cada segmento se actualiza la informaci\'on disponible: se incorporan los retornos ya observados hasta ese punto, se reestiman $\mu$ y $\Sigma$, y se resuelven nuevamente los problemas de optimizaci\'on para todos los perfiles. Los pesos resultantes se aplican al segmento siguiente y se mantienen constantes hasta el pr\'oximo rebalanceo.
+
+Con este procedimiento, el modelo simula una implementaci\'on m\'as realista que una cartera est\'atica, pero sin usar informaci\'on futura no observada. Las m\'etricas finales se calculan concatenando los retornos diarios generados en todos los segmentos de rebalanceo.
+
+
+% ============================================================================
+% 4.4 Modelo Black-Litterman
+% ============================================================================
+\section{Modelo Black-Litterman}
+
+\subsection{Prior de equilibrio de mercado}
+
+El modelo parte de que, en equilibrio, los retornos impl\'icitos del mercado
+son consistentes con los pesos observados por capitalizaci\'on
+\cite{black1992, he1999}:
+\begin{equation}
+\pi = \delta \cdot \Sigma \cdot w_{\text{market}}
+\end{equation}
+donde $w_{\text{market}}$ son los pesos normalizados por capitalizaci\'on
+burs\'atil y $\delta$ es el coeficiente de aversi\'on al riesgo impl\'icito:
+\begin{equation}
+\delta = \frac{R_{\text{market}} - R_f}{\sigma_{\text{market}}^2}
+\end{equation}
+
+\subsection{Incorporaci\'on de \textit{views}}
+
+Dadas las \textit{views} representadas por la matriz de selecci\'on
+$P \in \mathbb{R}^{k \times n}$, el vector de expectativas
+$Q \in \mathbb{R}^k$ y la matriz de incertidumbre
+$\Omega \in \mathbb{R}^{k \times k}$, el retorno esperado posterior es:
+\begin{equation}
+\mu_{\text{BL}} = \pi + \tau\,\Sigma\, P^\top
+\left(P\,\tau\,\Sigma\, P^\top + \Omega\right)^{-1}
+(Q - P\,\pi)
+\end{equation}
+con $\tau = 0.05$. La covarianza posterior se calcula como:
+\begin{equation}
+\Sigma_{\text{BL}} = (1+\tau)\,\Sigma
+- \tau^2\,\Sigma\, P^\top
+\left(P\,\tau\,\Sigma\, P^\top + \Omega\right)^{-1}
+P\,\Sigma
+\end{equation}
+y se fuerza a ser semidefinida positiva mediante \texttt{nearest\_psd}. Con
+$\mu_{\text{BL}}$ y $\Sigma_{\text{BL}}$ se resuelven los mismos problemas de
+optimizaci\'on que en Markowitz.
+
+\subsection{Construcci\'on de \textit{views}}
+
+Se implementan cuatro \textit{views} independientes, cada una generando su
+propia versi\'on del modelo Black-Litterman. La
+Tabla~\ref{tab:views_config} resume su configuraci\'on.
+
+\begin{table*}[h]
+\centering
+\caption{Configuración de las cuatro variantes de \textit{views} Black-Litterman.}
+\label{tab:views_config}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{0.9}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{@{}llccccl@{}}
+\toprule
+View & Tipo & Lookback & Long & Short & Confianza & Universo \\
+\midrule
+Momentum & Endógena & 252 días & 20 & 20 & 0.50 & 601 activos \\
+Momentum Top20 6M & Market-cap & 126 días & 10 & 10 & 0.50 & Top 20 \\
+Momentum Top20-Bottom20 1Y & Market-cap & 252 días & 20 & 20 & 0.50 & Top 40 \\
+Desempleo & Macro asumida & 1\,764 días & 466 & 135 & 0.35 & 601 activos \\
+\bottomrule
+\end{tabular}}
+\end{table*}
+
+
+\subsubsection{Views de momentum}
+
+Las \textit{views} de momentum seleccionan activos por retorno acumulado
+durante el per\'iodo de lookback. La matriz $P$ tiene una fila que asigna
+$+1/n_{\text{long}}$ a los activos con mayor retorno y
+$-1/n_{\text{short}}$ a los de menor retorno. El valor $Q$ corresponde a la
+diferencia promedio diaria entre los retornos de ambos grupos. La variante
+general opera sobre los 601 activos; las variantes por capitalizaci\'on
+restringen el universo a los activos con mayor market cap (top 20 o top 40).
+
+\subsubsection{View de desempleo}
+
+Es un supuesto macroecon\'omico fijo, no un dato observado. Se asume una
+tasa de desempleo de 4\% contra un nivel neutral de 5\%. Con desempleo bajo,
+se favorecen sectores c\'iclicos (Technology, Consumer Cyclical, Industrials,
+Financial Services, Basic Materials, Real Estate, Energy) sobre defensivos
+(Healthcare, Consumer Defensive, Utilities, Communication Services). La
+se\~nal es proporcional a la diferencia entre ambas tasas, escalada por
+$\beta_{\text{macro}} = 1.0$ y convertida a retorno diario dividiendo por
+252. La confianza se fija en $c = 0.35$, menor que la de momentum, reflejando
+que es un supuesto y no una observaci\'on.
+
+\subsubsection{Calibraci\'on de $\Omega$}
+
+Para cada \textit{view}, la incertidumbre se calibra como:
+\begin{equation}
+\Omega = \frac{P \cdot (\tau\,\Sigma) \cdot P^\top}{c}
+\end{equation}
+donde $c$ es la confianza de la \textit{view}. Con una sola \textit{view}
+($k=1$), $\Omega$ es escalar y la formulaci\'on se simplifica.
+
+% ============================================================================
+% 4.5 Simulación Monte Carlo (P4)
+% ============================================================================
+\section{Simulaci\'on Monte Carlo (P4)}
+
+\subsection{Objetivo}
+
+La tercera capa traduce los KPIs financieros de Markowitz y Black-Litterman en
+proyecciones de riqueza para el cliente y utilidad para la empresa. Simula el
+comportamiento completo del sistema recomendador durante 260 semanas (5
+a\~nos), incorporando las decisiones del cliente mediante funciones
+log\'isticas.
+
+\subsection{Funciones de comportamiento del cliente}
+
+La probabilidad de retiro ante p\'erdidas se modela como:
+\begin{equation}
+P_1(x_1) = \frac{1}{1 + \exp\left(-s\,(x_1 - \hat{x}_1)\right)}
+\end{equation}
+donde $x_1 = (C_0 - W_t) / C_0$ es la p\'erdida actual respecto al capital
+inicial, $\hat{x}_1$ es la tolerancia m\'axima del perfil, y $s = 20$ es la
+sensibilidad log\'istica. $P_1$ se activa \'unicamente cuando
+$x_1 > \hat{x}_1$; en caso contrario, la probabilidad de retiro es cero.
+
+La probabilidad de aceptaci\'on de una recomendaci\'on es:
+\begin{equation}
+P_2(x_2) = \frac{1}{1 + \exp\left(-s\,(x_2 - \hat{x}_2)\right)}
+\end{equation}
+donde $x_2$ es la tasa de retorno ofrecida en la recomendaci\'on y
+$\hat{x}_2$ es el umbral de tolerancia al riesgo del perfil.
+
+\subsection{Estructura de la simulaci\'on}
+
+Para cada combinaci\'on de escenario de datos (con/sin pandemia), t\'ecnica
+(6 alternativas), perfil de riesgo (5 niveles) y escenario proyectado
+(desfavorable, neutro, favorable), se ejecutan $N = 5\,000$ simulaciones
+independientes. En total, esto genera $2 \times 6 \times 5 \times 3 = 180$
+combinaciones, cada una con 5\,000 trayectorias.
+
+Cada simulaci\'on opera semana a semana. Primero, el cliente decide si acepta la recomendaci\'on inicial mediante $P_2$; si la acepta, invierte $C_0 = 1\,000$ USD y paga una comisi\'on inicial de $k = 1\%$. Luego, en cada semana se simula el retorno del portafolio como $r_{\text{sem}} \sim \mathcal{N}(\mu_{\text{sem}}, \sigma_{\text{sem}}^2)$, calibrado a partir de los KPIs anualizados de los modelos anteriores. Tambi\'en se ofrece una nueva recomendaci\'on semanal: si el cliente la acepta, nuevamente seg\'un $P_2$, se cobra una comisi\'on de $1\%$ sobre el 5\% de la riqueza actual, que representa la fracci\'on de rotaci\'on asumida. Finalmente, si la p\'erdida acumulada respecto de $C_0$ supera la tolerancia definida para el perfil, se eval\'ua el retiro mediante $P_1$. Cuando el cliente retira, la trayectoria se detiene y la riqueza terminal corresponde al valor disponible en ese momento.
+
+
+\subsection{Escenarios proyectados}
+
+Los tres escenarios se calibran a partir del retorno anualizado base
+$R_{\text{base}}$ y la volatilidad anualizada $\sigma_{\text{base}}$ de cada
+t\'ecnica:
+\begin{align}
+R_{\text{favorable}} &= R_{\text{base}} + 0.5\,\sigma_{\text{base}} \\
+R_{\text{neutro}} &= R_{\text{base}} \\
+R_{\text{desfavorable}} &= R_{\text{base}} - 0.5\,\sigma_{\text{base}}
+\end{align}
+Esto genera un abanico sim\'etrico de $\pm 0.5\sigma$ alrededor del caso
+base.
+
+\subsection{Reproducibilidad}
+
+La simulaci\'on utiliza semillas deterministas generadas mediante SHA-256 a
+partir de la combinaci\'on \'unica de escenario, t\'ecnica, \textit{view} y
+perfil. Esto garantiza que cada celda del experimento es reproducible
+individualmente sin afectar a las dem\'as.
+
+% ============================================================================
+% 4.6 Análisis distribucional de retornos
+% ============================================================================
+\section{An\'alisis distribucional de retornos}
+
+Complementariamente a la optimizaci\'on, se realiz\'o un an\'alisis
+distribucional sobre los retornos diarios del universo F5 sin pandemia, con el
+objetivo de caracterizar la forma estad\'istica de los retornos y evaluar la
+validez del supuesto de normalidad.
+
+Se ajustaron siete familias param\'etricas candidatas: normal, t-Student,
+Laplace, log\'istica, skew-normal, normal generalizada y Johnson~SU. Los
+par\'ametros se estimaron por m\'axima verosimilitud. Para cada familia $m$ se
+calcularon los criterios de informaci\'on:
+\begin{equation}
+\text{AIC}_m = 2k_m - 2\ell_m, \qquad
+\text{BIC}_m = k_m \log(n) - 2\ell_m,
+\end{equation}
+donde $k_m$ es el n\'umero de par\'ametros, $n$ la cantidad de retornos y
+$\ell_m$ la log-verosimilitud. Se aplicaron adicionalmente pruebas de
+normalidad (Shapiro-Wilk, D'Agostino-Pearson, Jarque-Bera) y una prueba
+Kolmogorov--Smirnov aproximada.
+
+% ============================================================================
+% 4.7 Validación robusta
+% ============================================================================
+\section{Validaci\'on robusta}
+
+Para evitar que las conclusiones dependan de un \'unico horizonte de entrenamiento, se aplicaron dos mecanismos de validaci\'on. Primero, se evaluaron 70 particiones aleatorias train/test, lo que permiti\'o observar la distribuci\'on del Sharpe fuera de muestra para cada portafolio y t\'ecnica. Segundo, se probaron 18 ventanas m\'oviles robustas, desde h2\_f7 hasta h7\_f2, variando la proporci\'on entre datos de entrenamiento y evaluaci\'on para medir c\'omo cambia el desempe\~no futuro al usar m\'as o menos historia.
+
+El horizonte central seleccionado fue h7\_f2, equivalente a 7 a\~nos de entrenamiento y 2 a\~nos de evaluaci\'on. Este horizonte entrega el mejor Sharpe futuro promedio: 2,32 en Markowitz y resultados comparables en Black-Litterman, con 2,32 para la view de desempleo y 2,22 para momentum. La validaci\'on muestra que ventanas hist\'oricas m\'as largas producen estimaciones m\'as estables, mientras que reducir el periodo de entrenamiento deteriora progresivamente el Sharpe fuera de muestra.

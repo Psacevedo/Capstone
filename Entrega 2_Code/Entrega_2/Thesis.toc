@@ -1,0 +1,143 @@
+\contentsline {chapter}{\tocchapter {}{}{\'INDICE DE FIGURAS}}{vii}{section*.1}%
+\contentsline {chapter}{\tocchapter {}{}{\'INDICE DE TABLAS}}{viii}{section*.2}%
+\contentsline {chapter}{\tocchapter {}{}{ABSTRACT}}{xi}{chapter*.4}%
+\contentsline {chapter}{\tocchapter {}{}{RESUMEN}}{xii}{chapter*.6}%
+\contentsline {chapter}{\tocchapter {}{1}{Introducción}}{1}{chapter.1}%
+\contentsline {chapter}{\tocchapter {}{2}{Descripción del problema}}{2}{chapter.2}%
+\contentsline {section}{\tocsection {}{2.1}{Contexto y motivación}}{2}{section.2.1}%
+\contentsline {section}{\tocsection {}{2.2}{Ciclo operacional}}{2}{section.2.2}%
+\contentsline {section}{\tocsection {}{2.3}{Perfiles de riesgo}}{2}{section.2.3}%
+\contentsline {section}{\tocsection {}{2.4}{Formulaci\'on del problema}}{3}{section.2.4}%
+\contentsline {subsection}{\tocsubsection {}{2.4.1}{Decisi\'on principal}}{3}{subsection.2.4.1}%
+\contentsline {subsection}{\tocsubsection {}{2.4.2}{Objetivos}}{3}{subsection.2.4.2}%
+\contentsline {subsection}{\tocsubsection {}{2.4.3}{Restricciones}}{3}{subsection.2.4.3}%
+\contentsline {section}{\tocsection {}{2.5}{Datos disponibles}}{3}{section.2.5}%
+\contentsline {subsection}{\tocsubsection {}{2.5.1}{Fuente y estructura}}{3}{subsection.2.5.1}%
+\contentsline {subsection}{\tocsubsection {}{2.5.2}{Proceso de filtrado}}{4}{subsection.2.5.2}%
+\contentsline {subsection}{\tocsubsection {}{2.5.3}{Justificaci\'on del filtrado}}{4}{subsection.2.5.3}%
+\contentsline {subsection}{\tocsubsection {}{2.5.4}{Dise\~no experimental: escenarios con y sin pandemia}}{5}{subsection.2.5.4}%
+\contentsline {subsection}{\tocsubsection {}{2.5.5}{Riesgos y limitaciones de los datos}}{5}{subsection.2.5.5}%
+\contentsline {chapter}{\tocchapter {}{3}{Metodología}}{6}{chapter.3}%
+\contentsline {section}{\tocsection {}{3.1}{Revisi\'on bibliogr\'afica}}{6}{section.3.1}%
+\contentsline {subsection}{\tocsubsection {}{3.1.1}{Modelos fundamentales de optimizaci\'on de portafolios}}{6}{subsection.3.1.1}%
+\contentsline {subsection}{\tocsubsection {}{3.1.2}{El modelo Black-Litterman}}{6}{subsection.3.1.2}%
+\contentsline {subsection}{\tocsubsection {}{3.1.3}{Estimaci\'on de covarianzas y medidas de riesgo}}{7}{subsection.3.1.3}%
+\contentsline {subsection}{\tocsubsection {}{3.1.4}{Sistemas de asesor\'ia financiera automatizada}}{7}{subsection.3.1.4}%
+\contentsline {subsection}{\tocsubsection {}{3.1.5}{Fortalezas y debilidades de la metodolog\'ia seleccionada}}{7}{subsection.3.1.5}%
+\contentsline {section}{\tocsection {}{3.2}{Arquitectura general del sistema}}{8}{section.3.2}%
+\contentsline {section}{\tocsection {}{3.3}{Estimaci\'on de par\'ametros}}{9}{section.3.3}%
+\contentsline {subsection}{\tocsubsection {}{3.3.1}{Retornos esperados}}{9}{subsection.3.3.1}%
+\contentsline {subsection}{\tocsubsection {}{3.3.2}{Matriz de covarianzas con \textit {shrinkage}}}{9}{subsection.3.3.2}%
+\contentsline {subsection}{\tocsubsection {}{3.3.3}{Anualizaci\'on}}{9}{subsection.3.3.3}%
+\contentsline {section}{\tocsection {}{3.4}{Optimizaci\'on media-varianza de Markowitz}}{9}{section.3.4}%
+\contentsline {subsection}{\tocsubsection {}{3.4.1}{Formulaci\'on por perfil de riesgo}}{9}{subsection.3.4.1}%
+\contentsline {subsection}{\tocsubsection {}{3.4.2}{Frontera eficiente y portafolio de tangencia}}{10}{subsection.3.4.2}%
+\contentsline {subsubsection}{\tocsubsubsection {}{3.4.2.1}{Rebalanceo semestral}}{10}{subsubsection.3.4.2.1}%
+\contentsline {section}{\tocsection {}{3.5}{Modelo Black-Litterman}}{11}{section.3.5}%
+\contentsline {subsection}{\tocsubsection {}{3.5.1}{Prior de equilibrio de mercado}}{11}{subsection.3.5.1}%
+\contentsline {subsection}{\tocsubsection {}{3.5.2}{Incorporaci\'on de \textit {views}}}{11}{subsection.3.5.2}%
+\contentsline {subsection}{\tocsubsection {}{3.5.3}{Construcci\'on de \textit {views}}}{11}{subsection.3.5.3}%
+\contentsline {subsubsection}{\tocsubsubsection {}{3.5.3.1}{Views de momentum}}{12}{subsubsection.3.5.3.1}%
+\contentsline {subsubsection}{\tocsubsubsection {}{3.5.3.2}{View de desempleo}}{12}{subsubsection.3.5.3.2}%
+\contentsline {subsubsection}{\tocsubsubsection {}{3.5.3.3}{Calibraci\'on de $\Omega $}}{12}{subsubsection.3.5.3.3}%
+\contentsline {section}{\tocsection {}{3.6}{Simulaci\'on Monte Carlo (P4)}}{13}{section.3.6}%
+\contentsline {subsection}{\tocsubsection {}{3.6.1}{Objetivo}}{13}{subsection.3.6.1}%
+\contentsline {subsection}{\tocsubsection {}{3.6.2}{Funciones de comportamiento del cliente}}{13}{subsection.3.6.2}%
+\contentsline {subsection}{\tocsubsection {}{3.6.3}{Estructura de la simulaci\'on}}{13}{subsection.3.6.3}%
+\contentsline {subsection}{\tocsubsection {}{3.6.4}{Escenarios proyectados}}{14}{subsection.3.6.4}%
+\contentsline {subsection}{\tocsubsection {}{3.6.5}{Reproducibilidad}}{14}{subsection.3.6.5}%
+\contentsline {section}{\tocsection {}{3.7}{An\'alisis distribucional de retornos}}{14}{section.3.7}%
+\contentsline {section}{\tocsection {}{3.8}{Validaci\'on robusta}}{15}{section.3.8}%
+\contentsline {chapter}{\tocchapter {}{4}{Supuestos}}{16}{chapter.4}%
+\contentsline {chapter}{\tocchapter {}{5}{KPIs}}{18}{chapter.5}%
+\contentsline {chapter}{\tocchapter {}{6}{Caso Base}}{19}{chapter.6}%
+\contentsline {section}{\tocsection {}{6.1}{Benchmark equiponderado}}{19}{section.6.1}%
+\contentsline {section}{\tocsection {}{6.2}{M\'etricas del caso base}}{19}{section.6.2}%
+\contentsline {section}{\tocsection {}{6.3}{Validaci\'on como l\'inea base}}{20}{section.6.3}%
+\contentsline {chapter}{\tocchapter {}{7}{Implementación y Herramientas}}{21}{chapter.7}%
+\contentsline {section}{\tocsection {}{7.1}{Implementaci\'on y herramientas}}{21}{section.7.1}%
+\contentsline {chapter}{\tocchapter {}{8}{Resultados y análisis}}{22}{chapter.8}%
+\contentsline {section}{\tocsection {}{8.1}{An\'alisis distribucional de retornos}}{22}{section.8.1}%
+\contentsline {section}{\tocsection {}{8.2}{Markowitz vs benchmark}}{23}{section.8.2}%
+\contentsline {subsection}{\tocsubsection {}{8.2.1}{Impacto de la pandemia en Markowitz}}{23}{subsection.8.2.1}%
+\contentsline {subsection}{\tocsubsection {}{8.2.2}{Validaci\'on robusta}}{24}{subsection.8.2.2}%
+\contentsline {section}{\tocsection {}{8.3}{Black-Litterman}}{25}{section.8.3}%
+\contentsline {section}{\tocsection {}{8.4}{Simulaci\'on Monte Carlo (P4)}}{25}{section.8.4}%
+\contentsline {section}{\tocsection {}{8.5}{An\'alisis integrado}}{27}{section.8.5}%
+\contentsline {chapter}{\tocchapter {}{9}{Conclusiones}}{29}{chapter.9}%
+\contentsline {section}{\tocsection {}{9.1}{Conclusiones principales y análisis de metodología}}{29}{section.9.1}%
+\contentsline {section}{\tocsection {}{9.2}{Carta Gantt: avance y fases restantes}}{30}{section.9.2}%
+\contentsline {chapter}{\tocchapter {}{}{Referencias}}{31}{chapter*.19}%
+\contentsline {chapter}{\tocchapter {}{}{Anexo N°1: Declaración de uso de IA en este informe y presentación asociada}}{32}{chapter*.21}%
+\contentsline {chapter}{\tocchapter {}{}{Anexo N°2: Análisis de datos}}{35}{chapter*.23}%
+\contentsline {section}{\tocsection {}{}{Descripción de la Fuente de Datos}}{35}{section*.24}%
+\contentsline {subsection}{\tocsubsection {}{}{Estructura de archivos}}{35}{section*.25}%
+\contentsline {subsection}{\tocsubsection {}{}{Formato de los CSV}}{35}{section*.26}%
+\contentsline {subsection}{\tocsubsection {}{}{Cobertura temporal}}{36}{section*.27}%
+\contentsline {subsection}{\tocsubsection {}{}{Tratamiento temporal de la pandemia}}{36}{section*.28}%
+\contentsline {section}{\tocsection {}{}{Clasificación Sectorial}}{37}{section*.29}%
+\contentsline {subsection}{\tocsubsection {}{}{Sistema de clasificación}}{37}{section*.30}%
+\contentsline {subsection}{\tocsubsection {}{}{Distribución sectorial del universo completo}}{37}{section*.31}%
+\contentsline {subsection}{\tocsubsection {}{}{Subsectores predominantes en Financial Services}}{39}{section*.33}%
+\contentsline {subsection}{\tocsubsection {}{}{Tipos de instrumento}}{39}{section*.34}%
+\contentsline {section}{\tocsection {}{}{Capitalización de Mercado}}{39}{section*.35}%
+\contentsline {section}{\tocsection {}{}{Niveles de Filtrado}}{40}{section*.36}%
+\contentsline {subsection}{\tocsubsection {}{}{Razones de exclusión}}{40}{section*.37}%
+\contentsline {subsection}{\tocsubsection {}{}{Definición formal de cada filtro}}{41}{section*.39}%
+\contentsline {section}{\tocsection {}{}{Universo Final Descriptivo: 636 Acciones}}{42}{section*.40}%
+\contentsline {subsection}{\tocsubsection {}{}{Distribución sectorial del universo final}}{42}{section*.41}%
+\contentsline {subsection}{\tocsubsection {}{}{Representantes por sector (top 5 por capitalización)}}{45}{section*.44}%
+\contentsline {section}{\tocsection {}{}{Universo Operacional con Inclusión de Pandemia: 601 Acciones}}{46}{section*.49}%
+\contentsline {subsection}{\tocsubsection {}{}{Escenarios de datos}}{46}{section*.50}%
+\contentsline {subsection}{\tocsubsection {}{}{Interpretación metodológica}}{47}{section*.53}%
+\contentsline {subsection}{\tocsubsection {}{}{Efecto observado en resultados}}{48}{section*.54}%
+\contentsline {section}{\tocsection {}{}{Implicaciones para el Modelo de Optimización}}{48}{section*.56}%
+\contentsline {subsection}{\tocsubsection {}{}{Conexión con parámetros del modelo}}{48}{section*.57}%
+\contentsline {subsection}{\tocsubsection {}{}{Sub-universos recomendados por perfil de riesgo}}{49}{section*.59}%
+\contentsline {subsection}{\tocsubsection {}{}{Consideraciones sobre la caja chica}}{50}{section*.61}%
+\contentsline {subsection}{\tocsubsection {}{}{Implicancia de la pandemia para los parámetros}}{50}{section*.62}%
+\contentsline {section}{\tocsection {}{}{Conclusión}}{50}{section*.63}%
+\contentsline {chapter}{\tocchapter {}{}{Anexo N°3: Análisis de ajuste de distribuciones}}{52}{chapter*.65}%
+\contentsline {section}{\tocsection {}{}{Resumen}}{52}{section*.66}%
+\contentsline {section}{\tocsection {}{}{Metodolog\'ia de c\'alculo}}{52}{section*.67}%
+\contentsline {section}{\tocsection {}{}{Pruebas de normalidad y distribuciones candidatas}}{53}{section*.69}%
+\contentsline {section}{\tocsection {}{}{Archivos generados}}{55}{section*.71}%
+\contentsline {section}{\tocsection {}{}{Resultados obtenidos}}{55}{section*.73}%
+\contentsline {section}{\tocsection {}{}{Discusi\'on e implicancias para el modelo}}{57}{section*.77}%
+\contentsline {section}{\tocsection {}{}{Limitaciones}}{58}{section*.78}%
+\contentsline {section}{\tocsection {}{}{Conclusiones del anexo}}{58}{section*.79}%
+\contentsline {chapter}{\tocchapter {}{}{Anexo N°4: Análisis de metodologías y código relacionado}}{60}{chapter*.81}%
+\contentsline {section}{\tocsection {}{}{Markowitz vs Benchmark}}{60}{section*.82}%
+\contentsline {subsection}{\tocsubsection {}{}{Resumen}}{60}{section*.83}%
+\contentsline {subsection}{\tocsubsection {}{}{Fundamentos metodol\'ogicos}}{61}{section*.84}%
+\contentsline {subsection}{\tocsubsection {}{}{Supuestos del experimento}}{62}{section*.85}%
+\contentsline {subsection}{\tocsubsection {}{}{Estructura del notebook}}{63}{section*.86}%
+\contentsline {subsection}{\tocsubsection {}{}{KPIs utilizados}}{64}{section*.88}%
+\contentsline {subsection}{\tocsubsection {}{}{Resultados del experimento pandemia}}{65}{section*.89}%
+\contentsline {subsection}{\tocsubsection {}{}{Rebalanceo}}{66}{section*.92}%
+\contentsline {subsection}{\tocsubsection {}{}{Splits aleatorios}}{66}{section*.93}%
+\contentsline {subsection}{\tocsubsection {}{}{Evaluaci\'on robusta}}{68}{section*.96}%
+\contentsline {subsection}{\tocsubsection {}{}{Implicancias y conclusiones}}{68}{section*.98}%
+\contentsline {section}{\tocsection {}{}{Black-Litterman}}{70}{section*.99}%
+\contentsline {subsection}{\tocsubsection {}{}{Resumen}}{70}{section*.100}%
+\contentsline {subsection}{\tocsubsection {}{}{Fundamentos metodol\'ogicos}}{70}{section*.102}%
+\contentsline {subsection}{\tocsubsection {}{}{Supuestos del experimento}}{72}{section*.103}%
+\contentsline {subsection}{\tocsubsection {}{}{Estructura del notebook}}{73}{section*.105}%
+\contentsline {subsection}{\tocsubsection {}{}{KPIs utilizados}}{75}{section*.109}%
+\contentsline {subsection}{\tocsubsection {}{}{Resultados del experimento pandemia}}{76}{section*.110}%
+\contentsline {subsection}{\tocsubsection {}{}{Rebalanceo}}{77}{section*.114}%
+\contentsline {subsection}{\tocsubsection {}{}{Splits aleatorios}}{77}{section*.115}%
+\contentsline {subsection}{\tocsubsection {}{}{Evaluaci\'on robusta}}{78}{section*.117}%
+\contentsline {subsection}{\tocsubsection {}{}{Implicancias y conclusiones}}{78}{section*.119}%
+\contentsline {section}{\tocsection {}{}{Simulaci\'on Monte Carlo}}{80}{section*.120}%
+\contentsline {subsection}{\tocsubsection {}{}{Resumen}}{80}{section*.121}%
+\contentsline {subsection}{\tocsubsection {}{}{Fundamentos metodol\'ogicos}}{80}{section*.122}%
+\contentsline {subsection}{\tocsubsection {}{}{Supuestos del experimento}}{81}{section*.123}%
+\contentsline {subsection}{\tocsubsection {}{}{Estructura del notebook}}{81}{section*.124}%
+\contentsline {subsection}{\tocsubsection {}{}{KPIs utilizados}}{82}{section*.126}%
+\contentsline {subsection}{\tocsubsection {}{}{Resultados del experimento pandemia}}{83}{section*.127}%
+\contentsline {subsection}{\tocsubsection {}{}{Rebalanceo}}{84}{section*.130}%
+\contentsline {subsection}{\tocsubsection {}{}{Splits aleatorios}}{84}{section*.131}%
+\contentsline {subsection}{\tocsubsection {}{}{Evaluaci\'on robusta}}{85}{section*.132}%
+\contentsline {subsection}{\tocsubsection {}{}{Implicancias y conclusiones}}{85}{section*.134}%
+\contentsline {section}{\tocsection {}{}{Conclusi\'on integrada}}{86}{section*.135}%

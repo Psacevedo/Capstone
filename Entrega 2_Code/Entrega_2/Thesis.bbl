@@ -1,0 +1,260 @@
+\begin{thebibliography}{}
+
+\bibitem [\protect \citeauthoryear {%
+Black%
+\ \BBA {} Litterman%
+}{%
+Black%
+\ \BBA {} Litterman%
+}{%
+{\protect \APACyear {1992}}%
+}]{%
+black1992}
+\APACinsertmetastar {%
+black1992}%
+\begin{APACrefauthors}%
+Black, F.%
+\BCBT {}\ \BBA {} Litterman, R.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1992}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Global Portfolio Optimization} {Global portfolio optimization}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Financial Analysts Journal}{48}{5}{28--43}.
+\newblock
+\begin{APACrefDOI} \doi{10.2469/faj.v48.n5.28} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+D'Acunto%
+, Prabhala%
+\BCBL {}\ \BBA {} Rossi%
+}{%
+D'Acunto%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2019}}%
+}]{%
+dacunto2019}
+\APACinsertmetastar {%
+dacunto2019}%
+\begin{APACrefauthors}%
+D'Acunto, F.%
+, Prabhala, N.%
+\BCBL {}\ \BBA {} Rossi, A\BPBI G.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2019}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {The Promises and Pitfalls of Robo-Advising} {The promises and pitfalls of robo-advising}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Review of Financial Studies}{32}{5}{1983--2020}.
+\newblock
+\begin{APACrefDOI} \doi{10.1093/rfs/hhz017} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Fama%
+\ \BBA {} French%
+}{%
+Fama%
+\ \BBA {} French%
+}{%
+{\protect \APACyear {1993}}%
+}]{%
+famafrench1993}
+\APACinsertmetastar {%
+famafrench1993}%
+\begin{APACrefauthors}%
+Fama, E\BPBI F.%
+\BCBT {}\ \BBA {} French, K\BPBI R.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1993}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Common Risk Factors in the Returns on Stocks and Bonds} {Common risk factors in the returns on stocks and bonds}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Journal of Financial Economics}{33}{1}{3--56}.
+\newblock
+\begin{APACrefDOI} \doi{10.1016/0304-405X(93)90023-5} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+He%
+\ \BBA {} Litterman%
+}{%
+He%
+\ \BBA {} Litterman%
+}{%
+{\protect \APACyear {1999}}%
+}]{%
+he1999}
+\APACinsertmetastar {%
+he1999}%
+\begin{APACrefauthors}%
+He, G.%
+\BCBT {}\ \BBA {} Litterman, R.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1999}{}{}.
+\newblock
+\APACrefbtitle {The Intuition Behind {Black--Litterman} Model Portfolios} {The intuition behind {Black--Litterman} model portfolios}\ \APACbVolEdTR{}{\BTR{}}.
+\newblock
+\APACaddressInstitution{}{Goldman Sachs Asset Management}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Idzorek%
+}{%
+Idzorek%
+}{%
+{\protect \APACyear {2005}}%
+}]{%
+idzorek2005}
+\APACinsertmetastar {%
+idzorek2005}%
+\begin{APACrefauthors}%
+Idzorek, T\BPBI M.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2005}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A Step-by-Step Guide to the {Black-Litterman} Model} {A step-by-step guide to the {Black-Litterman} model}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {Forecasting Expected Returns in the Financial Markets} {Forecasting expected returns in the financial markets}\ (\BPGS\ 17--38).
+\newblock
+\APACaddressPublisher{}{Academic Press}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Ledoit%
+\ \BBA {} Wolf%
+}{%
+Ledoit%
+\ \BBA {} Wolf%
+}{%
+{\protect \APACyear {2004}}%
+}]{%
+ledoit2004}
+\APACinsertmetastar {%
+ledoit2004}%
+\begin{APACrefauthors}%
+Ledoit, O.%
+\BCBT {}\ \BBA {} Wolf, M.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2004}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A Well-Conditioned Estimator for Large-Dimensional Covariance Matrices} {A well-conditioned estimator for large-dimensional covariance matrices}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Journal of Multivariate Analysis}{88}{2}{365--411}.
+\newblock
+\begin{APACrefDOI} \doi{10.1016/S0047-259X(03)00096-4} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Markowitz%
+}{%
+Markowitz%
+}{%
+{\protect \APACyear {1952}}%
+}]{%
+markowitz1952}
+\APACinsertmetastar {%
+markowitz1952}%
+\begin{APACrefauthors}%
+Markowitz, H.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1952}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Portfolio Selection} {Portfolio selection}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{The Journal of Finance}{7}{1}{77--91}.
+\newblock
+\begin{APACrefDOI} \doi{10.1111/j.1540-6261.1952.tb01525.x} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Michaud%
+}{%
+Michaud%
+}{%
+{\protect \APACyear {1989}}%
+}]{%
+michaud1989}
+\APACinsertmetastar {%
+michaud1989}%
+\begin{APACrefauthors}%
+Michaud, R\BPBI O.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1989}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {The {Markowitz} Optimization Enigma: Is `Optimized' Optimal?} {The {Markowitz} optimization enigma: Is `optimized' optimal?}{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Financial Analysts Journal}{45}{1}{31--42}.
+\newblock
+\begin{APACrefDOI} \doi{10.2469/faj.v45.n1.31} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Rockafellar%
+\ \BBA {} Uryasev%
+}{%
+Rockafellar%
+\ \BBA {} Uryasev%
+}{%
+{\protect \APACyear {2000}}%
+}]{%
+rockafellar2000}
+\APACinsertmetastar {%
+rockafellar2000}%
+\begin{APACrefauthors}%
+Rockafellar, R\BPBI T.%
+\BCBT {}\ \BBA {} Uryasev, S.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2000}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Optimization of Conditional Value-at-Risk} {Optimization of conditional value-at-risk}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Journal of Risk}{2}{3}{21--41}.
+\newblock
+\begin{APACrefDOI} \doi{10.21314/JOR.2000.038} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Sharpe%
+}{%
+Sharpe%
+}{%
+{\protect \APACyear {1964}}%
+}]{%
+sharpe1964}
+\APACinsertmetastar {%
+sharpe1964}%
+\begin{APACrefauthors}%
+Sharpe, W\BPBI F.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1964}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Capital Asset Prices: A Theory of Market Equilibrium under Conditions of Risk} {Capital asset prices: A theory of market equilibrium under conditions of risk}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{The Journal of Finance}{19}{3}{425--442}.
+\newblock
+\begin{APACrefDOI} \doi{10.1111/j.1540-6261.1964.tb02865.x} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\end{thebibliography}

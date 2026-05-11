@@ -1,0 +1,38 @@
+\section{Implementaci\'on y herramientas}
+
+La implementaci\'on se desarroll\'o en Python 3.11 y qued\'o organizada en tres
+notebooks finales, ejecutados en orden:
+
+\begin{enumerate}
+    \item \texttt{markowitz\_vs\_benchmark\_rebalanceo\_pandemia.ipynb}:
+    optimiza carteras Markowitz, calcula el benchmark top-20, aplica rebalanceo
+    semestral y compara escenarios con y sin pandemia.
+
+    \item \texttt{black\_litterman.ipynb}: construye portafolios
+    Black-Litterman usando las mismas m\'etricas y perfiles, con views de
+    momentum, desempleo, momentum top-20 a 6 meses y momentum top-20/bottom-20
+    a 1 a\~no.
+
+    \item \texttt{p4\_montecarlo\_recomendador\_portafolios.ipynb}: usa los
+    KPIs anteriores como insumo y simula 5\,000 trayectorias para las 180
+    combinaciones evaluadas.
+\end{enumerate}
+
+El c\'odigo computacional se encuentra disponible en el
+\href{https://github.com/Psacevedo/Capstone.git}{repositorio GitHub del proyecto}.
+El Anexo N°4 documenta la estructura de estos notebooks, los archivos CSV
+generados y la relaci\'on entre c\'odigo, supuestos, KPIs y resultados
+experimentales.
+
+Las principales herramientas fueron \textbf{Pandas} para manejo de datos y
+exportaci\'on a CSV, \textbf{NumPy/SciPy} para c\'alculo num\'erico y
+simulaci\'on, \textbf{CVXPY} para resolver los problemas de optimizaci\'on,
+\textbf{Matplotlib} para gr\'aficos, y \textbf{Hashlib} para semillas
+deterministas en Monte Carlo.
+
+La trazabilidad se asegura mediante carpetas \texttt{outputs/} por notebook.
+Cada etapa exporta CSV con pesos, KPIs, validaciones, rankings o simulaciones,
+y esos archivos son los que alimentan las tablas y figuras del informe. Adem\'as,
+los notebooks incluyen checklists finales que verifican archivos esperados,
+conteos por escenario/t\'ecnica/perfil y ausencia de \texttt{NaN} en columnas
+cr\'iticas. 

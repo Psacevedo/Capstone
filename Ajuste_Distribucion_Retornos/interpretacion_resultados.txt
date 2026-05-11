@@ -1,0 +1,29 @@
+Interpretación sugerida de los resultados
+========================================
+
+1. mejor_distribucion_por_ticker.csv
+   - La columna mejor_distribucion_aic indica la distribución que mejor ajusta el
+     ticker según AIC.
+   - La columna mejor_distribucion_bic indica la mejor distribución según BIC.
+   - AIC tiende a permitir modelos algo más flexibles.
+   - BIC penaliza más la complejidad, por lo que suele preferir modelos más simples.
+
+2. pruebas_normalidad_por_ticker.csv
+   - Si los p-values de Jarque-Bera, D'Agostino o Shapiro son menores a 0.05,
+     se rechaza normalidad al 5%.
+   - En retornos financieros diarios es común rechazar normalidad por asimetría,
+     curtosis elevada y colas pesadas.
+
+3. ajuste_distribuciones_por_ticker.csv
+   - Contiene todos los ajustes por ticker y distribución.
+   - Menor AIC/BIC implica mejor ajuste relativo entre las distribuciones comparadas.
+   - El p-value de Kolmogorov-Smirnov es aproximado porque los parámetros se estiman
+     con los mismos datos. Se debe usar como referencia, no como prueba definitiva.
+
+4. Lectura financiera esperada
+   - Si t_student domina, los retornos tienen colas más pesadas que la normal.
+   - Si skew_normal o johnson_su dominan, puede existir asimetría relevante.
+   - Si laplace domina, hay mayor concentración en torno a cero y colas más pesadas
+     que una normal.
+   - Si normal domina en pocos casos, no significa que el supuesto normal sea universal;
+     solo indica que dentro de las distribuciones comparadas fue la mejor para esos tickers.

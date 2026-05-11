@@ -1,0 +1,36 @@
+El informe documenta el desarrollo
+de un sistema
+recomendador de inversiones para FinPUC, una plataforma ficticia de asesor\'ia
+financiera que genera portafolios personalizados para clientes del mercado
+accionario estadounidense. El sistema atiende cinco perfiles de riesgo, desde
+muy conservador hasta muy arriesgado, y opera bajo un doble objetivo:
+maximizar el retorno esperado del cliente y maximizar la utilidad de la empresa
+por comisiones de transacci\'on.
+
+El universo de trabajo comprende 601 acciones, obtenidas tras filtrar 1\,406
+tickers. Se implementaron y compararon tres capas
+metodol\'ogicas de complejidad creciente. La primera es la optimizaci\'on
+media-varianza de Markowitz, resuelta mediante programaci\'on cuadr\'atica con
+CVXPY, con rebalanceo semestral cada 126 d\'ias h\'abiles. La segunda extiende
+Markowitz con el modelo Black-Litterman, que combina un prior de equilibrio de
+mercado con cuatro variantes de \textit{views} cuantitativas: momentum general,
+momentum por capitalizaci\'on a 6 meses y a 1 a\~no, y un escenario macro de
+desempleo asumido. La tercera capa es una simulaci\'on Monte Carlo de 5\,000
+trayectorias durante 260 semanas que modela la din\'amica completa del cliente: aceptaci\'on de recomendaciones, retiro ante p\'erdidas y comisiones; para
+las seis t\'ecnicas evaluadas. Como caso base se utiliza un benchmark
+equiponderado de los 20 activos con mayor capitalizaci\'on, cuyo desempe\~no no
+depende de estimaci\'on de par\'ametros.
+
+Los resultados muestran que Black-Litterman con momentum por
+capitalizaci\'on a 6 meses domina el ranking del recomendador, alcanzando una
+riqueza terminal esperada de USD~8\,974 y un score P4 de 9\,417 en el perfil
+muy arriesgado con datos de pandemia. El benchmark equiponderado se confirma
+como un competidor exigente en retorno bruto (Sharpe~2.05), pero con
+volatilidad y drawdown significativamente mayores. Incluir el per\'iodo de
+pandemia (2020 - 2022) en el entrenamiento deteriora los portafolios agresivos
+de Markowitz hasta en 1.1 puntos de Sharpe, mientras que las variantes
+Black-Litterman muestran mayor estabilidad frente al cambio de r\'egimen.
+
+\textbf{Palabras clave:} optimizaci\'on de portafolios, Markowitz,
+Black-Litterman, simulaci\'on Monte Carlo, sistema recomendador, rebalanceo
+semestral, CVXPY.

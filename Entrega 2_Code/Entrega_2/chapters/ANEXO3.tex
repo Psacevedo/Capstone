@@ -1,0 +1,213 @@
+\section*{Resumen}
+
+Este anexo resume la implementaci\'on y los resultados del an\'alisis distribucional aplicado a los retornos diarios de los tickers filtrados del universo FinPUC. El objetivo fue evaluar si los retornos de cada activo se ajustan mejor a una distribuci\'on normal o a familias alternativas capaces de representar colas pesadas, asimetr\'ia y mayor concentraci\'on de observaciones alrededor de cero. El an\'alisis se realiz\'o sobre la base de datos sin pandemia, es decir, excluyendo las observaciones del periodo 2020--2022 y utilizando activos que ya hab\'ian superado los filtros de historia, capitalizaci\'on, precio, clasificaci\'on y volatilidad.
+
+El procedimiento fue implementado mediante el script \texttt{ajustar\_distribuciones} \texttt{\_retornos}, que automatiza la lectura de archivos CSV, el c\'alculo de retornos diarios totales, la aplicaci\'on de pruebas de normalidad, el ajuste de distribuciones candidatas por m\'axima verosimilitud y la exportaci\'on de resultados. La finalidad no fue imponer una distribuci\'on \'unica para todo el universo de acciones, sino identificar, ticker por ticker, qu\'e familia param\'etrica describe mejor los retornos observados dentro del conjunto de distribuciones consideradas.
+
+\section*{Metodolog\'ia de c\'alculo}
+
+La primera etapa del script define las rutas de entrada y salida, las columnas requeridas y los par\'ametros generales del experimento. En particular, se exige un m\'inimo de 250 retornos v\'alidos por ticker para evitar estimaciones con muestras demasiado peque\~nas. Adem\'as, se eliminan retornos diarios menores a $-95\%$ o mayores a $300\%$, con el fin de controlar errores de datos, precios mal ajustados o registros extremos incompatibles con el an\'alisis financiero est\'andar.
+
+\begin{table}[h]
+\centering
+\caption{Principales par\'ametros de configuraci\'on del an\'alisis.}
+\label{tab:anexo4_configuracion}
+\small
+\begin{tabular}{@{}p{0.34\textwidth}p{0.58\textwidth}@{}}
+\toprule
+Par\'ametro & Descripci\'on \\
+\midrule
+\texttt{RUTA\_TICKERS\_FILTRADOS} & Carpeta con los CSV finales de acciones filtradas. \\
+\texttt{RUTA\_SALIDA} & Carpeta donde se guardan los resultados del ajuste. \\
+\texttt{Date}, \texttt{Close}, \texttt{Dividends} & Columnas usadas para fecha, precio de cierre y dividendos. \\
+\texttt{TIPO\_RETORNO} & Tipo de retorno calculado; por defecto se usa \texttt{simple\_total}. \\
+\texttt{MIN\_RETORNOS\_VALIDOS} & N\'umero m\'inimo de retornos requeridos para ajustar distribuciones. \\
+\texttt{RETORNO\_MINIMO\_PERMITIDO} y \texttt{RETORNO\_MAXIMO\_PERMITIDO} & Umbrales para remover retornos extremos asociados a errores de datos. \\
+\texttt{GENERAR\_GRAFICOS\_AJUSTE} & Indica si se generan histogramas con densidades ajustadas por ticker. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Para cada archivo, el script estandariza el nombre del ticker, valida que existan las columnas necesarias y, si no se encuentra la columna de dividendos, la crea con valor cero. Luego convierte las fechas a formato \texttt{datetime}, transforma precios y dividendos a valores num\'ericos, elimina fechas inv\'alidas y precios nulos o no positivos, y ordena las observaciones cronol\'ogicamente. Con esta base limpia, el retorno simple total del ticker $i$ en el d\'ia $t$ se calcula como:
+
+\begin{equation}
+r_{i,t} =
+\frac{P_{i,t} - P_{i,t-1} + D_{i,t}}{P_{i,t-1}},
+\end{equation}
+
+donde $P_{i,t}$ es el precio de cierre y $D_{i,t}$ corresponde al dividendo por acci\'on pagado en ese d\'ia. Esta definici\'on incorpora la rentabilidad por dividendos y, por tanto, representa mejor el retorno total del inversionista que una medida basada solo en precios. El script tambi\'en permite calcular retornos logar\'itmicos totales,
+
+\begin{equation}
+r^{\log}_{i,t} =
+\log\left(\frac{P_{i,t} + D_{i,t}}{P_{i,t-1}}\right),
+\end{equation}
+
+aunque el an\'alisis final utiliza retornos simples totales para mantener consistencia con el resto del proyecto.
+
+\section*{Pruebas de normalidad y distribuciones candidatas}
+
+Para evaluar normalidad se aplican tres pruebas formales: Jarque--Bera, D'Agostino--Pearson y Shapiro--Wilk. La hip\'otesis nula com\'un es que los retornos del ticker provienen de una distribuci\'on normal,
+
+\begin{equation}
+H_0: r_{i,t} \sim \mathcal{N}(\mu_i,\sigma_i^2).
+\end{equation}
+
+Cuando el valor-p es menor a 0,05, se rechaza la normalidad al 5\%. Jarque--Bera compara asimetr\'ia y curtosis respecto de los valores esperados bajo normalidad; D'Agostino--Pearson combina transformaciones de ambos momentos de forma; y Shapiro--Wilk contrasta los cuantiles ordenados de la muestra con los cuantiles esperados bajo normalidad. En muestras muy grandes, esta \'ultima prueba se aplica sobre un m\'aximo de 5\,000 observaciones para evitar sensibilidad excesiva.
+
+El ajuste param\'etrico considera siete distribuciones candidatas, todas razonables para modelar retornos diarios porque admiten valores positivos y negativos o tienen flexibilidad suficiente para representar distintas formas emp\'iricas.
+
+\begin{table}[h]
+\centering
+\caption{Distribuciones candidatas consideradas.}
+\label{tab:anexo4_distribuciones}
+\small
+\begin{tabular}{@{}p{0.25\textwidth}p{0.65\textwidth}@{}}
+\toprule
+Distribuci\'on & Interpretaci\'on financiera \\
+\midrule
+Normal & Modelo sim\'etrico base, con colas delgadas y sin asimetr\'ia. \\
+t-Student & Permite colas m\'as pesadas, \'util ante eventos extremos frecuentes. \\
+Laplace & Presenta mayor concentraci\'on cerca de cero y colas m\'as pesadas que la normal. \\
+Log\'istica & Distribuci\'on sim\'etrica con colas algo m\'as pesadas que la normal. \\
+Skew-normal & Extiende la normal incorporando asimetr\'ia mediante un par\'ametro de forma. \\
+Normal generalizada & Permite modificar concentraci\'on central y grosor de colas. \\
+Johnson SU & Familia flexible para representar asimetr\'ia, colas pesadas y formas complejas. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Para cada ticker $i$ y distribuci\'on candidata $d$, se estima un vector de par\'ametros $\theta_{i,d}$ por m\'axima verosimilitud:
+
+\begin{equation}
+\hat{\theta}_{i,d}
+= \arg\max_{\theta}
+\sum_{t=1}^{T_i}
+\log f_d(r_{i,t};\theta),
+\end{equation}
+
+donde $f_d(\cdot)$ es la densidad de la distribuci\'on candidata y $T_i$ corresponde al n\'umero de retornos v\'alidos del ticker. La log-verosimilitud maximizada se compara mediante AIC y BIC:
+
+\begin{equation}
+AIC = 2k - 2\ell,
+\end{equation}
+
+\begin{equation}
+BIC = k\ln(n) - 2\ell,
+\end{equation}
+
+donde $k$ es el n\'umero de par\'ametros, $n$ el tama\~no muestral y $\ell$ la log-verosimilitud maximizada. Ambos criterios equilibran ajuste y parsimonia: AIC tiende a favorecer modelos m\'as flexibles, mientras que BIC penaliza con mayor fuerza la complejidad cuando el tama\~no muestral es grande.
+
+Como medida adicional de bondad de ajuste se calcula el estad\'istico Kolmogorov--Smirnov aproximado:
+
+\begin{equation}
+D = \sup_x |F_n(x) - F_{\hat{\theta}}(x)|,
+\end{equation}
+
+donde $F_n(x)$ es la distribuci\'on emp\'irica y $F_{\hat{\theta}}(x)$ la distribuci\'on acumulada ajustada. Su valor-p se interpreta solo como referencia, ya que los par\'ametros se estiman con los mismos datos sobre los cuales se eval\'ua el ajuste.
+
+\section*{Archivos generados}
+
+El proceso principal verifica la disponibilidad de las librer\'ias necesarias, recorre todos los CSV disponibles, calcula retornos, descarta tickers con menos de 250 observaciones v\'alidas, aplica pruebas de normalidad, ajusta las distribuciones candidatas y exporta resultados agregados y por ticker. Si una distribuci\'on no converge para un ticker espec\'ifico, el script contin\'ua con las restantes; si un ticker completo no puede analizarse, registra el motivo de exclusi\'on.
+
+\begin{table}[h]
+\centering
+\caption{Archivos de salida generados por el script.}
+\label{tab:anexo4_salidas}
+\scriptsize
+\begin{tabular}{@{}p{0.38\textwidth}p{0.52\textwidth}@{}}
+\toprule
+Archivo & Contenido \\
+\midrule
+\texttt{ajuste\_distribuciones\_por\_ticker.csv} & Resultados de todas las distribuciones ajustadas para cada ticker. \\
+\texttt{mejor\_distribucion\_por\_ticker.csv} & Mejor distribuci\'on por ticker seg\'un AIC y BIC. \\
+\texttt{resumen\_mejores\_distribuciones.csv} & Conteo agregado de mejores distribuciones. \\
+\texttt{pruebas\_normalidad\_por\_ticker.csv} & Resultados de Jarque--Bera, D'Agostino--Pearson y Shapiro--Wilk. \\
+\texttt{tickers\_no\_analizados.csv} & Tickers omitidos y motivo de exclusi\'on. \\
+\texttt{interpretacion\_resultados.txt} & Gu\'ia breve para interpretar los resultados. \\
+\texttt{graficos\_ajuste/} & Histogramas con densidades param\'etricas ajustadas. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Resultados obtenidos}
+
+El an\'alisis final contiene 601 tickers y siete distribuciones candidatas por ticker, lo que produce 4\,207 ajustes distribucionales. La cantidad de retornos disponibles es suficiente para realizar comparaciones estad\'isticas robustas: la mediana es 7\,949 retornos por ticker y el promedio 8\,262,83, incluso despu\'es de aplicar filtros de calidad y excluir el periodo pand\'emico.
+
+\begin{table}[h]
+\centering
+\caption{Resumen del tama\~no muestral analizado.}
+\label{tab:anexo4_tamano}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Indicador & Valor \\
+\midrule
+Tickers analizados & 601 \\
+Distribuciones candidatas por ticker & 7 \\
+Ajustes totales & 4\,207 \\
+M\'inimo de retornos por ticker & 2\,518 \\
+Mediana de retornos por ticker & 7\,949 \\
+Promedio de retornos por ticker & 8\,262,83 \\
+M\'aximo de retornos por ticker & 15\,400 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los resultados muestran que la normal no fue seleccionada como mejor distribuci\'on para ning\'un ticker, ni por AIC ni por BIC. Seg\'un AIC, Johnson SU es la familia m\'as frecuente, con 247 tickers, equivalente al 41,10\% del total. Seg\'un BIC, t-Student pasa a ser la m\'as frecuente, con 241 tickers y 40,10\%. Esta diferencia es coherente con la mayor penalizaci\'on de BIC sobre modelos con m\'as par\'ametros: Johnson SU ofrece mayor flexibilidad para capturar asimetr\'ias y formas complejas, mientras que t-Student representa colas pesadas con una estructura m\'as parsimoniosa.
+
+\begin{table}[h]
+\centering
+\caption{Conteo de mejores distribuciones por criterio de informaci\'on.}
+\label{tab:anexo4_mejores_distribuciones}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Distribuci\'on & Mejor AIC & \% AIC & Mejor BIC & \% BIC \\
+\midrule
+Johnson SU & 247 & 41,10\% & 180 & 29,95\% \\
+t-Student & 179 & 29,78\% & 241 & 40,10\% \\
+Normal generalizada & 174 & 28,95\% & 176 & 29,28\% \\
+Laplace & 1 & 0,17\% & 4 & 0,67\% \\
+Normal & 0 & 0,00\% & 0 & 0,00\% \\
+Log\'istica & 0 & 0,00\% & 0 & 0,00\% \\
+Skew-normal & 0 & 0,00\% & 0 & 0,00\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+AIC y BIC coinciden en la mejor distribuci\'on para 532 tickers, lo que representa el 88,52\% del total. Las discrepancias se concentran principalmente en casos donde AIC selecciona Johnson SU y BIC selecciona t-Student. En t\'erminos pr\'acticos, si se busca el mejor ajuste emp\'irico por ticker, Johnson SU resulta atractiva; si se busca un modelo m\'as simple y estable para simulaci\'on o escenarios, t-Student puede ser preferible.
+
+\begin{table}[h]
+\centering
+\caption{Resultados agregados de pruebas de normalidad.}
+\label{tab:anexo4_normalidad}
+\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Prueba & Rechazos al 5\% & Porcentaje \\
+\midrule
+Jarque--Bera & 601 & 100,00\% \\
+D'Agostino--Pearson & 601 & 100,00\% \\
+Shapiro--Wilk & 601 & 100,00\% \\
+Las tres pruebas simult\'aneamente & 601 & 100,00\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Las tres pruebas rechazan normalidad en todos los tickers analizados, lo que constituye evidencia contundente contra el supuesto de retornos diarios normales. Desde el punto de vista financiero, este resultado es relevante porque la normalidad tiende a subestimar la probabilidad de p\'erdidas extremas cuando la distribuci\'on real presenta colas pesadas. Adem\'as, usando la mejor distribuci\'on seg\'un AIC, solo 220 de 601 tickers tienen un valor-p aproximado de Kolmogorov--Smirnov mayor a 0,05, equivalente al 36,61\%; seg\'un BIC, esto ocurre en 219 tickers, equivalente al 36,44\%. Por tanto, aunque Johnson SU, t-Student y normal generalizada mejoran el ajuste relativo frente a la normal, una distribuci\'on param\'etrica est\'atica no captura completamente todos los rasgos emp\'iricos de los retornos.
+
+\section*{Discusi\'on e implicancias para el modelo}
+
+Los resultados son consistentes con patrones frecuentes en series financieras: presencia de colas pesadas, asimetr\'ias relevantes, baja validez emp\'irica de la normalidad y tensi\'on entre ajuste flexible y parsimonia. Para el sistema recomendador FinPUC, esto tiene implicancias directas. Si el modelo utiliza solo media y varianza, puede perder informaci\'on importante sobre riesgo extremo; una cartera evaluada \'unicamente mediante volatilidad podr\'ia parecer aceptable aun cuando tenga exposici\'on significativa a p\'erdidas de cola.
+
+En modelos media-varianza, la normalidad facilita la interpretaci\'on del riesgo, pero no es estrictamente necesaria para calcular medias, varianzas y covarianzas. Sin embargo, cuando se desea proyectar escenarios desfavorables, calcular VaR o CVaR, o simular trayectorias futuras, la elecci\'on distribucional se vuelve m\'as relevante. A partir de los resultados, t-Student aparece como una alternativa adecuada para simulaciones base por su parsimonia y capacidad de capturar colas pesadas; Johnson SU resulta \'util para an\'alisis por ticker cuando se requiere mayor flexibilidad; y los m\'etodos emp\'iricos, como \textit{bootstrap} hist\'orico, simulaciones por bloques o modelos de volatilidad condicional, pueden complementar el an\'alisis al capturar dependencia temporal y cambios de r\'egimen.
+
+\section*{Limitaciones}
+
+El procedimiento presenta algunas limitaciones metodol\'ogicas. Los par\'ametros se estiman y eval\'uan sobre la misma muestra, por lo que ciertas pruebas de ajuste deben interpretarse como aproximadas. Adem\'as, el test Kolmogorov--Smirnov no corrige formalmente por la estimaci\'on previa de par\'ametros. El an\'alisis considera distribuciones incondicionales, aunque los retornos financieros suelen exhibir dependencia temporal y agrupamiento de volatilidad. La exclusi\'on de 2020--2022 responde a una decisi\'on metodol\'ogica del proyecto, pero tambi\'en elimina un periodo con eventos extremos relevantes. Finalmente, la comparaci\'on se limita a siete familias candidatas, por lo que podr\'ian existir otras distribuciones con mejor desempe\~no.
+
+\section*{Conclusiones del anexo}
+
+El script implementa una metodolog\'ia completa y replicable para evaluar distribuciones candidatas por ticker, desde la lectura de datos hasta la exportaci\'on e interpretaci\'on de resultados. La normalidad es rechazada de manera sistem\'atica: Jarque--Bera, D'Agostino--Pearson y Shapiro--Wilk rechazan la hip\'otesis normal en el 100\% de los 601 tickers. Adem\'as, la distribuci\'on normal no fue seleccionada como mejor ajuste para ning\'un activo, ni por AIC ni por BIC.
+
+La evidencia indica que los retornos del universo filtrado presentan colas pesadas y desviaciones relevantes respecto de la normalidad. Johnson SU domina bajo AIC por su flexibilidad para capturar asimetr\'ia y formas complejas, mientras que t-Student domina bajo BIC por ofrecer un buen balance entre ajuste y parsimonia. Para FinPUC, el resultado m\'as importante es que la estimaci\'on de riesgo no deber\'ia depender exclusivamente del supuesto normal. En escenarios desfavorables, estr\'es financiero o m\'etricas como VaR y CVaR, distribuciones con colas pesadas o m\'etodos emp\'iricos ofrecen aproximaciones m\'as realistas.

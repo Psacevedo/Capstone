@@ -1,0 +1,52 @@
+Los KPIs se definieron para decidir qu\'e combinaci\'on de t\'ecnica,
+\textit{view} y perfil conviene recomendar. 
+
+\begin{itemize}
+    \item \textbf{Retorno total rebalanceado:}
+    $R_{\text{total}} = \prod_t (1 + r_t) - 1$. Mide la ganancia acumulada
+    fuera de muestra. Se usa para comparar el resultado final de cada cartera.
+
+    \item \textbf{Retorno anualizado:}
+    $R_{\text{anual}} = (1 + R_{\text{total}})^{1/T} - 1$. Normaliza el retorno
+    por a\~no y permite comparar horizontes de distinta duraci\'on.
+
+    \item \textbf{Volatilidad anualizada:}
+    $\sigma_{\text{anual}} = \sigma_{\text{diaria}}\sqrt{252}$. Mide la
+    variabilidad del retorno. Sirve para descartar alternativas demasiado
+    inestables para el perfil del cliente.
+
+    \item \textbf{Ratio de Sharpe rebalanceado:}
+    $\text{Sharpe} = (R_{\text{anual}} - R_f)/\sigma_{\text{anual}}$, con
+    $R_f = 0.02$. Resume retorno ajustado por riesgo. Es el principal KPI para
+    comparar eficiencia financiera entre t\'ecnicas.
+
+    \item \textbf{M\'aximo drawdown:} mayor ca\'ida porcentual desde un m\'aximo
+    acumulado de riqueza. Eval\'ua la p\'erdida que el cliente habr\'ia tenido
+    que tolerar, por lo que pesa especialmente en perfiles conservadores.
+
+    \item \textbf{CVaR diario al 95\%:} p\'erdida promedio en el 5\% peor de
+    d\'ias \cite{rockafellar2000}. Se usa para medir riesgo de cola y evitar
+    carteras con p\'erdidas extremas demasiado severas.
+
+    \item \textbf{Riqueza terminal esperada:} valor final promedio desde
+    $C_0 = 1\,000$ USD en las 5\,000 simulaciones Monte Carlo. Traduce el
+    desempe\~no financiero a una cifra monetaria para el cliente.
+
+    \item \textbf{Probabilidad de ganancia:} proporci\'on de simulaciones en
+    que la riqueza terminal supera $C_0$. Indica qu\'e tan probable es que el
+    cliente termine el horizonte con utilidad.
+
+    \item \textbf{Tasa de retiro:} proporci\'on de simulaciones en que el
+    cliente abandona antes del final por superar su tolerancia de p\'erdida.
+    Afecta la decisi\'on porque reduce la continuidad del cliente y las
+    comisiones futuras.
+
+    \item \textbf{Utilidad por comisiones:} ingreso esperado de FinPUC con
+    comisi\'on $k = 1\%$, incluyendo comisi\'on inicial y comisiones por
+    recomendaciones aceptadas. Mide el atractivo de la alternativa para la
+    empresa.
+
+    \item \textbf{Tasa de aceptaci\'on de recomendaciones:} proporci\'on de
+    recomendaciones aceptadas seg\'un $P_2$. Una tasa baja indica que la cartera
+    no supera el umbral de atractivo del perfil, reduciendo rotaci\'on y utilidad.
+\end{itemize}
