@@ -13,6 +13,9 @@ services:
     volumes:
       - ./Data/Historical_Stocks:/data/Historical_Stocks:ro
       - finpuc_cache:/data
+      # Bind mounts para desarrollo: reflejan cambios sin reconstruir la imagen
+      - ./backend:/app/backend:ro
+      - ./frontend:/app/frontend:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)"]
       interval: 30s
