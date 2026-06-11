@@ -1,0 +1,258 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+\geometry{letterpaper, margin=2.5cm}
+
+\title{Validaci\'on temporal de Black--Litterman con tres horizontes y ventanas m\'oviles}
+\author{Proyecto Capstone FinPUC}
+\date{Junio 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Prop\'osito de la implementaci\'on}
+
+El objetivo de esta etapa fue corregir el principal riesgo metodol\'ogico identificado en la reuni\'on del 9 de junio: la posibilidad de \textit{overfitting} temporal al usar la misma ventana para calibrar Black--Litterman y para alimentar la simulaci\'on Monte Carlo P4. La soluci\'on implementada separa el experimento en tres horizontes con roles no intercambiables: calibraci\'on, validaci\'on y test final limpio para P4.
+
+La implementaci\'on se realiz\'o en una carpeta nueva, \texttt{Entrega\_3/05 Validaci\'on modelo}, sin modificar los scripts originales. El script base de calibraci\'on fue copiado como \texttt{calibracion\_secuencial\_bl\_base\_copiada.py}, y el nuevo pipeline se implement\'o en \texttt{validacion\_3h\_rolling\_bl.py}. Esta estructura permite auditar qu\'e parte corresponde al modelo original y qu\'e parte corresponde a la validaci\'on solicitada por el profesor.
+
+\section{Arquitectura temporal implementada}
+
+Para cada escenario de datos se generaron ventanas m\'oviles de tipo $h7\_f2$: siete a\~nos de entrenamiento y dos a\~nos fuera de muestra. El rebalanceo interno se mantuvo semestral, consistente con el pipeline anterior. Sin embargo, para multiplicar observaciones fuera de muestra se desplaz\'o el inicio de cada ventana cada 63 d\'ias h\'abiles. Esta decisi\'on permite obtener suficientes ventanas incluso en el escenario sin pandemia, que contiene menos observaciones que la base completa.
+
+Cada ventana $W_j$ se define como:
+
+\[
+W_j = \left[Train_j^{7y}, Test_j^{2y}\right],
+\]
+
+donde $Train_j^{7y}$ se usa para estimar los par\'ametros financieros en cada rebalanceo y $Test_j^{2y}$ se usa para medir desempe\~no fuera de muestra. Luego, las ventanas se asignan cronol\'ogicamente a tres roles:
+
+\begin{itemize}
+    \item \textbf{Calibraci\'on}: ventanas usadas para escoger familia de \textit{view}, estructura de $P$, intensidad de $Q$, confianza de $\Omega$ y $\tau$.
+    \item \textbf{Validaci\'on}: ventanas no vistas durante la calibraci\'on, usadas para evaluar la configuraci\'on congelada sin modificarla.
+    \item \textbf{Test P4}: ventanas finales reservadas exclusivamente para producir KPIs financieros y alimentar Monte Carlo P4.
+\end{itemize}
+
+La separaci\'on evita que el resultado P4 sea usado directa o indirectamente para escoger par\'ametros. En particular, P4 no interviene en la elecci\'on de $P$, $Q$, $\Omega$ ni $\tau$; solo recibe KPIs del horizonte final.
+
+\begin{table}[H]
+\centering
+\caption{Ventanas generadas por escenario y rol}
+\label{tab:ventanas}
+\begin{tabular}{l l r}
+\toprule
+Escenario & Rol & N\'umero de ventanas \\
+\midrule
+Con pandemia & Calibraci\'on & 10 \\
+Con pandemia & Validaci\'on & 3 \\
+Con pandemia & Test P4 & 4 \\
+Sin pandemia & Calibraci\'on & 3 \\
+Sin pandemia & Validaci\'on & 1 \\
+Sin pandemia & Test P4 & 1 \\
+\midrule
+Total & & 22 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Calibraci\'on secuencial bajo ventanas de calibraci\'on}
+
+La calibraci\'on se ejecut\'o exclusivamente con las 13 ventanas del Horizonte 1. El caso base Markowitz se recalcul\'o sobre las mismas ventanas, de modo que cada candidato de Black--Litterman fue comparado contra Markowitz en el mismo escenario, ventana y perfil. Para reducir sobreajuste por perfil de riesgo, la calibraci\'on de par\'ametros se realiz\'o usando el perfil Neutro como perfil central; luego la configuraci\'on congelada se evalu\'o en los cinco perfiles.
+
+El criterio de selecci\'on mantuvo la l\'ogica robusta del informe anterior: Sharpe medio, mejora de Sharpe frente a Markowitz, retorno anual, drawdown, CVaR y estabilidad. Adem\'as, se conserv\'o la penalizaci\'on para configuraciones que empeoran el drawdown promedio frente a Markowitz en m\'as de tres puntos porcentuales.
+
+\begin{table}[H]
+\centering
+\caption{Ganadores por etapa en Horizonte 1}
+\label{tab:ganadores}
+\begin{tabular}{l l r r r}
+\toprule
+Etapa & Ganador & Sharpe medio & $\Delta$ Sharpe & Score \\
+\midrule
+Familia de \textit{view} & Desempleo macro & 0.854 & 0.159 & 0.897 \\
+Estructura de $P$ & $u=4\%$, $\beta=1.5$ & 0.855 & 0.160 & 0.650 \\
+Intensidad de $Q$ & $q_{\text{scale}}=1.5$ & 0.855 & 0.160 & 0.650 \\
+Confianza de $\Omega$ & $c=0.50$ & 0.855 & 0.160 & 0.950 \\
+Sensibilidad de $\tau$ & $\tau=0.20$ & 0.857 & 0.162 & 0.723 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El resultado conserva la conclusi\'on estructural del modelo anterior: la familia ganadora sigue siendo la \textit{view} macro de desempleo, con desempleo asumido de 4\%, desempleo neutral de 5\%, $\beta_{\text{macro}}=1.5$, $q_{\text{scale}}=1.5$ y $\tau=0.20$. Sin embargo, la nueva arquitectura temporal cambia un punto relevante: la confianza ganadora pasa de $c=0.20$ en la calibraci\'on anterior a $c=0.50$ cuando se usan ventanas rolling separadas. Este cambio no debe interpretarse como una contradicci\'on, sino como evidencia de que la nueva validaci\'on est\'a cumpliendo su funci\'on: al ampliar el n\'umero de ventanas y separar horizontes, el par\'ametro de confianza deja de depender de una ventana puntual.
+
+\begin{table}[H]
+\centering
+\caption{Configuraci\'on congelada para validaci\'on y test}
+\label{tab:config}
+\begin{tabular}{l l}
+\toprule
+Componente & Valor \\
+\midrule
+Familia de \textit{view} & Desempleo macro asumido \\
+Direcci\'on de $P$ & Largo sectores c\'iclicos, corto defensivos \\
+Desempleo asumido & 4\% \\
+Desempleo neutral & 5\% \\
+$\beta_{\text{macro}}$ & 1.5 \\
+$q_{\text{scale}}$ & 1.5 \\
+Confianza $c$ & 0.50 \\
+$\tau$ & 0.20 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Validaci\'on fuera de calibraci\'on}
+
+Una vez congelada la configuraci\'on, se evalu\'o en el Horizonte 2 sin cambiar ning\'un par\'ametro. Los resultados muestran que Black--Litterman no domina universalmente a Markowitz en validaci\'on, pero mantiene una mejora relevante de drawdown en los perfiles m\'as expuestos al riesgo. En particular, para Muy arriesgado con pandemia, Black--Litterman mejora el Sharpe promedio en 3.0\% y mejora el drawdown promedio en 6.3 puntos porcentuales. Para Arriesgado con pandemia, el Sharpe promedio queda por debajo de Markowitz, pero el drawdown mejora 2.1 puntos porcentuales.
+
+\begin{table}[H]
+\centering
+\caption{Resumen de validaci\'on de la configuraci\'on congelada}
+\label{tab:validacion}
+\begin{tabular}{l l r r r r}
+\toprule
+Escenario & Perfil & Ventanas & Sharpe BL & Sharpe MK & $\Delta$ Drawdown \\
+\midrule
+Con pandemia & Muy arriesgado & 3 & 1.519 & 1.505 & 6.3 pp \\
+Con pandemia & Arriesgado & 3 & 1.752 & 1.850 & 2.1 pp \\
+Con pandemia & Neutro & 3 & 1.662 & 1.877 & -0.1 pp \\
+Sin pandemia & Arriesgado & 1 & 1.578 & 1.627 & 6.1 pp \\
+Sin pandemia & Neutro & 1 & 1.609 & 1.747 & 2.4 pp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La lectura metodol\'ogica es deliberadamente conservadora. La validaci\'on no permite afirmar que Black--Litterman sea superior para todos los perfiles. S\'i permite afirmar que, en perfiles de mayor riesgo, la \textit{view} macro de desempleo tiende a contener ca\'idas frente a Markowitz, incluso cuando no maximiza Sharpe promedio.
+
+\section{Test final limpio y Monte Carlo P4}
+
+El Horizonte 3 fue reservado para el test final limpio. En este bloque se calcularon los KPIs financieros de Black--Litterman y Markowitz, y solo esos KPIs fueron usados como entrada para Monte Carlo P4. Esto corrige el problema anterior: P4 ya no eval\'ua un per\'iodo usado para seleccionar la configuraci\'on.
+
+\begin{table}[H]
+\centering
+\caption{Comparaci\'on financiera en test limpio}
+\label{tab:test}
+\begin{tabular}{l l r r r r}
+\toprule
+Escenario & Perfil & Ventanas & Sharpe BL & Sharpe MK & Mejora Sharpe \\
+\midrule
+Con pandemia & Muy arriesgado & 4 & 1.119 & 0.933 & 23.1\% \\
+Con pandemia & Arriesgado & 4 & 1.644 & 1.391 & 19.9\% \\
+Con pandemia & Neutro & 4 & 1.660 & 1.773 & -6.0\% \\
+Sin pandemia & Arriesgado & 1 & 1.562 & 1.513 & 3.2\% \\
+Sin pandemia & Muy conservador & 1 & 1.738 & 1.736 & 0.2\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+En test limpio, el resultado m\'as fuerte aparece en los perfiles Arriesgado y Muy arriesgado del escenario con pandemia. Para Arriesgado, Black--Litterman mejora el Sharpe promedio en 19.9\% y mejora el drawdown promedio en 7.6 puntos porcentuales. Para Muy arriesgado, mejora el Sharpe promedio en 23.1\% y mejora el drawdown promedio en 4.7 puntos porcentuales. En perfiles conservadores y neutros, Markowitz sigue siendo competitivo o superior en Sharpe, por lo que la recomendaci\'on debe mantenerse segmentada.
+
+\begin{table}[H]
+\centering
+\caption{Monte Carlo P4 en Horizonte 3}
+\label{tab:p4}
+\begin{tabular}{l l l r r r r}
+\toprule
+Modelo & Escenario & Perfil & Riqueza & Retiro & Utilidad & Score P4 \\
+\midrule
+Markowitz & Sin pandemia & Neutro & 2797 & 0.9\% & 194 & 2982 \\
+Markowitz & Con pandemia & Neutro & 2623 & 0.7\% & 176 & 2792 \\
+Markowitz & Sin pandemia & Conservador & 2508 & 15.8\% & 196 & 2546 \\
+BL calibrado & Sin pandemia & Conservador & 2452 & 16.8\% & 192 & 2475 \\
+BL calibrado & Sin pandemia & Neutro & 2291 & 0.7\% & 144 & 2428 \\
+BL calibrado & Con pandemia & Conservador & 2241 & 14.2\% & 178 & 2278 \\
+BL calibrado & Con pandemia & Neutro & 2124 & 0.5\% & 125 & 2243 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La simulaci\'on P4 confirma una tensi\'on central del proyecto: Markowitz suele generar mayor riqueza terminal y, por lo tanto, mayor saldo administrado y utilidad de empresa en perfiles intermedios. Black--Litterman calibrado no debe presentarse como el maximizador universal de P4. Su valor est\'a en la resiliencia financiera para perfiles donde el costo de ca\'idas severas es m\'as relevante que maximizar riqueza terminal promedio.
+
+\section{M\'etricas de din\'amica del portafolio}
+
+La implementaci\'on agreg\'o tres familias de m\'etricas temporales. Primero, el turnover semestral:
+
+\[
+TO_t = \frac{1}{2}\sum_{i=1}^{N}|w_{i,t} - w_{i,t^-}^{drift}|,
+\]
+
+donde $w_{i,t^-}^{drift}$ corresponde al peso previo ajustado por la rentabilidad acumulada antes del rebalanceo. Segundo, la distancia inicial-final:
+
+\[
+D_{L1}^{init-final} = \frac{1}{2}\sum_i |w_{i,T} - w_{i,1}|.
+\]
+
+Tercero, la concentraci\'on sectorial de pesos y contribuciones a retorno:
+
+\[
+HHI^{sector}_t = \sum_s W_{s,t}^2, \qquad
+ShareReturn_s = \frac{|CR_s|}{\sum_k |CR_k|}.
+\]
+
+Estas m\'etricas permiten evaluar implementabilidad, estabilidad y dependencia sectorial. En test limpio, Black--Litterman presenta turnover promedio bajo, sin rebalanceos superiores a 20\% en los perfiles reportados. Esto sugiere que la configuraci\'on no solo es financieramente interpretable, sino tambi\'en operativamente implementable.
+
+\begin{table}[H]
+\centering
+\caption{Din\'amica de Black--Litterman en test limpio}
+\label{tab:dinamica}
+\begin{tabular}{l l r r r}
+\toprule
+Escenario & Perfil & Turnover medio & N efectivo & HHI sectorial \\
+\midrule
+Con pandemia & Arriesgado & 7.0\% & 205.7 & 0.135 \\
+Con pandemia & Neutro & 6.4\% & 136.3 & 0.158 \\
+Con pandemia & Muy arriesgado & 9.9\% & 121.0 & 0.214 \\
+Sin pandemia & Arriesgado & 6.9\% & 360.5 & 0.124 \\
+Sin pandemia & Muy arriesgado & 9.2\% & 163.3 & 0.178 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El an\'alisis sectorial muestra que, aunque el portafolio mantiene un n\'umero efectivo amplio de activos, los retornos pueden concentrarse en sectores espec\'ificos durante ciertas ventanas. En perfiles de mayor riesgo con pandemia, Technology y Financial Services aparecen frecuentemente como sectores dominantes en contribuci\'on absoluta al retorno. Esta evidencia debe reportarse como una advertencia de interpretaci\'on: la diversificaci\'on por cantidad de activos no elimina completamente la concentraci\'on econ\'omica por fuente de retorno.
+
+\section{Discusi\'on}
+
+La nueva arquitectura fortalece el proyecto en tres dimensiones. Primero, reduce el riesgo de \textit{overfitting}: la calibraci\'on ya no mira el mismo horizonte que P4. Segundo, aumenta la evidencia fuera de muestra: el an\'alisis pasa de una comparaci\'on est\'atica de pocos casos a 22 ventanas cronol\'ogicas, con 13 para calibrar, 4 para validar y 5 para testear P4. Tercero, agrega una capa de implementabilidad: turnover, estabilidad de composici\'on y concentraci\'on sectorial permiten evaluar si el portafolio es operable y no solo atractivo en KPIs agregados.
+
+El resultado tambi\'en obliga a precisar la conclusi\'on. Black--Litterman con \textit{view} de desempleo sigue siendo defendible, especialmente en perfiles Arriesgado y Muy arriesgado bajo escenario con pandemia. En el test limpio, esos perfiles muestran mejoras relevantes de Sharpe y drawdown frente a Markowitz. Sin embargo, Markowitz conserva ventaja en varios perfiles conservadores e intermedios, y tambi\'en en P4 cuando la m\'etrica dominante es riqueza terminal o saldo administrado.
+
+Por lo tanto, la recomendaci\'on final no debe formularse como sustituci\'on universal de Markowitz. La conclusi\'on robusta es segmentada: Black--Litterman calibrado es recomendable como alternativa resiliente para perfiles de mayor riesgo y escenarios adversos, mientras que Markowitz se mantiene como referencia competitiva para perfiles conservadores o para objetivos donde prime la riqueza terminal esperada. Esta distinci\'on es precisamente lo que la validaci\'on de tres horizontes permite defender con mayor rigor.
+
+\section{Archivos generados}
+
+Los principales productos computacionales quedan en \texttt{Entrega\_3/05 Validaci\'on modelo/outputs}:
+
+\begin{longtable}{p{0.38\linewidth} p{0.52\linewidth}}
+\toprule
+Archivo & Contenido \\
+\midrule
+\endfirsthead
+\toprule
+Archivo & Contenido \\
+\midrule
+\endhead
+\texttt{00\_windows\_roles.csv} & Fechas y rol de cada ventana rolling. \\
+\texttt{03\_configuracion\_congelada.csv} & Par\'ametros finales de Black--Litterman seleccionados solo con Horizonte 1. \\
+\texttt{validation/validacion\_configuracion\_congelada\_resumen.csv} & Resumen del Horizonte 2, sin recalibraci\'on. \\
+\texttt{test\_p4/test\_limpio\_comparacion\_resumen.csv} & Comparaci\'on financiera BL vs Markowitz en Horizonte 3. \\
+\texttt{test\_p4/p4\_test\_limpio\_resumen.csv} & Resultados Monte Carlo P4 usando solo test limpio. \\
+\texttt{portfolio\_dynamics/turnover\_summary.csv} & Turnover, concentraci\'on de pesos y n\'umero efectivo de activos. \\
+\texttt{portfolio\_dynamics/composition\_stability.csv} & Distancia inicial-final y overlap de principales posiciones. \\
+\texttt{portfolio\_dynamics/sector\_return\_concentration\_summary.csv} & Concentraci\'on sectorial de contribuciones a retorno. \\
+\bottomrule
+\end{longtable}
+
+\end{document}

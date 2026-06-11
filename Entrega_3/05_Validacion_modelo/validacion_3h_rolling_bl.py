@@ -1,0 +1,994 @@
+"""
+Validacion de Black-Litterman con tres horizontes temporales para FinPUC.
+
+Este script vive en una carpeta segura y no modifica los scripts originales.
+Parte desde la copia local `calibracion_secuencial_bl_base_copiada.py` y agrega:
+
+1. Rolling windows cronologicas.
+2. Separacion estricta de roles: calibracion, validacion y test_p4.
+3. Calibracion secuencial solo con ventanas de calibracion.
+4. Validacion de parametros congelados en ventanas no vistas.
+5. Test limpio para Monte Carlo P4.
+6. Metricas de dinamica del portafolio:
+   turnover semestral, estabilidad inicial-final y concentracion sectorial.
+"""
+
+from __future__ import annotations
+
+import math
+import time
+from dataclasses import dataclass, replace
+from pathlib import Path
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+
+import numpy as np
+import pandas as pd
+
+import calibracion_secuencial_bl_base_copiada as base
+
+
+WORK_DIR = Path(__file__).resolve().parent
+OUTPUT_DIR = WORK_DIR / "outputs"
+CALIB_DIR = OUTPUT_DIR / "calibration"
+VALIDATION_DIR = OUTPUT_DIR / "validation"
+TEST_DIR = OUTPUT_DIR / "test_p4"
+DYNAMICS_DIR = OUTPUT_DIR / "portfolio_dynamics"
+for directory in [OUTPUT_DIR, CALIB_DIR, VALIDATION_DIR, TEST_DIR, DYNAMICS_DIR]:
+    directory.mkdir(parents=True, exist_ok=True)
+
+HISTORICAL_YEARS = 7
+FUTURE_YEARS = 2
+REBALANCE_DAYS = base.REBALANCE_DAYS
+ROLLING_STEP_DAYS = 63
+CALIBRATION_SHARE = 0.60
+VALIDATION_SHARE = 0.20
+TOP_K_OVERLAP = 10
+RNG_SEED_P4 = 20260611
+
+ROLE_CALIBRATION = "calibracion"
+ROLE_VALIDATION = "validacion"
+ROLE_TEST = "test_p4"
+
+
+@dataclass(frozen=True)
+class WindowSpec:
+    scenario: str
+    window_id: str
+    role: str
+    start_idx: int
+    train_end_idx: int
+    test_end_idx: int
+    train_start: str
+    train_end: str
+    test_start: str
+    test_end: str
+
+
+def log(message: str) -> None:
+    print(f"[BL-3H] {message}", flush=True)
+
+
+def pctile_10(x: pd.Series) -> float:
+    return float(x.quantile(0.10))
+
+
+def pctile_25(x: pd.Series) -> float:
+    return float(x.quantile(0.25))
+
+
+def generate_rolling_windows(
+    returns: pd.DataFrame,
+    scenario: str,
+    historical_years: int = HISTORICAL_YEARS,
+    future_years: int = FUTURE_YEARS,
+    step_days: int = ROLLING_STEP_DAYS,
+) -> List[WindowSpec]:
+    """Genera ventanas h7_f2 desplazadas cronologicamente.
+
+    El paso se fija en 63 dias habiles para obtener al menos tres roles incluso
+    en la base sin pandemia, que tiene menos observaciones que la base completa.
+    El rebalanceo interno sigue siendo semestral.
+    """
+    historical_days = int(historical_years * base.TRADING_DAYS)
+    future_days = int(future_years * base.TRADING_DAYS)
+    total_days = historical_days + future_days
+    max_start = len(returns) - total_days
+    if max_start < 0:
+        raise ValueError(f"{scenario}: observaciones insuficientes para h{historical_years}_f{future_years}")
+
+    starts = list(range(0, max_start + 1, step_days))
+    if starts[-1] != max_start:
+        starts.append(max_start)
+
+    raw_windows: List[Tuple[int, int, int]] = []
+    for start in starts:
+        train_end = start + historical_days
+        test_end = train_end + future_days
+        raw_windows.append((start, train_end, test_end))
+
+    n = len(raw_windows)
+    if n < 3:
+        raise ValueError(f"{scenario}: se requieren al menos 3 ventanas para separar calibracion/validacion/test")
+
+    cal_end = max(1, int(math.floor(n * CALIBRATION_SHARE)))
+    val_end = max(cal_end + 1, int(math.floor(n * (CALIBRATION_SHARE + VALIDATION_SHARE))))
+    if val_end >= n:
+        val_end = n - 1
+
+    windows: List[WindowSpec] = []
+    for j, (start, train_end, test_end) in enumerate(raw_windows):
+        if j < cal_end:
+            role = ROLE_CALIBRATION
+        elif j < val_end:
+            role = ROLE_VALIDATION
+        else:
+            role = ROLE_TEST
+        train_index = returns.index[start:train_end]
+        test_index = returns.index[train_end:test_end]
+        windows.append(
+            WindowSpec(
+                scenario=scenario,
+                window_id=f"{scenario}_w{j:02d}",
+                role=role,
+                start_idx=start,
+                train_end_idx=train_end,
+                test_end_idx=test_end,
+                train_start=str(train_index.min().date()),
+                train_end=str(train_index.max().date()),
+                test_start=str(test_index.min().date()),
+                test_end=str(test_index.max().date()),
+            )
+        )
+    return windows
+
+
+def write_windows_roles(datasets: Dict[str, pd.DataFrame]) -> List[WindowSpec]:
+    all_windows: List[WindowSpec] = []
+    for scenario, returns in datasets.items():
+        scenario_windows = generate_rolling_windows(returns, scenario)
+        all_windows.extend(scenario_windows)
+    rows = [w.__dict__ for w in all_windows]
+    pd.DataFrame(rows).to_csv(OUTPUT_DIR / "00_windows_roles.csv", index=False)
+    return all_windows
+
+
+def split_from_window(returns: pd.DataFrame, window: WindowSpec) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    historical = returns.iloc[window.start_idx : window.train_end_idx]
+    future = returns.iloc[window.train_end_idx : window.test_end_idx]
+    return historical, future
+
+
+def drift_weights(weights: np.ndarray, test_returns: pd.DataFrame) -> np.ndarray:
+    gross = (1.0 + test_returns).prod(axis=0).to_numpy(dtype=float)
+    drifted = weights * gross
+    total = drifted.sum()
+    if not np.isfinite(total) or total <= 0:
+        return weights.copy()
+    return drifted / total
+
+
+def sector_weights(weights: np.ndarray, tickers: Sequence[str], meta: pd.DataFrame) -> pd.Series:
+    sectors = meta.set_index("ticker").reindex(tickers)["sector"].fillna("Sin sector")
+    df = pd.DataFrame({"sector": sectors.to_numpy(), "weight": weights})
+    return df.groupby("sector")["weight"].sum().sort_values(ascending=False)
+
+
+def append_weight_rows(
+    rows: List[Dict[str, object]],
+    metadata: Dict[str, object],
+    tickers: Sequence[str],
+    weights: np.ndarray,
+    meta: pd.DataFrame,
+) -> None:
+    meta_idx = meta.set_index("ticker").reindex(tickers)
+    sectors = meta_idx["sector"].fillna("Sin sector")
+    market_caps = meta_idx["marketCap"].fillna(0.0)
+    for ticker, weight in zip(tickers, weights):
+        rows.append(
+            {
+                **metadata,
+                "ticker": ticker,
+                "sector": sectors.loc[ticker],
+                "marketCap": float(market_caps.loc[ticker]),
+                "weight": float(weight),
+            }
+        )
+
+
+def evaluate_config_on_windows(
+    datasets: Dict[str, pd.DataFrame],
+    meta: pd.DataFrame,
+    config: Optional[base.ViewConfig],
+    profiles: Sequence[base.RiskProfile],
+    windows: Sequence[WindowSpec],
+    stage: str,
+    model_label: str,
+    collect_dynamics: bool = False,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Evalua una configuracion sobre una lista explicita de ventanas."""
+    metric_rows: List[Dict[str, object]] = []
+    view_rows: List[Dict[str, object]] = []
+    weight_rows: List[Dict[str, object]] = []
+    rebalance_rows: List[Dict[str, object]] = []
+    sector_return_rows: List[Dict[str, object]] = []
+    config_id = config.config_id if config else "markowitz_base"
+
+    for window in windows:
+        returns = datasets[window.scenario]
+        historical, future = split_from_window(returns, window)
+        tickers = list(historical.columns)
+        combined_returns: Dict[str, List[pd.Series]] = {p.label: [] for p in profiles}
+        previous_weights: Dict[str, np.ndarray] = {}
+        previous_tests: Dict[str, pd.DataFrame] = {}
+        notes: Dict[str, str] = {}
+
+        for segment_id, train, test in base.rebalance_segments(historical, future):
+            mu_model, sigma_model, view_record = base.black_litterman_model(train, meta, config)
+            view_record.update(
+                {
+                    "stage": stage,
+                    "modelo": model_label,
+                    "config_id": config_id,
+                    "scenario": window.scenario,
+                    "window_id": window.window_id,
+                    "window_role": window.role,
+                    "segment_id": segment_id,
+                    "train_start": str(train.index.min().date()),
+                    "train_end": str(train.index.max().date()),
+                    "test_start": str(test.index.min().date()),
+                    "test_end": str(test.index.max().date()),
+                }
+            )
+            view_rows.append(view_record)
+
+            for profile in profiles:
+                weights, note = base.optimize_profile(mu_model, sigma_model, profile)
+                notes[profile.label] = note
+                segment_returns = base.portfolio_returns(test, weights)
+                combined_returns[profile.label].append(segment_returns)
+
+                if collect_dynamics:
+                    turnover = np.nan
+                    if profile.label in previous_weights:
+                        drifted = drift_weights(previous_weights[profile.label], previous_tests[profile.label])
+                        turnover = 0.5 * float(np.abs(weights - drifted).sum())
+                    hhi = float(np.square(weights).sum())
+                    n_eff = 1.0 / hhi if hhi > 1e-12 else np.nan
+                    sector_w = sector_weights(weights, tickers, meta)
+                    sector_hhi = float(np.square(sector_w.to_numpy()).sum())
+                    top_sector = str(sector_w.index[0]) if len(sector_w) else ""
+                    top_sector_weight = float(sector_w.iloc[0]) if len(sector_w) else np.nan
+                    common_meta = {
+                        "stage": stage,
+                        "modelo": model_label,
+                        "config_id": config_id,
+                        "scenario": window.scenario,
+                        "window_id": window.window_id,
+                        "window_role": window.role,
+                        "portfolio": profile.label,
+                        "profile_key": profile.key,
+                        "segment_id": segment_id,
+                        "rebalance_date": str(test.index.min().date()),
+                        "test_start": str(test.index.min().date()),
+                        "test_end": str(test.index.max().date()),
+                    }
+                    rebalance_rows.append(
+                        {
+                            **common_meta,
+                            "turnover": turnover,
+                            "hhi_assets": hhi,
+                            "n_effective_assets": n_eff,
+                            "max_weight": float(weights.max()),
+                            "sector_hhi": sector_hhi,
+                            "top_sector": top_sector,
+                            "top_sector_weight": top_sector_weight,
+                        }
+                    )
+                    append_weight_rows(weight_rows, common_meta, tickers, weights, meta)
+                    sector_series = pd.Series(0.0, index=sorted(meta["sector"].fillna("Sin sector").unique()))
+                    sectors = meta.set_index("ticker").reindex(tickers)["sector"].fillna("Sin sector")
+                    weighted_asset_returns = test.to_numpy(dtype=float) * weights.reshape(1, -1)
+                    contrib_df = pd.DataFrame(weighted_asset_returns, columns=tickers, index=test.index)
+                    for sector, sector_tickers in sectors.groupby(sectors).groups.items():
+                        cols = [t for t in sector_tickers if t in contrib_df.columns]
+                        if cols:
+                            sector_series.loc[sector] = float(contrib_df[cols].sum(axis=1).sum())
+                    abs_total = float(np.abs(sector_series).sum())
+                    for sector, contribution in sector_series.items():
+                        sector_return_rows.append(
+                            {
+                                **common_meta,
+                                "sector": sector,
+                                "return_contribution": float(contribution),
+                                "abs_return_contribution": abs(float(contribution)),
+                                "share_abs_return_contribution": abs(float(contribution)) / abs_total if abs_total > 0 else np.nan,
+                            }
+                        )
+
+                    previous_weights[profile.label] = weights
+                    previous_tests[profile.label] = test
+
+        for profile in profiles:
+            realised_returns = pd.concat(combined_returns[profile.label]).sort_index()
+            metrics = base.metrics_from_returns(realised_returns)
+            row = {
+                "stage": stage,
+                "modelo": model_label,
+                "config_id": config_id,
+                "view_label": config.view_label if config else "Markowitz base",
+                "family": config.family if config else "markowitz",
+                "scenario": window.scenario,
+                "window_id": window.window_id,
+                "window_role": window.role,
+                "train_start": window.train_start,
+                "train_end": window.train_end,
+                "test_start": window.test_start,
+                "test_end": window.test_end,
+                "portfolio": profile.label,
+                "profile_key": profile.key,
+                "optimizer_note": notes.get(profile.label, ""),
+            }
+            if config:
+                row.update(base.config_to_record(config))
+            row.update(metrics)
+            metric_rows.append(row)
+
+    return (
+        pd.DataFrame(metric_rows),
+        pd.DataFrame(view_rows),
+        pd.DataFrame(weight_rows),
+        pd.DataFrame(rebalance_rows),
+        pd.DataFrame(sector_return_rows),
+    )
+
+
+def score_candidates_rolling(df: pd.DataFrame, base_df: pd.DataFrame, stage: str) -> pd.DataFrame:
+    merge_cols = ["scenario", "window_id", "window_role", "portfolio"]
+    merged = df.merge(
+        base_df[
+            merge_cols + ["sharpe", "retorno_anual", "max_drawdown", "cvar_95_diario"]
+        ].rename(
+            columns={
+                "sharpe": "base_sharpe",
+                "retorno_anual": "base_retorno_anual",
+                "max_drawdown": "base_drawdown",
+                "cvar_95_diario": "base_cvar",
+            }
+        ),
+        on=merge_cols,
+        how="left",
+    )
+    merged["delta_sharpe_vs_markowitz"] = merged["sharpe"] - merged["base_sharpe"]
+    merged["delta_retorno_vs_markowitz"] = merged["retorno_anual"] - merged["base_retorno_anual"]
+    merged["delta_drawdown_vs_markowitz"] = merged["max_drawdown"] - merged["base_drawdown"]
+    merged["delta_cvar_vs_markowitz"] = merged["cvar_95_diario"] - merged["base_cvar"]
+    merged.to_csv(CALIB_DIR / f"{stage}_detalle_vs_markowitz.csv", index=False)
+
+    group_cols = ["config_id", "view_label", "family"]
+    optional_cols = [
+        "lookback_days",
+        "top_bottom_size",
+        "market_cap_universe_size",
+        "long_short_size",
+        "p_weighting",
+        "q_scale",
+        "confidence",
+        "tau",
+        "unemployment_assumed",
+        "macro_beta",
+    ]
+    group_cols += [c for c in optional_cols if c in merged.columns]
+    summary = (
+        merged.groupby(group_cols, dropna=False)
+        .agg(
+            sharpe_mean=("sharpe", "mean"),
+            sharpe_std=("sharpe", "std"),
+            sharpe_p10=("sharpe", pctile_10),
+            sharpe_p25=("sharpe", pctile_25),
+            retorno_anual_mean=("retorno_anual", "mean"),
+            drawdown_mean=("max_drawdown", "mean"),
+            worst_drawdown=("max_drawdown", "min"),
+            cvar_mean=("cvar_95_diario", "mean"),
+            delta_sharpe_mean=("delta_sharpe_vs_markowitz", "mean"),
+            delta_drawdown_mean=("delta_drawdown_vs_markowitz", "mean"),
+            pct_windows_beats_sharpe=("delta_sharpe_vs_markowitz", lambda x: float((x > 0).mean())),
+            pct_windows_beats_drawdown=("delta_drawdown_vs_markowitz", lambda x: float((x > 0).mean())),
+            n_obs=("sharpe", "count"),
+        )
+        .reset_index()
+    )
+    summary["sharpe_std"] = summary["sharpe_std"].fillna(0.0)
+    summary["score_robusto"] = base.robust_score(summary)
+    summary = summary.sort_values("score_robusto", ascending=False).reset_index(drop=True)
+    summary.to_csv(CALIB_DIR / f"{stage}_ranking.csv", index=False)
+    return summary
+
+
+def run_stage_rolling(
+    name: str,
+    configs: Sequence[base.ViewConfig],
+    datasets: Dict[str, pd.DataFrame],
+    meta: pd.DataFrame,
+    markowitz_base: pd.DataFrame,
+    calibration_windows: Sequence[WindowSpec],
+    profiles: Sequence[base.RiskProfile],
+) -> Tuple[base.ViewConfig, pd.DataFrame, pd.DataFrame]:
+    frames = []
+    views = []
+    for ix, config in enumerate(configs, start=1):
+        log(f"{name}: {ix}/{len(configs)} {config.config_id}")
+        df, view_df, _, _, _ = evaluate_config_on_windows(
+            datasets,
+            meta,
+            config,
+            profiles,
+            calibration_windows,
+            name,
+            "BL candidato",
+            collect_dynamics=False,
+        )
+        frames.append(df)
+        views.append(view_df)
+    stage_df = pd.concat(frames, ignore_index=True)
+    stage_views = pd.concat(views, ignore_index=True)
+    stage_df.to_csv(CALIB_DIR / f"{name}_resultados.csv", index=False)
+    stage_views.to_csv(CALIB_DIR / f"{name}_views_segmentos.csv", index=False)
+    ranking = score_candidates_rolling(stage_df, markowitz_base, name)
+    winner_id = ranking.iloc[0]["config_id"]
+    winner = next(c for c in configs if c.config_id == winner_id)
+    log(f"{name}: ganador {winner.config_id}, score={ranking.iloc[0]['score_robusto']:.3f}")
+    return winner, stage_df, ranking
+
+
+def aggregate_window_metrics(df: pd.DataFrame, out_path: Path) -> pd.DataFrame:
+    summary = (
+        df.groupby(["window_role", "modelo", "scenario", "portfolio"], as_index=False)
+        .agg(
+            n_windows=("window_id", "nunique"),
+            sharpe_mean=("sharpe", "mean"),
+            sharpe_median=("sharpe", "median"),
+            sharpe_p10=("sharpe", pctile_10),
+            sharpe_p25=("sharpe", pctile_25),
+            sharpe_min=("sharpe", "min"),
+            sharpe_std=("sharpe", "std"),
+            retorno_anual_mean=("retorno_anual", "mean"),
+            drawdown_mean=("max_drawdown", "mean"),
+            worst_drawdown=("max_drawdown", "min"),
+            cvar_mean=("cvar_95_diario", "mean"),
+            volatilidad_anual_mean=("volatilidad_anual", "mean"),
+        )
+        .fillna({"sharpe_std": 0.0})
+    )
+    summary.to_csv(out_path, index=False)
+    return summary
+
+
+def compare_against_markowitz(bl: pd.DataFrame, mk: pd.DataFrame, out_path: Path) -> pd.DataFrame:
+    merge_cols = ["window_role", "scenario", "window_id", "portfolio"]
+    comparison = bl.merge(
+        mk[
+            merge_cols + ["sharpe", "retorno_anual", "max_drawdown", "cvar_95_diario", "volatilidad_anual"]
+        ].rename(
+            columns={
+                "sharpe": "sharpe_markowitz",
+                "retorno_anual": "retorno_anual_markowitz",
+                "max_drawdown": "drawdown_markowitz",
+                "cvar_95_diario": "cvar_markowitz",
+                "volatilidad_anual": "volatilidad_markowitz",
+            }
+        ),
+        on=merge_cols,
+        how="left",
+    )
+    comparison["mejora_pct_sharpe_vs_markowitz"] = (
+        (comparison["sharpe"] - comparison["sharpe_markowitz"])
+        / comparison["sharpe_markowitz"].abs().replace(0, np.nan)
+    )
+    comparison["delta_drawdown_vs_markowitz"] = comparison["max_drawdown"] - comparison["drawdown_markowitz"]
+    comparison["delta_cvar_vs_markowitz"] = comparison["cvar_95_diario"] - comparison["cvar_markowitz"]
+    comparison["recomendacion"] = np.where(
+        (comparison["mejora_pct_sharpe_vs_markowitz"] > 0)
+        & (comparison["delta_drawdown_vs_markowitz"] > -0.03),
+        "Recomendado",
+        "No dominante",
+    )
+    comparison.to_csv(out_path, index=False)
+    return comparison
+
+
+def summarize_comparison(comparison: pd.DataFrame, out_path: Path) -> pd.DataFrame:
+    summary = (
+        comparison.groupby(["window_role", "scenario", "portfolio"], as_index=False)
+        .agg(
+            n_windows=("window_id", "nunique"),
+            sharpe_bl_mean=("sharpe", "mean"),
+            sharpe_mk_mean=("sharpe_markowitz", "mean"),
+            mejora_pct_sharpe_mean=("mejora_pct_sharpe_vs_markowitz", "mean"),
+            drawdown_bl_mean=("max_drawdown", "mean"),
+            drawdown_mk_mean=("drawdown_markowitz", "mean"),
+            delta_drawdown_mean=("delta_drawdown_vs_markowitz", "mean"),
+            pct_recomendado=("recomendacion", lambda x: float((x == "Recomendado").mean())),
+        )
+    )
+    summary.to_csv(out_path, index=False)
+    return summary
+
+
+def composition_stability(weights_df: pd.DataFrame, out_path: Path) -> pd.DataFrame:
+    rows: List[Dict[str, object]] = []
+    group_cols = ["modelo", "window_role", "scenario", "window_id", "portfolio"]
+    if weights_df.empty:
+        pd.DataFrame().to_csv(out_path, index=False)
+        return pd.DataFrame()
+
+    for keys, group in weights_df.groupby(group_cols):
+        group = group.sort_values(["segment_id", "ticker"])
+        first_segment = int(group["segment_id"].min())
+        last_segment = int(group["segment_id"].max())
+        first = group[group["segment_id"] == first_segment].set_index("ticker")["weight"]
+        last = group[group["segment_id"] == last_segment].set_index("ticker")["weight"]
+        tickers = first.index.union(last.index)
+        first = first.reindex(tickers).fillna(0.0)
+        last = last.reindex(tickers).fillna(0.0)
+        top_first = set(first.sort_values(ascending=False).head(TOP_K_OVERLAP).index)
+        top_last = set(last.sort_values(ascending=False).head(TOP_K_OVERLAP).index)
+        rows.append(
+            {
+                "modelo": keys[0],
+                "window_role": keys[1],
+                "scenario": keys[2],
+                "window_id": keys[3],
+                "portfolio": keys[4],
+                "distance_l1_initial_final": 0.5 * float(np.abs(last - first).sum()),
+                "top10_overlap_initial_final": len(top_first & top_last) / TOP_K_OVERLAP,
+                "hhi_initial": float(np.square(first).sum()),
+                "hhi_final": float(np.square(last).sum()),
+                "n_effective_initial": 1.0 / float(np.square(first).sum()),
+                "n_effective_final": 1.0 / float(np.square(last).sum()),
+                "max_weight_initial": float(first.max()),
+                "max_weight_final": float(last.max()),
+            }
+        )
+    result = pd.DataFrame(rows)
+    result.to_csv(out_path, index=False)
+    return result
+
+
+def summarize_sector_returns(sector_df: pd.DataFrame, out_path_detail: Path, out_path_summary: Path) -> pd.DataFrame:
+    if sector_df.empty:
+        pd.DataFrame().to_csv(out_path_detail, index=False)
+        pd.DataFrame().to_csv(out_path_summary, index=False)
+        return pd.DataFrame()
+
+    group_cols = ["modelo", "window_role", "scenario", "window_id", "portfolio", "sector"]
+    detail = (
+        sector_df.groupby(group_cols, as_index=False)
+        .agg(return_contribution=("return_contribution", "sum"))
+    )
+    totals = detail.groupby(["modelo", "window_role", "scenario", "window_id", "portfolio"])["return_contribution"].transform(
+        lambda x: np.abs(x).sum()
+    )
+    detail["abs_return_contribution"] = detail["return_contribution"].abs()
+    detail["share_abs_return_contribution"] = np.where(
+        totals > 0,
+        detail["abs_return_contribution"] / totals,
+        np.nan,
+    )
+    detail.to_csv(out_path_detail, index=False)
+
+    rows = []
+    for keys, group in detail.groupby(["modelo", "window_role", "scenario", "window_id", "portfolio"]):
+        ordered = group.sort_values("share_abs_return_contribution", ascending=False)
+        rows.append(
+            {
+                "modelo": keys[0],
+                "window_role": keys[1],
+                "scenario": keys[2],
+                "window_id": keys[3],
+                "portfolio": keys[4],
+                "top_sector": ordered.iloc[0]["sector"] if len(ordered) else "",
+                "top_sector_share_abs_return": float(ordered.iloc[0]["share_abs_return_contribution"]) if len(ordered) else np.nan,
+                "top3_sector_share_abs_return": float(ordered.head(3)["share_abs_return_contribution"].sum()),
+                "n_sectors_active_return": int((ordered["abs_return_contribution"] > 1e-10).sum()),
+            }
+        )
+    summary = pd.DataFrame(rows)
+    summary.to_csv(out_path_summary, index=False)
+    return summary
+
+
+def summarize_rebalance_dynamics(rebalance_df: pd.DataFrame, out_path: Path) -> pd.DataFrame:
+    if rebalance_df.empty:
+        pd.DataFrame().to_csv(out_path, index=False)
+        return pd.DataFrame()
+    summary = (
+        rebalance_df.groupby(["modelo", "window_role", "scenario", "portfolio"], as_index=False)
+        .agg(
+            n_rebalances=("segment_id", "count"),
+            turnover_mean=("turnover", "mean"),
+            turnover_median=("turnover", "median"),
+            turnover_max=("turnover", "max"),
+            pct_turnover_gt_20=("turnover", lambda x: float((x > 0.20).mean())),
+            pct_turnover_gt_40=("turnover", lambda x: float((x > 0.40).mean())),
+            hhi_assets_mean=("hhi_assets", "mean"),
+            n_effective_assets_mean=("n_effective_assets", "mean"),
+            max_weight_mean=("max_weight", "mean"),
+            sector_hhi_mean=("sector_hhi", "mean"),
+            top_sector_weight_mean=("top_sector_weight", "mean"),
+        )
+    )
+    summary.to_csv(out_path, index=False)
+    return summary
+
+
+def simulate_p4_clean(metrics_df: pd.DataFrame) -> pd.DataFrame:
+    rows: List[Dict[str, object]] = []
+    rng = np.random.default_rng(RNG_SEED_P4)
+    for _, row in metrics_df.iterrows():
+        profile = base.PROFILE_BY_LABEL[row["portfolio"]]
+        ann_return = base.safe_float(row["retorno_anual"])
+        ann_vol = max(base.safe_float(row["volatilidad_anual"]), 1e-6)
+        weekly_mu = (1.0 + ann_return) ** (1.0 / 52.0) - 1.0
+        weekly_sigma = ann_vol / math.sqrt(52.0)
+        p_accept = 1.0 / (1.0 + math.exp(-20.0 * (ann_return - profile.loss_tolerance)))
+        wealth = np.full(base.N_SIMULATIONS, base.INITIAL_CAPITAL)
+        active = rng.random(base.N_SIMULATIONS) < p_accept
+        company = np.where(active, base.INITIAL_CAPITAL * base.COMPANY_FEE_RATE, 0.0)
+        withdrawn = np.zeros(base.N_SIMULATIONS, dtype=bool)
+        for _week in range(base.N_WEEKS):
+            idx = active & ~withdrawn
+            if not idx.any():
+                break
+            rets = rng.normal(weekly_mu, weekly_sigma, idx.sum())
+            wealth[idx] *= np.maximum(1.0 + rets, 0.01)
+            accept_rec = rng.random(idx.sum()) < p_accept
+            company[idx] += accept_rec * wealth[idx] * base.TURNOVER_FRACTION * base.COMPANY_FEE_RATE
+            loss = np.maximum((base.INITIAL_CAPITAL - wealth[idx]) / base.INITIAL_CAPITAL, 0.0)
+            p_withdraw = np.where(
+                loss > profile.loss_tolerance,
+                1.0 / (1.0 + np.exp(-20.0 * (loss - profile.loss_tolerance))),
+                0.0,
+            )
+            withdraw_now = rng.random(idx.sum()) < p_withdraw
+            full_idx = np.where(idx)[0]
+            withdrawn[full_idx[withdraw_now]] = True
+        rows.append(
+            {
+                "modelo": row["modelo"],
+                "scenario": row["scenario"],
+                "window_id": row["window_id"],
+                "window_role": row["window_role"],
+                "portfolio": row["portfolio"],
+                "retorno_anual_input": ann_return,
+                "volatilidad_anual_input": ann_vol,
+                "terminal_wealth_mean": float(wealth.mean()),
+                "prob_profit": float((wealth > base.INITIAL_CAPITAL).mean()),
+                "withdrawal_rate": float(withdrawn.mean()),
+                "company_revenue_mean": float(company.mean()),
+                "p4_score": float(wealth.mean() + company.mean() - base.INITIAL_CAPITAL * withdrawn.mean()),
+            }
+        )
+    return pd.DataFrame(rows).sort_values("p4_score", ascending=False)
+
+
+def summarize_p4(p4: pd.DataFrame, out_path: Path) -> pd.DataFrame:
+    summary = (
+        p4.groupby(["modelo", "scenario", "portfolio"], as_index=False)
+        .agg(
+            n_windows=("window_id", "nunique"),
+            terminal_wealth_mean=("terminal_wealth_mean", "mean"),
+            terminal_wealth_p10=("terminal_wealth_mean", pctile_10),
+            prob_profit_mean=("prob_profit", "mean"),
+            withdrawal_rate_mean=("withdrawal_rate", "mean"),
+            company_revenue_mean=("company_revenue_mean", "mean"),
+            p4_score_mean=("p4_score", "mean"),
+        )
+        .sort_values("p4_score_mean", ascending=False)
+    )
+    summary.to_csv(out_path, index=False)
+    return summary
+
+
+def write_search_space() -> None:
+    rows = [
+        ("1_familia_view", "familia/P/Q base", "momentum, market-cap 6M, market-cap 1Y, desempleo", "tau=.05, confianza base", "solo ventanas de calibracion"),
+        ("2_estructura_P", "estructura interna de P", "desempleo {4%,5%,6%}; beta {0.5,1.0,1.5}", "familia ganadora fija", "perfil Neutro, ventanas de calibracion"),
+        ("3_intensidad_Q", "q_scale", "{0.5,1.0,1.5}", "P ganador fijo", "score robusto rolling"),
+        ("4_Omega", "confidence", "desempleo {0.20,0.35,0.50}", "P y Q fijos", "balance prior-view"),
+        ("5_tau", "tau", "{0.01,0.025,0.05,0.10,0.20}", "P,Q,Omega fijos", "sensibilidad final"),
+    ]
+    pd.DataFrame(rows, columns=["etapa", "parametro", "valores_probados", "valores_fijos", "criterio"]).to_csv(
+        OUTPUT_DIR / "01_espacio_busqueda_3h.csv", index=False
+    )
+
+
+def write_execution_summary(
+    windows: Sequence[WindowSpec],
+    winners: Dict[str, base.ViewConfig],
+    rankings: Dict[str, pd.DataFrame],
+    validation_summary: pd.DataFrame,
+    test_summary: pd.DataFrame,
+    dynamics_summary: pd.DataFrame,
+    p4_summary: pd.DataFrame,
+    elapsed_seconds: float,
+) -> None:
+    lines = [
+        "# Validacion tres horizontes Black-Litterman",
+        "",
+        "## Ventanas",
+    ]
+    role_counts = pd.DataFrame([w.__dict__ for w in windows]).groupby(["scenario", "role"]).size().reset_index(name="n")
+    for _, row in role_counts.iterrows():
+        lines.append(f"- {row['scenario']} / {row['role']}: {int(row['n'])} ventanas.")
+    lines.extend(["", "## Ganadores de calibracion"])
+    for stage, config in winners.items():
+        row = rankings[stage].iloc[0]
+        lines.append(
+            f"- {stage}: {config.config_id}, Sharpe medio {row['sharpe_mean']:.3f}, "
+            f"delta Sharpe {row['delta_sharpe_mean']:.3f}, score {row['score_robusto']:.3f}."
+        )
+    final = winners["stage5_tau"]
+    lines.extend(
+        [
+            "",
+            "## Configuracion congelada",
+            f"- family={final.family}; unemployment_assumed={final.unemployment_assumed:.2%}; "
+            f"macro_beta={final.macro_beta}; q_scale={final.q_scale}; confidence={final.confidence}; tau={final.tau}.",
+            "",
+            "## Validacion y test",
+        ]
+    )
+    for label, df in [("validacion", validation_summary), ("test_p4", test_summary)]:
+        subset = df[df["window_role"] == label] if "window_role" in df.columns else df
+        if subset.empty:
+            continue
+        best = subset.sort_values("mejora_pct_sharpe_mean", ascending=False).head(5)
+        for _, row in best.iterrows():
+            lines.append(
+                f"- {label} / {row['scenario']} / {row['portfolio']}: mejora Sharpe media "
+                f"{row['mejora_pct_sharpe_mean']:.1%}, delta drawdown {row['delta_drawdown_mean']:.1%}, "
+                f"pct recomendado {row['pct_recomendado']:.1%}."
+            )
+    lines.extend(["", "## Dinamica de portafolio"])
+    if not dynamics_summary.empty:
+        for _, row in dynamics_summary.head(8).iterrows():
+            lines.append(
+                f"- {row['modelo']} / {row['window_role']} / {row['scenario']} / {row['portfolio']}: "
+                f"turnover medio {row['turnover_mean']:.1%}, N efectivo {row['n_effective_assets_mean']:.1f}, "
+                f"sector HHI {row['sector_hhi_mean']:.3f}."
+            )
+    lines.extend(["", "## P4 limpio"])
+    for _, row in p4_summary.head(8).iterrows():
+        lines.append(
+            f"- {row['modelo']} / {row['scenario']} / {row['portfolio']}: riqueza "
+            f"{row['terminal_wealth_mean']:.0f}, retiro {row['withdrawal_rate_mean']:.1%}, "
+            f"utilidad {row['company_revenue_mean']:.0f}, score {row['p4_score_mean']:.0f}."
+        )
+    lines.append(f"\nTiempo total: {elapsed_seconds:.1f} segundos.")
+    (OUTPUT_DIR / "resumen_ejecucion_3h.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+def main() -> None:
+    t0 = time.perf_counter()
+    write_search_space()
+    log("Cargando metadata y retornos")
+    meta = base.read_metadata()
+    datasets = {
+        "sin_pandemia": base.load_returns_for_scenario(meta, "sin_pandemia"),
+        "con_pandemia": base.load_returns_for_scenario(meta, "con_pandemia"),
+    }
+    common = [
+        ticker
+        for ticker in meta["ticker"].tolist()
+        if ticker in datasets["sin_pandemia"].columns and ticker in datasets["con_pandemia"].columns
+    ]
+    datasets = {scenario: df[common].copy() for scenario, df in datasets.items()}
+    meta = meta.set_index("ticker").reindex(common).reset_index()
+    log(f"Universo comun: {len(common)} activos")
+
+    windows = write_windows_roles(datasets)
+    windows_df = pd.DataFrame([w.__dict__ for w in windows])
+    log("Ventanas por rol:")
+    for _, row in windows_df.groupby(["scenario", "role"]).size().reset_index(name="n").iterrows():
+        log(f"  {row['scenario']} / {row['role']}: {int(row['n'])}")
+
+    calibration_windows = [w for w in windows if w.role == ROLE_CALIBRATION]
+    validation_windows = [w for w in windows if w.role == ROLE_VALIDATION]
+    test_windows = [w for w in windows if w.role == ROLE_TEST]
+    validation_test_windows = validation_windows + test_windows
+
+    log("Calculando Markowitz base en todas las ventanas")
+    markowitz_base, _, _, _, _ = evaluate_config_on_windows(
+        datasets,
+        meta,
+        None,
+        base.RISK_PROFILES,
+        windows,
+        "00_markowitz_base",
+        "Markowitz base",
+        collect_dynamics=False,
+    )
+    markowitz_base.to_csv(OUTPUT_DIR / "02_markowitz_base_rolling.csv", index=False)
+
+    markowitz_calibration = markowitz_base[
+        (markowitz_base["window_role"] == ROLE_CALIBRATION) & (markowitz_base["portfolio"] == "Neutro")
+    ].copy()
+
+    winners: Dict[str, base.ViewConfig] = {}
+    rankings: Dict[str, pd.DataFrame] = {}
+
+    winner1, _, ranking1 = run_stage_rolling(
+        "stage1_familia_view",
+        base.BASE_VIEW_CONFIGS,
+        datasets,
+        meta,
+        markowitz_calibration,
+        calibration_windows,
+        base.CALIBRATION_PROFILES,
+    )
+    winners["stage1_familia_view"] = winner1
+    rankings["stage1_familia_view"] = ranking1
+
+    stage2_configs = base.generate_stage2_configs(winner1)
+    winner2, _, ranking2 = run_stage_rolling(
+        "stage2_estructura_P",
+        stage2_configs,
+        datasets,
+        meta,
+        markowitz_calibration,
+        calibration_windows,
+        base.CALIBRATION_PROFILES,
+    )
+    winners["stage2_estructura_P"] = winner2
+    rankings["stage2_estructura_P"] = ranking2
+
+    q_configs = [replace(winner2, config_id=f"stage3_q_scale_{q:.1f}", q_scale=q) for q in [0.5, 1.0, 1.5]]
+    winner3, _, ranking3 = run_stage_rolling(
+        "stage3_intensidad_Q",
+        q_configs,
+        datasets,
+        meta,
+        markowitz_calibration,
+        calibration_windows,
+        base.CALIBRATION_PROFILES,
+    )
+    winners["stage3_intensidad_Q"] = winner3
+    rankings["stage3_intensidad_Q"] = ranking3
+
+    confidence_grid = [0.20, 0.35, 0.50] if winner3.family == "unemployment" else [0.35, 0.50, 0.65, 0.80]
+    conf_configs = [replace(winner3, config_id=f"stage4_conf_{c:.2f}", confidence=c) for c in confidence_grid]
+    winner4, _, ranking4 = run_stage_rolling(
+        "stage4_confianza_Omega",
+        conf_configs,
+        datasets,
+        meta,
+        markowitz_calibration,
+        calibration_windows,
+        base.CALIBRATION_PROFILES,
+    )
+    winners["stage4_confianza_Omega"] = winner4
+    rankings["stage4_confianza_Omega"] = ranking4
+
+    tau_configs = [replace(winner4, config_id=f"stage5_tau_{tau:.3f}", tau=tau) for tau in [0.01, 0.025, 0.05, 0.10, 0.20]]
+    winner5, _, ranking5 = run_stage_rolling(
+        "stage5_tau",
+        tau_configs,
+        datasets,
+        meta,
+        markowitz_calibration,
+        calibration_windows,
+        base.CALIBRATION_PROFILES,
+    )
+    winners["stage5_tau"] = winner5
+    rankings["stage5_tau"] = ranking5
+
+    frozen_rows = [base.config_to_record(winner5)]
+    frozen_rows[0].update({"config_id": winner5.config_id, "family": winner5.family, "view_label": winner5.view_label})
+    pd.DataFrame(frozen_rows).to_csv(OUTPUT_DIR / "03_configuracion_congelada.csv", index=False)
+
+    log("Evaluando configuracion congelada en validacion y test limpio")
+    final_bl, final_views, bl_weights, bl_rebalance, bl_sector = evaluate_config_on_windows(
+        datasets,
+        meta,
+        winner5,
+        base.RISK_PROFILES,
+        validation_test_windows,
+        "final_bl_congelado",
+        "BL calibrado",
+        collect_dynamics=True,
+    )
+    final_bl.to_csv(OUTPUT_DIR / "04_bl_congelado_validacion_test.csv", index=False)
+    final_views.to_csv(OUTPUT_DIR / "04_bl_congelado_views_validacion_test.csv", index=False)
+
+    mk_valtest, _, mk_weights, mk_rebalance, mk_sector = evaluate_config_on_windows(
+        datasets,
+        meta,
+        None,
+        base.RISK_PROFILES,
+        validation_test_windows,
+        "markowitz_validacion_test",
+        "Markowitz base",
+        collect_dynamics=True,
+    )
+    mk_valtest.to_csv(OUTPUT_DIR / "05_markowitz_validacion_test.csv", index=False)
+
+    validation_metrics = final_bl[final_bl["window_role"] == ROLE_VALIDATION]
+    test_metrics = final_bl[final_bl["window_role"] == ROLE_TEST]
+    aggregate_window_metrics(pd.concat([final_bl, mk_valtest], ignore_index=True), VALIDATION_DIR / "metricas_rolling_validacion_test_resumen.csv")
+
+    comparison = compare_against_markowitz(
+        final_bl,
+        mk_valtest,
+        OUTPUT_DIR / "06_comparacion_bl_vs_markowitz_validacion_test.csv",
+    )
+    validation_summary = summarize_comparison(
+        comparison[comparison["window_role"] == ROLE_VALIDATION],
+        VALIDATION_DIR / "validacion_configuracion_congelada_resumen.csv",
+    )
+    test_summary = summarize_comparison(
+        comparison[comparison["window_role"] == ROLE_TEST],
+        TEST_DIR / "test_limpio_comparacion_resumen.csv",
+    )
+    validation_metrics.to_csv(VALIDATION_DIR / "validacion_configuracion_congelada_detalle.csv", index=False)
+    test_metrics.to_csv(TEST_DIR / "kpis_financieros_test_limpio_bl.csv", index=False)
+    mk_valtest[mk_valtest["window_role"] == ROLE_TEST].to_csv(TEST_DIR / "kpis_financieros_test_limpio_markowitz.csv", index=False)
+
+    log("Calculando dinamica de portafolio")
+    weights_all = pd.concat([bl_weights, mk_weights], ignore_index=True)
+    rebalance_all = pd.concat([bl_rebalance, mk_rebalance], ignore_index=True)
+    sector_all = pd.concat([bl_sector, mk_sector], ignore_index=True)
+    weights_all.to_csv(DYNAMICS_DIR / "weights_by_rebalance.csv", index=False)
+    rebalance_all.to_csv(DYNAMICS_DIR / "rebalance_dynamics_detail.csv", index=False)
+    dynamics_summary = summarize_rebalance_dynamics(rebalance_all, DYNAMICS_DIR / "turnover_summary.csv")
+    composition_stability(weights_all, DYNAMICS_DIR / "composition_stability.csv")
+    summarize_sector_returns(
+        sector_all,
+        DYNAMICS_DIR / "sector_return_contribution.csv",
+        DYNAMICS_DIR / "sector_return_concentration_summary.csv",
+    )
+
+    log("Ejecutando P4 solo sobre ventanas test_p4")
+    p4_input = pd.concat(
+        [
+            final_bl[final_bl["window_role"] == ROLE_TEST][
+                ["modelo", "scenario", "window_id", "window_role", "portfolio", "retorno_anual", "volatilidad_anual"]
+            ],
+            mk_valtest[mk_valtest["window_role"] == ROLE_TEST][
+                ["modelo", "scenario", "window_id", "window_role", "portfolio", "retorno_anual", "volatilidad_anual"]
+            ],
+        ],
+        ignore_index=True,
+    )
+    p4 = simulate_p4_clean(p4_input)
+    p4.to_csv(TEST_DIR / "p4_test_limpio_detalle.csv", index=False)
+    p4_summary = summarize_p4(p4, TEST_DIR / "p4_test_limpio_resumen.csv")
+
+    checks = {
+        "activos": len(common),
+        "windows_total": len(windows),
+        "windows_calibracion": len(calibration_windows),
+        "windows_validacion": len(validation_windows),
+        "windows_test_p4": len(test_windows),
+        "stage1_configs": len(base.BASE_VIEW_CONFIGS),
+        "stage2_configs": len(stage2_configs),
+        "final_bl_rows_validacion_test": len(final_bl),
+        "weights_rows": len(weights_all),
+        "p4_rows": len(p4),
+        "elapsed_seconds": round(time.perf_counter() - t0, 1),
+    }
+    pd.DataFrame([checks]).to_csv(OUTPUT_DIR / "99_checks_validacion_3h.csv", index=False)
+    write_execution_summary(
+        windows,
+        winners,
+        rankings,
+        validation_summary,
+        test_summary,
+        dynamics_summary,
+        p4_summary,
+        checks["elapsed_seconds"],
+    )
+    log(f"Listo en {checks['elapsed_seconds']}s. Outputs en {OUTPUT_DIR}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,451 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\geometry{letterpaper, margin=2.5cm}
+
+\title{Plan de acci\'on posterior al feedback del 9 de junio\\
+Calibraci\'on Black--Litterman y validaci\'on final FinPUC}
+\author{Proyecto Capstone FinPUC}
+\date{Junio 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Objetivo del plan}
+
+El feedback del profesor del 9 de junio introduce una correcci\'on metodol\'ogica central: los resultados actuales de Black--Litterman no pueden cerrarse usando la misma ventana para calibrar par\'ametros, validar la configuraci\'on y alimentar la simulaci\'on Monte Carlo P4. Aunque la calibraci\'on secuencial ya resolvi\'o la arbitrariedad inicial de $P$, $Q$, $\Omega$ y $\tau$, todav\'ia existe riesgo de \textit{overfitting} temporal si la configuraci\'on final se escoge mirando el mismo per\'iodo que luego se presenta como test econ\'omico final.
+
+El objetivo de este plan es ordenar el trabajo pendiente antes de la entrega y presentación final. La propuesta se organiza en cuatro ejes: separar horizontes, ampliar escenarios mediante ventanas móviles, medir la dinámica temporal del portafolio y preparar una defensa metodológica. El resultado esperado no es cambiar el relato completo del proyecto, sino fortalecerlo: pasar de "encontramos una configuración ganadora" a "calibramos, validamos y testeamos la configuración en horizontes separados".
+
+\section{Diagn\'ostico de la situaci\'on actual}
+
+La implementaci\'on actual en \texttt{calibracion\_secuencial\_bl.py} realiza correctamente una calibraci\'on secuencial:
+
+\begin{enumerate}[label=\arabic*.]
+    \item Calcula Markowitz base comparable.
+    \item Eval\'ua familias de \textit{views}.
+    \item Calibra estructura de $P$.
+    \item Calibra intensidad de $Q$.
+    \item Calibra confianza de $\Omega$.
+    \item Calibra $\tau$.
+    \item Recalcula el modelo final para todos los perfiles.
+    \item Eval\'ua una robustez adicional.
+    \item Ejecuta P4 posterior usando los KPIs finales.
+\end{enumerate}
+
+El problema no est\'a en la l\'ogica secuencial, sino en la separaci\'on temporal. El modelo usa el horizonte principal $h7\_f2$ para decidir configuraciones y luego utiliza resultados del mismo tipo de ventana para alimentar P4. Desde el punto de vista estad\'istico, P4 deja de ser una evaluaci\'on limpia si el per\'iodo ya influy\'o en la selecci\'on de par\'ametros. Por tanto, la acci\'on prioritaria es redise\~nar el pipeline para que cada resultado tenga un rol temporal expl\'icito.
+
+\section{Prioridades de implementaci\'on}
+
+\begin{table}[h!]
+\centering
+\caption{Orden recomendado de trabajo}
+\label{tab:prioridades}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.11\linewidth} >{\raggedright\arraybackslash}p{0.34\linewidth} >{\raggedright\arraybackslash}p{0.43\linewidth}}
+\toprule
+Prioridad & Tarea & Justificaci\'on \\
+\midrule
+1 & Separar horizontes de calibraci\'on, validaci\'on y test P4 & Corrige el riesgo metodol\'ogico m\'as grave: P4 no puede usar datos ya vistos por la calibraci\'on. \\
+2 & Generalizar rolling windows con etiqueta de rol & Aumenta observaciones fuera de muestra y permite evaluar distintos reg\'imenes de mercado. \\
+3 & Reejecutar calibraci\'on solo en Horizonte 1 & La selecci\'on de $P$, $Q$, $\Omega$ y $\tau$ debe quedar congelada antes de mirar validaci\'on y P4. \\
+4 & Validar modelo congelado en Horizonte 2 & Permite confirmar robustez sin volver a escoger par\'ametros. \\
+5 & Ejecutar P4 solo en Horizonte 3 & Produce el resultado final limpio para cliente y empresa. \\
+6 & Agregar m\'etricas de din\'amica del portafolio & Responde al feedback sobre turnover, composici\'on inicial/final y concentraci\'on sectorial. \\
+7 & Actualizar informe y presentación & Reescribe la historia metodológica con defensa frente a preguntas esperables. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Eje 1: reestructuraci\'on de horizontes}
+
+\subsection{Principio metodol\'ogico}
+
+La nueva estructura debe separar tres funciones estad\'isticas:
+
+\begin{itemize}
+    \item \textbf{Horizonte 1: calibraci\'on de par\'ametros.} Se usa para escoger familia de \textit{view}, estructura de $P$, intensidad de $Q$, confianza de $\Omega$ y $\tau$.
+    \item \textbf{Horizonte 2: validaci\'on de la calibraci\'on.} Se usa para evaluar la configuraci\'on congelada. No se puede cambiar ning\'un par\'ametro mirando este horizonte, salvo que se declare formalmente que el dise\~no fall\'o y se vuelve al proceso completo.
+    \item \textbf{Horizonte 3: test final limpio para P4.} Se usa solo al final, una vez cerrado el modelo. Sus resultados alimentan Monte Carlo P4 y la conclusi\'on econ\'omica cliente--empresa.
+\end{itemize}
+
+La regla debe ser estricta: el Horizonte 3 no participa en ning\'un ranking, grilla, selecci\'on ni ajuste narrativo del modelo. Su funci\'on es simular la aplicaci\'on real de FinPUC sobre un per\'iodo no observado durante el dise\~no.
+
+\subsection{Propuesta temporal concreta}
+
+Se recomienda construir todos los cortes de manera cronol\'ogica y no aleatoria, porque en series financieras el orden temporal es parte del problema. Para cada escenario de datos se debe generar una lista de ventanas tipo $h7\_f2$:
+
+\[
+W_j = \left[Train_j^{7y}, Test_j^{2y}\right],
+\]
+
+donde $Train_j^{7y}$ corresponde a siete a\~nos de entrenamiento y $Test_j^{2y}$ corresponde a dos a\~nos fuera de muestra. Las ventanas se desplazan cada semestre:
+
+\[
+start_{j+1} = start_j + 126 \text{ d\'ias h\'abiles}.
+\]
+
+Luego, las ventanas se asignan a roles:
+
+\begin{itemize}
+    \item \textbf{Calibraci\'on}: primeras ventanas cronol\'ogicas disponibles, por ejemplo 60\% de las ventanas generadas.
+    \item \textbf{Validaci\'on}: ventanas intermedias, por ejemplo 20\%.
+    \item \textbf{Test P4}: \'ultimas ventanas cronol\'ogicas, por ejemplo 20\%, reservando especialmente la ventana m\'as reciente como test final principal.
+\end{itemize}
+
+Si la cantidad de ventanas disponibles es baja, se debe usar una versi\'on m\'inima:
+
+\[
+\text{Calibraci\'on} = 50\%, \qquad
+\text{Validaci\'on} = 25\%, \qquad
+\text{Test P4} = 25\%.
+\]
+
+Lo importante no es el porcentaje exacto, sino que los per\'iodos de test fuera de muestra usados para P4 sean posteriores y no hayan sido usados para elegir el modelo.
+
+\subsection{Implementaci\'on computacional}
+
+El script central afectado es:
+
+\begin{itemize}
+    \item \path{Entrega_3/04_calibracion_black_litterman/calibracion_secuencial_bl.py}
+\end{itemize}
+
+Se recomienda refactorizar el manejo temporal agregando las siguientes funciones:
+
+\begin{enumerate}[label=\arabic*.]
+    \item \path{generate_rolling_windows}: genera todas las ventanas $h7\_f2$ posibles con desplazamiento semestral.
+    \item \path{assign_window_roles}: asigna cada ventana a calibraci\'on, validaci\'on o test P4.
+    \item \path{evaluate_config_on_windows}: eval\'ua una configuraci\'on solo sobre ventanas con el rol indicado.
+    \item \path{run_calibration_pipeline}: ejecuta las cinco etapas de calibraci\'on usando exclusivamente Horizonte 1.
+    \item \path{validate_frozen_config}: eval\'ua la configuraci\'on ganadora en Horizonte 2 sin modificarla.
+    \item \path{run_clean_p4}: genera KPIs financieros y ejecuta P4 solo sobre Horizonte 3.
+\end{enumerate}
+
+La salida debe incluir un archivo de auditor\'ia:
+
+\begin{itemize}
+    \item \path{00_windows_roles.csv}: escenario, \path{window_id}, fechas de entrenamiento, fechas de test, rol asignado.
+\end{itemize}
+
+Este archivo es clave para defender que P4 no us\'o datos vistos durante la calibraci\'on.
+
+\subsection{Cambios en outputs}
+
+Los archivos actuales deben separarse por rol:
+
+\begin{itemize}
+    \item \path{calibration/stage1_familia_view_ranking.csv}
+    \item \path{calibration/stage2_estructura_P_ranking.csv}
+    \item \path{calibration/stage3_intensidad_Q_ranking.csv}
+    \item \path{calibration/stage4_confianza_Omega_ranking.csv}
+    \item \path{calibration/stage5_tau_ranking.csv}
+    \item \path{validation/validacion_config_congelada.csv}
+    \item \path{test_p4/p4_test_limpio.csv}
+    \item \path{test_p4/kpis_financieros_test_limpio.csv}
+\end{itemize}
+
+La presentación final debe mostrar explícitamente esta separación. Una frase defendible sería: "Los parámetros se calibraron en el primer bloque temporal, se validaron sin ajuste en el segundo bloque y P4 se ejecutó exclusivamente en el tercer bloque".
+
+\section{Eje 2: ampliaci\'on de escenarios mediante rolling windows}
+
+\subsection{Problema actual}
+
+El resultado actual resume principalmente 10 observaciones finales: cinco perfiles por dos escenarios. Eso es insuficiente para defender una conclusi\'on robusta, porque una configuraci\'on puede parecer buena por un per\'iodo espec\'ifico. El profesor pidi\'o multiplicar observaciones fuera de muestra usando ventanas m\'oviles.
+
+\subsection{Dise\~no de ventanas m\'oviles}
+
+Se propone generar ventanas con los siguientes par\'ametros:
+
+\begin{itemize}
+    \item Historial de estimaci\'on: 7 a\~nos.
+    \item Horizonte fuera de muestra: 2 a\~nos.
+    \item Paso entre ventanas: 126 d\'ias h\'abiles.
+    \item Rebalanceo interno: semestral.
+    \item Escenarios: con pandemia y sin pandemia, si ambos tienen historia suficiente.
+\end{itemize}
+
+Cada ventana produce resultados por modelo y perfil:
+
+\[
+N_{\text{obs}} = N_{\text{windows}} \times N_{\text{escenarios}} \times N_{\text{perfiles}} \times N_{\text{modelos}}.
+\]
+
+Si, por ejemplo, se obtienen 12 ventanas cronol\'ogicas, dos escenarios, cinco perfiles y tres modelos, la evaluaci\'on pasa de 10 observaciones est\'aticas a:
+
+\[
+12 \times 2 \times 5 \times 3 = 360
+\]
+
+observaciones modelo--perfil--escenario. Aunque las ventanas se solapen parcialmente, el an\'alisis gana exposici\'on a distintos reg\'imenes y permite reportar distribuciones, percentiles y peores casos.
+
+\subsection{M\'etricas agregadas por ventana}
+
+Para cada modelo, perfil y escenario se deben reportar:
+
+\begin{itemize}
+    \item Sharpe medio y mediano.
+    \item Percentil 25 y percentil 10 del Sharpe.
+    \item Peor Sharpe observado.
+    \item Drawdown medio y peor drawdown.
+    \item CVaR medio.
+    \item Porcentaje de ventanas donde BL supera a Markowitz en Sharpe.
+    \item Porcentaje de ventanas donde BL mejora drawdown.
+    \item Porcentaje de ventanas donde BL cumple ambas condiciones: mayor Sharpe y drawdown no peor por m\'as de 3 puntos porcentuales.
+\end{itemize}
+
+Estas m\'etricas permiten cambiar el tono del informe: no se afirma que BL gana siempre, sino que se cuantifica en qu\'e proporci\'on de escenarios aporta valor y cu\'al es su peor caso.
+
+\subsection{Modificaciones de c\'odigo}
+
+En \path{calibracion_secuencial_bl.py} se debe reemplazar la evaluaci\'on actual basada en \path{latest_split} y \path{rolling_split} puntual por una estructura general de ventanas. La funci\'on actual \path{rolling_split} puede reutilizarse conceptualmente, pero debe convertirse en un generador de m\'ultiples ventanas con metadatos completos.
+
+Tambi\'en se recomienda agregar:
+
+\begin{itemize}
+    \item \path{window_id}
+    \item \path{window_role}
+    \item \path{train_start}
+    \item \path{train_end}
+    \item \path{test_start}
+    \item \path{test_end}
+    \item \path{rebalance_id}
+\end{itemize}
+
+en todos los outputs de resultados y de \textit{views}. Sin esos campos, despu\'es ser\'a dif\'icil auditar si una observaci\'on pertenece a calibraci\'on, validaci\'on o test final.
+
+\section{Eje 3: m\'etricas de din\'amica del portafolio}
+
+\subsection{Motivaci\'on}
+
+El profesor pidi\'o analizar c\'omo evoluciona el portafolio a lo largo de los rebalanceos. Esto es distinto a evaluar solo Sharpe o drawdown. Una cartera puede tener buen desempe\~no fuera de muestra, pero ser dif\'icil de implementar si exige transacciones excesivas o si su retorno depende de una sola industria. Por eso deben agregarse m\'etricas de turnover, cambio de composici\'on y concentraci\'on sectorial.
+
+\subsection{Turnover semestral}
+
+Para cada rebalanceo $t$, sea $w_t$ el vector de pesos objetivo despu\'es de optimizar y sea $w_{t^-}^{drift}$ el vector de pesos del portafolio anterior justo antes de rebalancear, despu\'es de incorporar la rentabilidad acumulada desde el rebalanceo anterior. El turnover implementable se define como:
+
+\[
+TO_t = \frac{1}{2}\sum_{i=1}^{N} \left|w_{i,t} - w_{i,t^-}^{drift}\right|.
+\]
+
+El factor $1/2$ evita contar doble las compras y ventas. Para el primer rebalanceo, donde no existe cartera previa, se puede reportar \texttt{NaN} o medir el turnover contra una cartera inicial en efectivo; para el informe conviene excluirlo del promedio.
+
+El turnover promedio por ventana ser\'a:
+
+\[
+\overline{TO} = \frac{1}{T-1}\sum_{t=2}^{T} TO_t.
+\]
+
+Tambi\'en se debe reportar:
+
+\begin{itemize}
+    \item turnover m\'aximo;
+    \item turnover mediano;
+    \item porcentaje de rebalanceos con turnover superior a 20\%, 40\% y 60\%;
+    \item comparaci\'on de turnover entre Markowitz y BL calibrado.
+\end{itemize}
+
+\subsection{Variaci\'on de composici\'on inicial versus final}
+
+Sea $w_1$ el vector de pesos del primer rebalanceo de una ventana y $w_T$ el vector del \'ultimo rebalanceo. Se proponen tres m\'etricas:
+
+\[
+D_{L1}^{init-final} = \frac{1}{2}\sum_i |w_{i,T} - w_{i,1}|,
+\]
+
+\[
+Overlap_{K}^{init-final} =
+\frac{|TopK(w_1) \cap TopK(w_T)|}{K},
+\]
+
+\[
+HHI_t = \sum_i w_{i,t}^2, \qquad
+N_{eff,t} = \frac{1}{HHI_t}.
+\]
+
+La primera mide distancia total de composici\'on. La segunda mide persistencia de los principales activos. La tercera y cuarta miden concentraci\'on efectiva. Estas m\'etricas deben calcularse por modelo, perfil, escenario y ventana.
+
+\subsection{Concentraci\'on sectorial de pesos y retornos}
+
+La concentraci\'on sectorial debe medirse de dos formas complementarias.
+
+Primero, concentraci\'on sectorial de pesos:
+
+\[
+W_{s,t} = \sum_{i \in s} w_{i,t}.
+\]
+
+Con ello se calcula:
+
+\[
+HHI^{sector}_t = \sum_s W_{s,t}^2.
+\]
+
+Segundo, concentraci\'on sectorial de contribuci\'on a retornos. Para cada d\'ia $d$ del segmento posterior al rebalanceo $t$:
+
+\[
+CR_{s,d} = \sum_{i \in s} w_{i,t} r_{i,d}.
+\]
+
+La contribuci\'on acumulada sectorial de la ventana puede aproximarse como:
+
+\[
+CR_s = \sum_{d \in \text{test}} CR_{s,d}.
+\]
+
+Luego se reporta:
+
+\[
+ShareReturn_s = \frac{|CR_s|}{\sum_k |CR_k|}.
+\]
+
+El uso de valor absoluto evita que sectores con contribuciones positivas y negativas se cancelen artificialmente. Para el informe, se deben mostrar los tres sectores con mayor contribuci\'on absoluta al retorno y el porcentaje acumulado de esos tres sectores. Si un solo sector explica, por ejemplo, 80\% del retorno absoluto, el modelo es menos diversificado de lo que parece por n\'umero de activos.
+
+\subsection{Outputs propuestos}
+
+Se deben crear al menos cuatro archivos nuevos:
+
+\begin{itemize}
+    \item \path{weights_by_rebalance.csv}: pesos por activo en cada rebalanceo.
+    \item \path{turnover_summary.csv}: turnover por modelo, perfil, escenario y ventana.
+    \item \path{composition_stability.csv}: distancia inicial-final, overlap top-K, HHI y n\'umero efectivo.
+    \item \path{sector_return_contribution.csv}: contribuci\'on sectorial a retornos y concentraci\'on sectorial.
+\end{itemize}
+
+Para esto, \path{evaluate_rebalanced_config} debe guardar los pesos calculados en cada rebalanceo, no solo los retornos agregados. Actualmente la funci\'on conserva m\'etricas finales y registros de \textit{views}; se debe agregar una tercera salida: \path{weights_df}.
+
+\section{Eje 4: integraci\'on limpia con P4}
+
+\subsection{Regla de separaci\'on}
+
+P4 debe recibir como input solamente los KPIs financieros calculados en Horizonte 3. No debe recibir resultados de calibraci\'on ni validaci\'on. La utilidad de la empresa sigue siendo posterior al optimizador y no debe entrar en la selecci\'on de pesos.
+
+La nueva secuencia ser\'a:
+
+\begin{enumerate}[label=\arabic*.]
+    \item Calibrar BL en Horizonte 1.
+    \item Congelar par\'ametros: familia de desempleo, $u=4\%$, $u_{neutral}=5\%$, $\beta=1.5$, $q_{\text{scale}}=1.5$, $c=0.20$, $\tau=0.20$, salvo que la nueva calibraci\'on con horizontes separados cambie el ganador.
+    \item Validar la configuraci\'on congelada en Horizonte 2.
+    \item Si la validaci\'on es aceptable, evaluar KPIs en Horizonte 3.
+    \item Enviar solo esos KPIs a Monte Carlo P4.
+\end{enumerate}
+
+\subsection{Scripts afectados}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.42\linewidth} >{\raggedright\arraybackslash}p{0.48\linewidth}}
+\caption{Archivos afectados por la reestructuraci\'on} \\
+\toprule
+Archivo & Cambio requerido \\
+\midrule
+\endfirsthead
+\toprule
+Archivo & Cambio requerido \\
+\midrule
+\endhead
+\path{Entrega_3/04_calibracion_black_litterman/calibracion_secuencial_bl.py} & Refactorizar ventanas, separar roles, guardar pesos por rebalanceo, recalcular outputs de calibraci\'on, validaci\'on y test P4 limpio. \\
+\path{Entrega_3/Entrega 2/02_black_litterman/black_litterman.ipynb} & Solo si se mantiene como notebook explicativo: actualizar celdas para reflejar configuraci\'on final y nueva separaci\'on temporal. \\
+\path{Entrega_3/Entrega 2/03_p4_montecarlo/p4_montecarlo_recomendador_portafolios.ipynb} & Ajustar para leer KPIs del Horizonte 3, no de resultados de calibraci\'on. \\
+\path{Entrega_3/01_simulacion_k/simulacion_comisiones_k.ipynb} & Si usa KPIs de portafolio, actualizar fuente de datos hacia \path{test_p4}. \\
+\path{Entrega_3/02_simulacion_lambda/simulacion_lambda_multiobjetivo.ipynb} & Revisar si incorpora resultados financieros; si lo hace, separar inputs de validaci\'on y test. \\
+\path{Entrega_3/04_calibracion_black_litterman/informe_calibracion_bl.tex} & Reescribir resultados para dejar claro que los resultados P4 provienen de Horizonte 3 limpio. \\
+\bottomrule
+\end{longtable}
+
+\section{Bater\'ia de defensa metodol\'ogica}
+
+\subsection{Pregunta 1: ¿Por qué calibración secuencial y no iterativa o simultánea?}
+
+\textbf{Respuesta corta.} Porque el espacio de b\'usqueda simult\'aneo es demasiado grande, costoso y menos explicable; la calibraci\'on secuencial permite aislar el aporte marginal de cada decisi\'on y construir una defensa metodol\'ogica trazable.
+
+\textbf{Respuesta t\'ecnica.} Una b\'usqueda simult\'anea tendr\'ia que combinar familias de \textit{views}, ventanas de momentum, tama\~nos long-short, ponderaciones de $P$, intensidades de $Q$, niveles de confianza, valores de $\tau$, perfiles de riesgo, escenarios y ventanas temporales. Eso genera un n\'umero de combinaciones alto y, m\'as importante, dificulta saber si una configuraci\'on gana por la se\~nal econ\'omica, por la intensidad de la opini\'on, por la confianza, por el perfil o por una ventana espec\'ifica. La secuencia usada responde en orden: primero qu\'e informaci\'on entra, luego c\'omo se traduce en $P$, luego cu\'anta fuerza tiene $Q$, luego cu\'anta confianza tiene $\Omega$ y finalmente cu\'an sensible es el prior mediante $\tau$.
+
+\textbf{Defensa con datos actuales.} La calibraci\'on secuencial revel\'o algo que una b\'usqueda ciega podr\'ia ocultar: momentum general ten\'ia mayor Sharpe medio, 1.705, pero empeoraba el drawdown promedio frente a Markowitz en 4.42 puntos porcentuales. La regla secuencial con penalizaci\'on de drawdown permiti\'o escoger desempleo, que ten\'ia menor Sharpe medio inicial, 1.579, pero mejoraba el drawdown en 2.69 puntos porcentuales. Esta diferencia justifica que el criterio no sea maximizar Sharpe de manera oportunista.
+
+\subsection{Pregunta 2: ¿Por qué es válido usar una sola \textit{view} de desempleo?}
+
+\textbf{Respuesta corta.} Porque el profesor indic\'o que una sola \textit{view} es aceptable si est\'a bien calibrada y validada. En este proyecto, una sola \textit{view} permite mantener interpretabilidad, evitar sobreparametrizaci\'on y defender claramente el mecanismo econ\'omico.
+
+\textbf{Respuesta t\'ecnica.} Combinar varias \textit{views} aumenta el n\'umero de par\'ametros: se deben calibrar varias filas de $P$, varios valores de $Q$, una matriz $\Omega$ potencialmente con covarianzas entre opiniones y pesos relativos entre se\~nales. Con la cantidad de datos disponible, agregar \textit{views} puede mejorar ajuste dentro de muestra pero empeorar capacidad de generalizaci\'on. Usar una sola \textit{view} robusta es una decisi\'on conservadora: reduce grados de libertad y hace que el posterior Black--Litterman tenga una fuente de ajuste econ\'omico identificable.
+
+\textbf{Defensa con datos actuales.} La \textit{view} de desempleo no fue elegida porque sonara razonable, sino porque sobrevivi\'o a la comparaci\'on contra momentum. En el escenario con pandemia, la configuraci\'on final mejor\'o Sharpe en perfiles relevantes: Neutro de 1.66 a 1.79, Arriesgado de 1.17 a 1.71 y Muy arriesgado de 0.71 a 1.08. Adem\'as, redujo drawdown en esos mismos perfiles. Por tanto, la \textit{view} \'unica tiene evidencia emp\'irica y un relato econ\'omico coherente: expresa una rotaci\'on relativa entre sectores c\'iclicos y defensivos.
+
+\textbf{Respuesta si preguntan por combinaci\'on de \textit{views}.} Se puede reconocer que una extensi\'on natural ser\'ia calibrar una segunda \textit{view}, por ejemplo momentum, de forma independiente y luego estudiar una matriz $\Omega$ conjunta. Sin embargo, para la entrega final se prioriza un modelo parsimonioso y defendible. No se descarta la combinaci\'on, pero se evita introducirla sin suficiente validaci\'on fuera de muestra.
+
+\subsection{\texorpdfstring{Pregunta 3: ¿Por qué es coherente que la confianza sea baja, $c=0.20$?}{Pregunta 3: ¿Por qué es coherente que la confianza sea baja, c=0.20?}}
+
+\textbf{Respuesta corta.} Porque la \textit{view} de desempleo usada es un escenario macro asumido, no una predicci\'on macroecon\'omica observada en tiempo real. Una confianza baja permite que la opini\'on corrija suavemente el prior sin dominarlo.
+
+\textbf{Respuesta t\'ecnica.} La implementaci\'on define:
+
+\[
+\Omega = \frac{P(\tau \Sigma)P^\top}{c}.
+\]
+
+Por lo tanto, menor $c$ implica mayor incertidumbre de la opini\'on y menor desplazamiento del posterior hacia $Q$. Esto es apropiado para una se\~nal macro de escenario. En cambio, momentum es una se\~nal directamente medida con retornos recientes y podr\'ia justificar niveles de confianza mayores. La baja confianza evita transformar Black--Litterman en una apuesta sectorial fuerte basada en un supuesto macro.
+
+\textbf{Defensa con datos actuales.} Al calibrar $c \in \{0.20,0.35,0.50\}$, gan\'o $c=0.20$ con Sharpe medio 1.722, superior a las alternativas evaluadas en esa etapa, manteniendo drawdown cercano a -9.9\%. Esto confirma que el modelo funcion\'o mejor cuando la \textit{view} se us\'o como correcci\'on suave y no como se\~nal dominante.
+
+\subsection{Pregunta 4: ¿Por qué desempleo ganó sobre momentum si momentum tenía más Sharpe?}
+
+\textbf{Respuesta.} Porque el criterio de selecci\'on no maximiza Sharpe de forma aislada. Momentum general alcanz\'o Sharpe medio 1.705, pero con drawdown medio -20.0\% y deterioro de drawdown frente a Markowitz. La \textit{view} de desempleo tuvo Sharpe medio menor en la primera etapa, 1.579, pero mejor\'o drawdown y obtuvo mejor score robusto. Dado que FinPUC es un recomendador para clientes, no una estrategia especulativa, la estabilidad ante p\'erdidas pesa en la recomendaci\'on.
+
+\subsection{Pregunta 5: ¿Qué cambia después del feedback del 9 de junio?}
+
+\textbf{Respuesta.} Cambia la estructura de evaluaci\'on. Antes, la calibraci\'on, validaci\'on y P4 estaban demasiado cerca temporalmente. Ahora los par\'ametros se calibran en un primer bloque, se validan en un segundo bloque no visto y P4 se ejecuta en un tercer bloque limpio. Adem\'as, se agregan rolling windows y m\'etricas de din\'amica del portafolio para mostrar implementabilidad y no solo KPIs financieros agregados.
+
+\section{Tareas de c\'odigo versus tareas de an\'alisis}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.12\linewidth} >{\raggedright\arraybackslash}p{0.38\linewidth} >{\raggedright\arraybackslash}p{0.40\linewidth}}
+\caption{Clasificaci\'on operativa de tareas} \\
+\toprule
+Tipo & Tarea & Entregable esperado \\
+\midrule
+\endfirsthead
+\toprule
+Tipo & Tarea & Entregable esperado \\
+\midrule
+\endhead
+C\'odigo & Crear generador de rolling windows con roles & \path{00_windows_roles.csv} y trazabilidad temporal. \\
+C\'odigo & Ejecutar calibraci\'on solo en Horizonte 1 & Rankings de etapas bajo carpeta \path{calibration}. \\
+C\'odigo & Evaluar configuraci\'on congelada en Horizonte 2 & Tabla \path{validation/validacion_config_congelada.csv}. \\
+C\'odigo & Ejecutar P4 solo en Horizonte 3 & Tabla \path{test_p4/p4_test_limpio.csv}. \\
+C\'odigo & Guardar pesos por rebalanceo & Tabla \path{weights_by_rebalance.csv}. \\
+C\'odigo & Calcular turnover, composici\'on y concentraci\'on sectorial & Tablas de din\'amica del portafolio. \\
+An\'alisis & Interpretar resultados de validaci\'on & Decidir si BL sigue siendo recomendaci\'on segmentada o si debe suavizarse la conclusi\'on. \\
+An\'alisis & Reescribir secci\'on de robustez & Enfatizar distribuci\'on por ventanas, no solo escenario pandemia. \\
+An\'alisis & Actualizar conclusi\'on por perfil & Separar conclusi\'on financiera, conclusi\'on P4 y advertencias. \\
+Present. & Preparar defensa metodológica & Diapositiva con Q\&A: secuencial, una \textit{view}, confianza baja, horizonte limpio. \\
+\bottomrule
+\end{longtable}
+
+\section{Checklist final antes de la entrega}
+
+\begin{enumerate}[label=\arabic*.]
+    \item Existe un archivo \texttt{00\_windows\_roles.csv} que prueba la separaci\'on temporal.
+    \item Ninguna ventana de test P4 aparece en archivos de calibraci\'on.
+    \item Los par\'ametros finales se congelan antes de generar P4.
+    \item Los resultados finales reportan n\'umero de ventanas, no solo cinco perfiles por dos escenarios.
+    \item El informe incluye turnover semestral promedio y m\'aximo.
+    \item El informe compara composici\'on inicial versus final.
+    \item El informe muestra si los retornos vienen de pocos sectores o de una contribuci\'on diversificada.
+    \item La presentación tiene una respuesta preparada para calibración secuencial versus simultánea.
+    \item La presentación tiene una respuesta preparada para una sola \textit{view} versus combinación.
+    \item La presentación tiene una respuesta preparada para confianza baja $c=0.20$.
+\end{enumerate}
+
+\section{Cierre}
+
+La acci\'on m\'as urgente es corregir la arquitectura temporal. Sin esa separaci\'on, cualquier resultado P4 queda vulnerable a la cr\'itica de \textit{overfitting}. Una vez resuelto ese punto, las rolling windows y las m\'etricas de din\'amica del portafolio permiten fortalecer el argumento central: Black--Litterman con \textit{view} macro de desempleo no debe defenderse como un modelo que gana siempre, sino como una configuraci\'on parsimoniosa, calibrada y potencialmente m\'as resiliente en perfiles y escenarios donde Markowitz es m\'as sensible a errores de estimaci\'on.
+
+\end{document}
