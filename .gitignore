@@ -12,8 +12,6 @@ informe/
 *.gz
 *.tar
 *.rar
-*.xlsx
-*.xls
 *.parquet
 *.feather
 
