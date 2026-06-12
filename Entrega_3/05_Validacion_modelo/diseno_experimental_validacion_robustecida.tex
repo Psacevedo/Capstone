@@ -1,0 +1,598 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{float}
+
+\geometry{letterpaper, margin=2.5cm}
+
+\begin{document}
+
+\section{Dise\~no Experimental}
+
+\subsection{Objetivo de la arquitectura experimental}
+
+El dise\~no experimental implementado tiene como objetivo separar de manera estricta las etapas de calibraci\'on, validaci\'on y evaluaci\'on econ\'omica final del sistema recomendador FinPUC. Esta separaci\'on responde a una exigencia metodol\'ogica central: evitar que los par\'ametros del modelo Black--Litterman sean seleccionados utilizando informaci\'on del mismo horizonte temporal que posteriormente ser\'a usado para evaluar el desempe\~no econ\'omico del cliente y de la empresa mediante la simulaci\'on Monte Carlo P4.
+
+Formalmente, sea $\mathcal{D}$ el conjunto completo de observaciones hist\'oricas disponibles, compuesto por retornos diarios de $N$ activos:
+
+\begin{equation}
+    \mathcal{D} = \{r_t \in \mathbb{R}^{N} : t = 1,\dots,T\}.
+\end{equation}
+
+El experimento divide $\mathcal{D}$ en tres bloques funcionales no intercambiables:
+
+\begin{equation}
+    \mathcal{D}
+    =
+    \mathcal{H}_1
+    \cup
+    \mathcal{H}_2
+    \cup
+    \mathcal{H}_3,
+\end{equation}
+
+donde $\mathcal{H}_1$ corresponde al horizonte de calibraci\'on, $\mathcal{H}_2$ al horizonte de validaci\'on y $\mathcal{H}_3$ al horizonte de testeo limpio para P4. La condici\'on fundamental es que la selecci\'on de hiperpar\'ametros no puede depender de $\mathcal{H}_3$:
+
+\begin{equation}
+    \widehat{\theta}_{BL}
+    =
+    \mathcal{A}(\mathcal{H}_1),
+    \qquad
+    \widehat{\theta}_{BL}
+    \not\equiv
+    \mathcal{A}(\mathcal{H}_1,\mathcal{H}_2,\mathcal{H}_3),
+\end{equation}
+
+donde $\theta_{BL}$ representa el conjunto de par\'ametros estructurales de Black--Litterman:
+
+\begin{equation}
+    \theta_{BL}
+    =
+    \{P, Q, \Omega, \tau\}.
+\end{equation}
+
+As\'i, el modelo final utilizado en P4 queda congelado antes de observar el desempe\~no del horizonte econ\'omico final. Esta arquitectura impide que la evaluaci\'on de riqueza terminal, tasa de retiro o utilidad de la empresa se contamine con decisiones tomadas a partir del mismo per\'iodo.
+
+\subsection{Arquitectura de tres horizontes temporales}
+
+\subsubsection{Horizonte 1: calibraci\'on de par\'ametros}
+
+El primer horizonte, $\mathcal{H}_1$, se utiliza exclusivamente para seleccionar los par\'ametros del modelo Black--Litterman. En esta etapa se ejecuta una calibraci\'on secuencial sobre las componentes:
+
+\begin{equation}
+    P \rightarrow Q \rightarrow \Omega \rightarrow \tau.
+\end{equation}
+
+La matriz $P$ define la estructura de la \textit{view}; el vector $Q$ determina la magnitud esperada de dicha opini\'on; la matriz $\Omega$ representa la incertidumbre asociada a la opini\'on; y $\tau$ controla la incertidumbre del prior de equilibrio.
+
+El prior Black--Litterman se construye a partir de los pesos de mercado $w_{mkt}$ y la matriz de covarianzas $\Sigma$:
+
+\begin{equation}
+    \pi = \delta \Sigma w_{mkt},
+\end{equation}
+
+donde $\delta$ es el coeficiente de aversi\'on al riesgo impl\'icito de mercado. Luego, la media posterior se calcula como:
+
+\begin{equation}
+    \mu_{BL}
+    =
+    \pi
+    +
+    \tau \Sigma P^\top
+    \left(
+    P \tau \Sigma P^\top + \Omega
+    \right)^{-1}
+    \left(
+    Q - P\pi
+    \right).
+\end{equation}
+
+La covarianza posterior se expresa como:
+
+\begin{equation}
+    \Sigma_{BL}
+    =
+    (1+\tau)\Sigma
+    -
+    \tau \Sigma P^\top
+    \left(
+    P \tau \Sigma P^\top + \Omega
+    \right)^{-1}
+    P\tau\Sigma.
+\end{equation}
+
+La calibraci\'on secuencial en $\mathcal{H}_1$ selecciona la configuraci\'on que maximiza un criterio robusto fuera de muestra, sujeto a restricciones de estabilidad y control de p\'erdidas. Una vez seleccionada la configuraci\'on final, esta queda congelada y no puede ser reajustada usando los horizontes posteriores.
+
+\begin{table}[H]
+\centering
+\caption{Estructura de calibraci\'on en Horizonte 1}
+\begin{tabular}{p{0.22\linewidth} p{0.32\linewidth} p{0.32\linewidth}}
+\toprule
+Etapa & Par\'ametro calibrado & Criterio de decisi\'on \\
+\midrule
+1 & Familia de \textit{view} & [VALOR] \\
+2 & Estructura de $P$ & [VALOR] \\
+3 & Intensidad de $Q$ & [VALOR] \\
+4 & Confianza de $\Omega$ & [VALOR] \\
+5 & Sensibilidad de $\tau$ & [VALOR] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Horizonte 2: validaci\'on de par\'ametros}
+
+El segundo horizonte, $\mathcal{H}_2$, se utiliza para evaluar la configuraci\'on ya congelada. Su prop\'osito no es volver a calibrar el modelo, sino verificar si la configuraci\'on seleccionada en $\mathcal{H}_1$ mantiene un comportamiento razonable fuera del bloque usado para su elecci\'on.
+
+La regla metodol\'ogica es:
+
+\begin{equation}
+    \widehat{\theta}_{BL}^{\,final}
+    =
+    \widehat{\theta}_{BL}(\mathcal{H}_1),
+\end{equation}
+
+y la validaci\'on se calcula como:
+
+\begin{equation}
+    \mathcal{V}
+    =
+    \mathcal{M}
+    \left(
+    \widehat{\theta}_{BL}^{\,final};
+    \mathcal{H}_2
+    \right),
+\end{equation}
+
+donde $\mathcal{M}(\cdot)$ representa el conjunto de m\'etricas financieras fuera de muestra: Sharpe, retorno anualizado, volatilidad, drawdown m\'aximo, CVaR y estabilidad de portafolio.
+
+El horizonte de validaci\'on cumple una funci\'on de control. Si el modelo falla en $\mathcal{H}_2$, la conclusi\'on metodol\'ogica debe reportar esa debilidad; no corresponde ajustar par\'ametros con $\mathcal{H}_2$ sin reiniciar formalmente el dise\~no experimental.
+
+\subsubsection{Horizonte 3: testeo limpio para P4}
+
+El tercer horizonte, $\mathcal{H}_3$, se reserva exclusivamente para la evaluaci\'on econ\'omica final. En esta etapa se calculan los KPIs financieros del modelo ya congelado y se entregan como input a la simulaci\'on Monte Carlo P4.
+
+La simulaci\'on P4 se define como una funci\'on posterior:
+
+\begin{equation}
+    P4
+    =
+    \mathcal{S}
+    \left(
+    \mathcal{M}
+    \left(
+    \widehat{\theta}_{BL}^{\,final};
+    \mathcal{H}_3
+    \right)
+    \right),
+\end{equation}
+
+donde $\mathcal{S}(\cdot)$ representa el simulador de comportamiento cliente--empresa. La utilidad de la empresa no participa en la optimizaci\'on de portafolio; se calcula despu\'es, a partir del saldo administrado, la permanencia del cliente y la trayectoria simulada de riqueza.
+
+Esta separaci\'on elimina el riesgo de \textit{overfitting} temporal en la evaluaci\'on econ\'omica porque:
+
+\begin{align}
+    \widehat{\theta}_{BL}^{\,final}
+    &=
+    \mathcal{A}(\mathcal{H}_1), \\
+    \mathcal{H}_3
+    &\notin
+    \operatorname{Dom}(\mathcal{A}), \\
+    P4
+    &=
+    \mathcal{S}
+    \left(
+    \mathcal{H}_3
+    \mid
+    \widehat{\theta}_{BL}^{\,final}
+    \right).
+\end{align}
+
+Por lo tanto, $\mathcal{H}_3$ no influye en la selecci\'on de par\'ametros y opera como ventana ciega para la evaluaci\'on final.
+
+\section{Implementaci\'on de Validaci\'on Robustecida}
+
+\subsection{Metodolog\'ia de ventanas m\'oviles}
+
+Para aumentar el n\'umero de observaciones fuera de muestra se implement\'o una metodolog\'ia de ventanas m\'oviles. Sea $L$ la longitud del per\'iodo de entrenamiento, $F$ la longitud del per\'iodo de evaluaci\'on fuera de muestra y $\Delta$ el desplazamiento temporal entre ventanas consecutivas. La ventana $j$ se define como:
+
+\begin{align}
+    \mathcal{W}_j^{train}
+    &=
+    \{r_t : t = s_j,\dots,s_j+L-1\}, \\
+    \mathcal{W}_j^{test}
+    &=
+    \{r_t : t = s_j+L,\dots,s_j+L+F-1\},
+\end{align}
+
+con desplazamiento:
+
+\begin{equation}
+    s_{j+1} = s_j + \Delta.
+\end{equation}
+
+Cada ventana contiene una etapa de estimaci\'on y una etapa de evaluaci\'on. Dentro de la etapa de evaluaci\'on se realiza rebalanceo peri\'odico. En cada rebalanceo, el modelo se reestima usando toda la informaci\'on disponible hasta ese punto, pero siempre respetando la frontera temporal de la ventana.
+
+El algoritmo general es:
+
+\begin{enumerate}
+    \item Ordenar cronol\'ogicamente la matriz de retornos.
+    \item Definir $L$, $F$ y $\Delta$.
+    \item Generar ventanas $\mathcal{W}_1,\dots,\mathcal{W}_J$.
+    \item Asignar cada ventana a calibraci\'on, validaci\'on o test final seg\'un su posici\'on temporal.
+    \item Calibrar par\'ametros \'unicamente en las ventanas de $\mathcal{H}_1$.
+    \item Congelar la configuraci\'on seleccionada.
+    \item Evaluar la configuraci\'on congelada en $\mathcal{H}_2$.
+    \item Ejecutar P4 \'unicamente usando KPIs provenientes de $\mathcal{H}_3$.
+\end{enumerate}
+
+Esta metodolog\'ia permite evaluar el modelo bajo distintos reg\'imenes de mercado. En vez de depender de una \'unica partici\'on hist\'orica, el sistema observa m\'ultiples trayectorias fuera de muestra, lo cual reduce la probabilidad de que la recomendaci\'on final dependa de un episodio puntual.
+
+\begin{table}[H]
+\centering
+\caption{Plantilla de asignaci\'on de ventanas m\'oviles}
+\begin{tabular}{p{0.18\linewidth} p{0.22\linewidth} p{0.22\linewidth} p{0.22\linewidth}}
+\toprule
+Ventana & Entrenamiento & Evaluaci\'on & Rol \\
+\midrule
+$\mathcal{W}_1$ & [FECHA]--[FECHA] & [FECHA]--[FECHA] & Calibraci\'on \\
+$\mathcal{W}_2$ & [FECHA]--[FECHA] & [FECHA]--[FECHA] & Calibraci\'on \\
+$\mathcal{W}_j$ & [FECHA]--[FECHA] & [FECHA]--[FECHA] & Validaci\'on \\
+$\mathcal{W}_J$ & [FECHA]--[FECHA] & [FECHA]--[FECHA] & Test P4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{M\'etricas de din\'amica y estabilidad del portafolio}
+
+\subsubsection{Turnover semestral}
+
+El turnover mide la intensidad de transacciones requerida para mover el portafolio desde la composici\'on previa hacia la nueva cartera \'optima. Sea $w_t$ el vector de pesos objetivo luego del rebalanceo $t$, y sea $w_{t^-}^{drift}$ el vector de pesos previo ajustado por la rentabilidad realizada antes de rebalancear. El turnover se define como:
+
+\begin{equation}
+    TO_t
+    =
+    \frac{1}{2}
+    \sum_{i=1}^{N}
+    \left|
+    w_{i,t}
+    -
+    w_{i,t^-}^{drift}
+    \right|.
+\end{equation}
+
+El vector con deriva se obtiene como:
+
+\begin{equation}
+    w_{i,t^-}^{drift}
+    =
+    \frac{
+    w_{i,t-1}
+    \prod_{\tau=t-1}^{t^-}(1+r_{i,\tau})
+    }{
+    \sum_{k=1}^{N}
+    w_{k,t-1}
+    \prod_{\tau=t-1}^{t^-}(1+r_{k,\tau})
+    }.
+\end{equation}
+
+El turnover promedio de una ventana se calcula como:
+
+\begin{equation}
+    \overline{TO}
+    =
+    \frac{1}{B-1}
+    \sum_{t=2}^{B}
+    TO_t,
+\end{equation}
+
+donde $B$ es el n\'umero de rebalanceos dentro de la ventana. El primer rebalanceo se excluye del promedio porque no existe una cartera previa comparable.
+
+\begin{table}[H]
+\centering
+\caption{Plantilla de turnover por modelo y perfil}
+\begin{tabular}{p{0.24\linewidth} p{0.20\linewidth} p{0.18\linewidth} p{0.18\linewidth}}
+\toprule
+Modelo & Perfil & Turnover medio & Turnover m\'aximo \\
+\midrule
+Black--Litterman & [PERFIL] & --- & --- \\
+Markowitz & [PERFIL] & --- & --- \\
+Benchmark & [PERFIL] & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Composici\'on inicial versus final}
+
+Para medir la estabilidad de composici\'on se compara el vector de pesos inicial $w_1$ con el vector de pesos final $w_B$ dentro de una ventana. La distancia $L_1$ normalizada se define como:
+
+\begin{equation}
+    D_{L1}^{init-final}
+    =
+    \frac{1}{2}
+    \sum_{i=1}^{N}
+    \left|
+    w_{i,B} - w_{i,1}
+    \right|.
+\end{equation}
+
+Una distancia cercana a cero indica alta estabilidad de composici\'on; una distancia alta indica que el portafolio final difiere sustancialmente del portafolio inicial.
+
+Tambi\'en se mide la persistencia de los principales activos mediante el \textit{overlap} de los $K$ mayores pesos:
+
+\begin{equation}
+    Overlap_K
+    =
+    \frac{
+    \left|
+    TopK(w_1)
+    \cap
+    TopK(w_B)
+    \right|
+    }{K}.
+\end{equation}
+
+Finalmente, se calcula concentraci\'on por activo mediante el \'indice de Herfindahl-Hirschman:
+
+\begin{equation}
+    HHI_t^{asset}
+    =
+    \sum_{i=1}^{N}
+    w_{i,t}^{2},
+\end{equation}
+
+y el n\'umero efectivo de activos:
+
+\begin{equation}
+    N_{eff,t}
+    =
+    \frac{1}{HHI_t^{asset}}.
+\end{equation}
+
+\begin{table}[H]
+\centering
+\caption{Plantilla de estabilidad de composici\'on}
+\begin{tabular}{p{0.20\linewidth} p{0.18\linewidth} p{0.20\linewidth} p{0.20\linewidth}}
+\toprule
+Modelo & Perfil & Distancia $L_1$ & $Overlap_K$ \\
+\midrule
+Black--Litterman & [PERFIL] & --- & --- \\
+Markowitz & [PERFIL] & --- & --- \\
+Benchmark & [PERFIL] & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Concentraci\'on sectorial de retornos}
+
+La concentraci\'on sectorial permite distinguir entre diversificaci\'on aparente y diversificaci\'on econ\'omica real. Sea $\mathcal{S}$ el conjunto de sectores y sea $s(i)$ el sector al que pertenece el activo $i$. El peso agregado del sector $s$ en el rebalanceo $t$ es:
+
+\begin{equation}
+    W_{s,t}
+    =
+    \sum_{i:s(i)=s}
+    w_{i,t}.
+\end{equation}
+
+El HHI sectorial se calcula como:
+
+\begin{equation}
+    HHI_t^{sector}
+    =
+    \sum_{s \in \mathcal{S}}
+    W_{s,t}^{2}.
+\end{equation}
+
+Para medir la procedencia del retorno, se define la contribuci\'on diaria del sector $s$ como:
+
+\begin{equation}
+    CR_{s,d}
+    =
+    \sum_{i:s(i)=s}
+    w_{i,t(d)}
+    r_{i,d},
+\end{equation}
+
+donde $t(d)$ indica el rebalanceo vigente en el d\'ia $d$. La contribuci\'on acumulada del sector en la ventana es:
+
+\begin{equation}
+    CR_s
+    =
+    \sum_{d \in \mathcal{W}^{test}}
+    CR_{s,d}.
+\end{equation}
+
+La participaci\'on relativa absoluta del sector en la generaci\'on de retornos se define como:
+
+\begin{equation}
+    ShareReturn_s
+    =
+    \frac{
+    |CR_s|
+    }{
+    \sum_{k \in \mathcal{S}} |CR_k|
+    }.
+\end{equation}
+
+El uso de valor absoluto evita que sectores con contribuciones positivas y negativas se cancelen artificialmente. Esta m\'etrica permite detectar si el retorno del portafolio proviene de una fuente diversificada o de una industria dominante.
+
+\begin{table}[H]
+\centering
+\caption{Plantilla de concentraci\'on sectorial de retornos}
+\begin{tabular}{p{0.24\linewidth} p{0.24\linewidth} p{0.20\linewidth} p{0.18\linewidth}}
+\toprule
+Modelo & Sector dominante & Participaci\'on sectorial & HHI sectorial \\
+\midrule
+Black--Litterman & [SECTOR] & --- & --- \\
+Markowitz & [SECTOR] & --- & --- \\
+Benchmark & [SECTOR] & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Defensa Metodol\'ogica}
+
+\subsection{Por qu\'e calibraci\'on secuencial y no optimizaci\'on global simult\'anea}
+
+La calibraci\'on secuencial se utiliza como una heur\'istica v\'alida porque el espacio conjunto de b\'usqueda es de alta dimensi\'on. Una optimizaci\'on simult\'anea deber\'ia resolver:
+
+\begin{equation}
+    \theta^\star
+    =
+    \arg\max_{\theta \in \Theta}
+    \mathcal{J}(\theta),
+\end{equation}
+
+donde:
+
+\begin{equation}
+    \Theta
+    =
+    \Theta_P
+    \times
+    \Theta_Q
+    \times
+    \Theta_{\Omega}
+    \times
+    \Theta_{\tau}
+    \times
+    \Theta_{\text{perfil}}
+    \times
+    \Theta_{\text{ventana}}.
+\end{equation}
+
+El tama\~no de $\Theta$ crece r\'apidamente al combinar familias de \textit{views}, tama\~nos de universo, ventanas de \textit{lookback}, ponderaciones de $P$, intensidades de $Q$, niveles de confianza, valores de $\tau$, perfiles de riesgo y escenarios temporales. Una b\'usqueda global ser\'ia m\'as costosa computacionalmente y menos trazable metodol\'ogicamente.
+
+La calibraci\'on secuencial reemplaza el problema global por una serie de decisiones condicionales:
+
+\begin{align}
+    P^\star
+    &=
+    \arg\max_{P \in \Theta_P}
+    \mathcal{J}(P \mid Q_0,\Omega_0,\tau_0), \\
+    Q^\star
+    &=
+    \arg\max_{Q \in \Theta_Q}
+    \mathcal{J}(Q \mid P^\star,\Omega_0,\tau_0), \\
+    \Omega^\star
+    &=
+    \arg\max_{\Omega \in \Theta_{\Omega}}
+    \mathcal{J}(\Omega \mid P^\star,Q^\star,\tau_0), \\
+    \tau^\star
+    &=
+    \arg\max_{\tau \in \Theta_{\tau}}
+    \mathcal{J}(\tau \mid P^\star,Q^\star,\Omega^\star).
+\end{align}
+
+Esta estructura es defendible porque permite aislar el aporte marginal de cada decisi\'on. Primero se decide qu\'e informaci\'on entra al modelo; luego se determina c\'omo se expresa esa informaci\'on; despu\'es se calibra su intensidad; posteriormente se ajusta su incertidumbre; y finalmente se eval\'ua la sensibilidad del prior. La trazabilidad de esta secuencia es una ventaja acad\'emica y pr\'actica frente a una b\'usqueda simult\'anea opaca.
+
+\subsection{Por qu\'e es robusto utilizar una \'unica \textit{view} macro}
+
+Usar una \'unica \textit{view} macro es metodol\'ogicamente robusto cuando se cumplen tres condiciones:
+
+\begin{enumerate}
+    \item La \textit{view} tiene interpretaci\'on econ\'omica clara.
+    \item La \textit{view} es calibrada fuera de muestra.
+    \item La \textit{view} muestra resiliencia en escenarios adversos.
+\end{enumerate}
+
+En Black--Litterman, cada \textit{view} adicional agrega una fila a $P$, un componente a $Q$ y una dimensi\'on adicional a $\Omega$. Si se utilizan $K$ opiniones, entonces:
+
+\begin{equation}
+    P \in \mathbb{R}^{K \times N},
+    \qquad
+    Q \in \mathbb{R}^{K},
+    \qquad
+    \Omega \in \mathbb{R}^{K \times K}.
+\end{equation}
+
+Aumentar $K$ eleva la flexibilidad del modelo, pero tambi\'en incrementa el riesgo de sobreparametrizaci\'on. En un contexto de evaluaci\'on fuera de muestra, una \'unica \textit{view} macro bien justificada puede ser preferible a una combinaci\'on de se\~nales d\'ebilmente validadas.
+
+La \textit{view} de desempleo se interpreta como una opini\'on relativa entre sectores c\'iclicos y defensivos. Si el desempleo asumido se ubica bajo su nivel neutral, el modelo favorece exposici\'on relativa a sectores c\'iclicos. Si el desempleo asumido supera su nivel neutral, la direcci\'on de la opini\'on se invierte. Esta estructura se expresa como:
+
+\begin{equation}
+    \sum_{i \in \mathcal{C}} P_i = 1,
+    \qquad
+    \sum_{j \in \mathcal{D}} P_j = -1,
+\end{equation}
+
+donde $\mathcal{C}$ representa sectores c\'iclicos y $\mathcal{D}$ sectores defensivos.
+
+La ventaja de una \'unica \textit{view} es que el mecanismo econ\'omico del posterior queda identificado. Si el modelo mejora su resiliencia, es posible atribuir esa mejora a una rotaci\'on macro espec\'ifica, no a una mezcla dif\'icil de interpretar entre m\'ultiples se\~nales.
+
+\subsection{Por qu\'e una confianza baja es coherente para una \textit{view} macro asumida}
+
+La confianza de una \textit{view} se incorpora mediante la matriz $\Omega$. En la implementaci\'on, se utiliza la estructura:
+
+\begin{equation}
+    \Omega
+    =
+    \frac{
+    P(\tau\Sigma)P^\top
+    }{c},
+\end{equation}
+
+donde $c$ representa el nivel de confianza. Un valor bajo de $c$ implica una $\Omega$ mayor, es decir, mayor incertidumbre asociada a la opini\'on. Esto reduce la fuerza con la que la \textit{view} desplaza el prior de equilibrio.
+
+Para una \textit{view} macro basada en umbrales asumidos, como desempleo asumido versus desempleo neutral, una confianza baja es matem\'aticamente coherente. La raz\'on es que la se\~nal no proviene de una predicci\'on perfecta ni de un modelo macroecon\'omico estructural estimado, sino de un escenario econ\'omico interpretable. Por tanto, debe actuar como correcci\'on suave del prior y no como imposici\'on dominante.
+
+La relaci\'on entre confianza y desplazamiento del posterior puede observarse en el t\'ermino de ajuste:
+
+\begin{equation}
+    \Delta \mu
+    =
+    \tau \Sigma P^\top
+    \left(
+    P\tau\Sigma P^\top + \Omega
+    \right)^{-1}
+    (Q-P\pi).
+\end{equation}
+
+Si $c$ disminuye, entonces $\Omega$ aumenta y el t\'ermino inverso reduce la magnitud de $\Delta \mu$. En consecuencia, el posterior permanece m\'as cercano al prior:
+
+\begin{equation}
+    c \downarrow
+    \quad \Rightarrow \quad
+    \Omega \uparrow
+    \quad \Rightarrow \quad
+    \|\mu_{BL} - \pi\| \downarrow.
+\end{equation}
+
+Esto es deseable cuando la opini\'on macro es razonable pero incierta. Una confianza baja preserva la estabilidad del modelo y evita que Black--Litterman se transforme en una apuesta sectorial excesivamente agresiva.
+
+\begin{table}[H]
+\centering
+\caption{Interpretaci\'on metodol\'ogica del par\'ametro de confianza}
+\begin{tabular}{p{0.22\linewidth} p{0.34\linewidth} p{0.30\linewidth}}
+\toprule
+Nivel de confianza & Efecto sobre $\Omega$ & Interpretaci\'on \\
+\midrule
+Bajo & $\Omega$ alta & View usada como correcci\'on suave \\
+Medio & $\Omega$ intermedia & Balance entre prior y opini\'on \\
+Alto & $\Omega$ baja & View domina el posterior \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{S\'intesis de la arquitectura metodol\'ogica}
+
+La arquitectura implementada fortalece el sistema FinPUC porque separa expl\'icitamente tres decisiones que antes pod\'ian confundirse: calibrar par\'ametros, validar comportamiento fuera de muestra y evaluar impacto econ\'omico. La calibraci\'on ocurre en $\mathcal{H}_1$; la validaci\'on ocurre en $\mathcal{H}_2$; y P4 se ejecuta \'unicamente en $\mathcal{H}_3$.
+
+La combinaci\'on de tres horizontes, ventanas m\'oviles y m\'etricas de din\'amica del portafolio permite evaluar el modelo en tres dimensiones:
+
+\begin{enumerate}
+    \item Desempe\~no financiero fuera de muestra.
+    \item Estabilidad operacional del portafolio.
+    \item Impacto econ\'omico posterior para cliente y empresa.
+\end{enumerate}
+
+Esta estructura convierte la recomendaci\'on final en una conclusi\'on metodol\'ogicamente defendible: el modelo no se eval\'ua por una \'unica ventana hist\'orica ni por una \'unica m\'etrica, sino por su comportamiento temporal, su estabilidad y su capacidad de sostener resultados en un horizonte econ\'omico no utilizado durante la calibraci\'on.
+
+\end{document}
