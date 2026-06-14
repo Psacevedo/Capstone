@@ -1,0 +1,131 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\setlength{\parskip}{0.65em}
+\setlength{\parindent}{0pt}
+\title{Informe de resultados Momentum top market-cap 6M - abandono V1}
+\author{FinPUC}
+\date{}
+\begin{document}
+\maketitle
+\section{Análisis de resultados fuera de muestra}
+Esta iteracion calibra y valida la view \textit{Momentum top market-cap 6M} bajo la arquitectura robustecida de tres horizontes. La configuracion congelada resultante corresponde a familia marketcap\_momentum, lookback 252 dias, ponderacion equal, q\_scale=1.5, confianza=80\% y $\tau$=0.200. La capa P4 usa la Version 1 de abandono: $p_{retiro,t}=0$ si $loss_t\leq\hat{x}_1$ y $p_{retiro,t}=[1+\exp(-(loss_t-\hat{x}_1))]^{-1}$ si $loss_t>\hat{x}_1$.
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+Escenario & Perfil & Sharpe BL & Sharpe MK & Mejora Sharpe & DD BL & DD MK & \% recomendado \\
+\midrule
+sin\_pandemia & Muy conservador & 1.748 & 1.736 & 0.7\% & -10.0\% & -10.3\% & 100.0\% \\
+sin\_pandemia & Conservador & 1.754 & 1.728 & 1.5\% & -9.9\% & -11.0\% & 100.0\% \\
+sin\_pandemia & Neutro & 1.708 & 1.747 & -2.2\% & -10.1\% & -13.0\% & 0.0\% \\
+sin\_pandemia & Arriesgado & 1.299 & 1.513 & -14.2\% & -14.2\% & -18.2\% & 0.0\% \\
+sin\_pandemia & Muy arriesgado & 1.185 & 1.198 & -1.1\% & -21.7\% & -26.5\% & 0.0\% \\
+con\_pandemia & Muy conservador & 1.639 & 1.699 & -3.6\% & -9.2\% & -9.0\% & 0.0\% \\
+con\_pandemia & Conservador & 1.667 & 1.749 & -4.7\% & -9.4\% & -9.0\% & 25.0\% \\
+con\_pandemia & Neutro & 1.595 & 1.773 & -10.1\% & -11.0\% & -10.9\% & 0.0\% \\
+con\_pandemia & Arriesgado & 1.045 & 1.391 & -25.4\% & -19.5\% & -18.7\% & 0.0\% \\
+con\_pandemia & Muy arriesgado & 0.926 & 0.933 & -2.5\% & -29.0\% & -27.6\% & 75.0\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Comparacion fuera de muestra para Momentum top market-cap 6M con abandono V1.}
+\label{tab:momentum_top_marketcap_6m_v1:oos}
+\end{table}
+
+\section{Resultados de la dinámica de portafolio}
+La dinamica del portafolio se evalua antes de la simulacion economica para separar el comportamiento financiero del modelo de la respuesta conductual del cliente. El turnover semestral, el numero efectivo de activos y la concentracion sectorial permiten medir si la view es implementable sin exigir cambios excesivos de composicion.
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+Escenario & Perfil & Turnover & Turn. >20\% & N efectivo & HHI sector & Peso sector lider \\
+\midrule
+sin\_pandemia & Muy conservador & 8.9\% & 0.0\% & 224.87 & 0.144 & 27.2\% \\
+sin\_pandemia & Conservador & 12.6\% & 0.0\% & 238.56 & 0.140 & 26.5\% \\
+sin\_pandemia & Neutro & 24.5\% & 25.0\% & 235.30 & 0.135 & 24.7\% \\
+sin\_pandemia & Arriesgado & 54.2\% & 75.0\% & 109.89 & 0.196 & 32.3\% \\
+sin\_pandemia & Muy arriesgado & 61.4\% & 75.0\% & 32.13 & 0.255 & 39.4\% \\
+con\_pandemia & Muy conservador & 8.3\% & 0.0\% & 114.50 & 0.165 & 25.1\% \\
+con\_pandemia & Conservador & 12.1\% & 0.0\% & 118.52 & 0.157 & 24.3\% \\
+con\_pandemia & Neutro & 24.5\% & 50.0\% & 104.69 & 0.149 & 21.9\% \\
+con\_pandemia & Arriesgado & 48.1\% & 75.0\% & 38.91 & 0.267 & 42.1\% \\
+con\_pandemia & Muy arriesgado & 52.1\% & 75.0\% & 11.47 & 0.474 & 59.1\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Dinamica de portafolio de Black-Litterman para Momentum top market-cap 6M.}
+\label{tab:momentum_top_marketcap_6m_v1:dinamica}
+\end{table}
+
+\section{Evaluación Económica Monte Carlo P4 en Horizonte Limpio}
+La simulacion Monte Carlo P4 se ejecuta solo en el horizonte limpio, con 2000 trayectorias por cruce modelo-escenario-perfil y 260 semanas. La utilidad de empresa es ex-post y corresponde al 0,5\% mensual del saldo administrado activo. El abandono se calcula semanalmente y se reporta tambien en equivalente semestral.
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrrr}
+\toprule
+Escenario & Perfil & Riqueza & Utilidad & P acepta reb. & P abandono semanal & P abandono sem. & Retiro 260w & Retencion & Clientes finales \\
+\midrule
+sin\_pandemia & Muy conservador & 1.426 & 124 & 55.6\% & 0.6\% & 14.2\% & 34.1\% & 39.1\% & 438 \\
+sin\_pandemia & Conservador & 1.833 & 249 & 54.4\% & 0.1\% & 1.8\% & 8.8\% & 84.1\% & 929 \\
+sin\_pandemia & Neutro & 1.947 & 275 & 52.0\% & 0.0\% & 0.1\% & 0.4\% & 99.1\% & 1037 \\
+sin\_pandemia & Arriesgado & 1.965 & 266 & 48.5\% & 0.0\% & 0.1\% & 0.4\% & 99.3\% & 969 \\
+sin\_pandemia & Muy arriesgado & 2.300 & 297 & 47.7\% & 0.0\% & 0.2\% & 0.9\% & 98.0\% & 939 \\
+con\_pandemia & Muy conservador & 1.327 & 108 & 55.0\% & 0.6\% & 15.4\% & 34.8\% & 37.0\% & 409 \\
+con\_pandemia & Conservador & 1.736 & 238 & 53.8\% & 0.1\% & 1.6\% & 8.2\% & 85.1\% & 932 \\
+con\_pandemia & Neutro & 1.856 & 259 & 51.7\% & 0.0\% & 0.1\% & 0.6\% & 98.8\% & 1002 \\
+con\_pandemia & Arriesgado & 1.966 & 263 & 48.5\% & 0.0\% & 0.4\% & 1.9\% & 96.0\% & 944 \\
+con\_pandemia & Muy arriesgado & 2.472 & 310 & 47.8\% & 0.0\% & 1.0\% & 4.5\% & 90.7\% & 880 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Resultados P4 para Momentum top market-cap 6M con abandono V1.}
+\label{tab:momentum_top_marketcap_6m_v1:p4}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.86\textwidth]{figuras/fig_probabilidades_sin_pandemia.png}
+\caption{Probabilidades conductuales sin pandemia para Momentum top market-cap 6M con abandono V1.}
+\label{fig:momentum_top_marketcap_6m_v1:prob_sin}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.86\textwidth]{figuras/fig_probabilidades_con_pandemia.png}
+\caption{Probabilidades conductuales con pandemia para Momentum top market-cap 6M con abandono V1.}
+\label{fig:momentum_top_marketcap_6m_v1:prob_con}
+\end{figure}
+\section{Discusión de Robustez}
+La robustez se interpreta como la capacidad de sostener desempeno fuera de muestra, estabilidad de composicion y retencion de clientes bajo escenarios con y sin pandemia. La Version 1 elimina el abandono artificial cuando no hay exceso de perdida, pero mantiene una respuesta intensa cuando la perdida cruza la tolerancia.
+\section{Conclusiones}
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+Perfil & Riqueza & Utilidad & P abandono sem. & Retiro 260w & Retencion & Clientes finales & Lectura \\
+\midrule
+Muy conservador & 1.377 & 116 & 14.8\% & 34.5\% & 38.0\% & 423 & Critica \\
+Conservador & 1.784 & 243 & 1.7\% & 8.4\% & 84.6\% & 931 & Intermedia \\
+Neutro & 1.902 & 267 & 0.1\% & 0.5\% & 99.0\% & 1019 & Estable \\
+Arriesgado & 1.965 & 265 & 0.2\% & 1.1\% & 97.7\% & 956 & Estable \\
+Muy arriesgado & 2.386 & 304 & 0.6\% & 2.7\% & 94.4\% & 909 & Estable \\
+\bottomrule
+\end{tabular}
+}
+\caption{Conclusion segmentada para Momentum top market-cap 6M con abandono V1.}
+\label{tab:momentum_top_marketcap_6m_v1:conclusiones}
+\end{table}
+
+La recomendacion final de esta view debe considerar simultaneamente mejora financiera, estabilidad dinamica y retencion. Cuando el modelo aumenta Sharpe pero exige alto turnover o concentra retornos en pocos sectores, su uso debe presentarse como tactico y condicionado al perfil de riesgo.
+\end{document}

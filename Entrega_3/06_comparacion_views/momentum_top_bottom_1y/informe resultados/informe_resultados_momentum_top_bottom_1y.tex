@@ -1,0 +1,162 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{array}
+\geometry{margin=2.5cm}
+\setlength{\parskip}{0.65em}
+\setlength{\parindent}{0pt}
+\title{Informe de resultados: Momentum top/bottom 1Y}
+\author{FinPUC}
+\date{}
+\begin{document}
+\maketitle
+
+\section{Análisis de resultados fuera de muestra}
+Esta iteración evalúa la view \textit{Momentum top/bottom 1Y} dentro de la misma arquitectura de tres horizontes y ventanas móviles utilizada en la validación robustecida. La etapa de calibración no vuelve a competir contra otras familias de views; en cambio, fija la familia analizada y calibra secuencialmente su estructura interna hasta congelar la configuración final: familia marketcap\_momentum, lookback 252 días, long/short 5, ponderación equal, q\_scale=1.5, confianza=80\%, $\tau$=0.200.
+En promedio, la mejora porcentual de Sharpe frente a Markowitz fue -6.1\%, con una fracción recomendada media de 30.0\% sobre los cruces escenario-perfil. La señal mejora algunos frentes de retorno, pero lo hace a costa de mayor rotación y de una concentración más visible de la exposición.
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+Escenario & Perfil & Sharpe BL & Sharpe MK & Mejora Sharpe & DD BL & DD MK & \% ventanas recomendado \\
+\midrule
+sin\_pandemia & Muy conservador & 1.748 & 1.736 & 0.7\% & -10.0\% & -10.3\% & 100.0\% \\
+sin\_pandemia & Conservador & 1.754 & 1.728 & 1.5\% & -9.9\% & -11.0\% & 100.0\% \\
+sin\_pandemia & Neutro & 1.708 & 1.747 & -2.2\% & -10.1\% & -13.0\% & 0.0\% \\
+sin\_pandemia & Arriesgado & 1.299 & 1.513 & -14.2\% & -14.2\% & -18.2\% & 0.0\% \\
+sin\_pandemia & Muy arriesgado & 1.185 & 1.198 & -1.1\% & -21.7\% & -26.5\% & 0.0\% \\
+con\_pandemia & Muy conservador & 1.639 & 1.699 & -3.6\% & -9.2\% & -9.0\% & 0.0\% \\
+con\_pandemia & Conservador & 1.667 & 1.749 & -4.7\% & -9.4\% & -9.0\% & 25.0\% \\
+con\_pandemia & Neutro & 1.595 & 1.773 & -10.1\% & -11.0\% & -10.9\% & 0.0\% \\
+con\_pandemia & Arriesgado & 1.045 & 1.391 & -25.4\% & -19.5\% & -18.7\% & 0.0\% \\
+con\_pandemia & Muy arriesgado & 0.926 & 0.933 & -2.5\% & -29.0\% & -27.6\% & 75.0\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Comparación fuera de muestra en horizonte limpio para Momentum top/bottom 1Y.}
+\label{tab:momentum_top_bottom_1y:resultados_oos}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/sharpe_sin_pandemia.png}
+\caption{Sharpe fuera de muestra sin pandemia para Momentum top/bottom 1Y.}
+\label{fig:momentum_top_bottom_1y:sharpe_sin}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/sharpe_con_pandemia.png}
+\caption{Sharpe fuera de muestra con pandemia para Momentum top/bottom 1Y.}
+\label{fig:momentum_top_bottom_1y:sharpe_con}
+\end{figure}
+
+\section{Resultados de la dinámica de portafolio}
+La dinámica del portafolio se analiza como una condición de implementabilidad. Un modelo puede mejorar el Sharpe fuera de muestra, pero si lo hace mediante rotación excesiva, concentración sectorial o inestabilidad de pesos, su recomendación debe ser tratada como condicional.
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+Escenario & Perfil & Turnover & Turn. >20\% & N efectivo & HHI sector & Peso sector líder \\
+\midrule
+sin\_pandemia & Muy conservador & 8.9\% & 0.0\% & 224.87 & 0.144 & 27.2\% \\
+sin\_pandemia & Conservador & 12.6\% & 0.0\% & 238.56 & 0.140 & 26.5\% \\
+sin\_pandemia & Neutro & 24.5\% & 25.0\% & 235.30 & 0.135 & 24.7\% \\
+sin\_pandemia & Arriesgado & 54.2\% & 75.0\% & 109.89 & 0.196 & 32.3\% \\
+sin\_pandemia & Muy arriesgado & 61.4\% & 75.0\% & 32.13 & 0.255 & 39.4\% \\
+con\_pandemia & Muy conservador & 8.3\% & 0.0\% & 114.50 & 0.165 & 25.1\% \\
+con\_pandemia & Conservador & 12.1\% & 0.0\% & 118.52 & 0.157 & 24.3\% \\
+con\_pandemia & Neutro & 24.5\% & 50.0\% & 104.69 & 0.149 & 21.9\% \\
+con\_pandemia & Arriesgado & 48.1\% & 75.0\% & 38.91 & 0.267 & 42.1\% \\
+con\_pandemia & Muy arriesgado & 52.1\% & 75.0\% & 11.47 & 0.474 & 59.1\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Dinámica de portafolio de Black-Litterman calibrado para Momentum top/bottom 1Y.}
+\label{tab:momentum_top_bottom_1y:dinamica}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/turnover_sin_pandemia.png}
+\caption{Turnover semestral medio sin pandemia para Momentum top/bottom 1Y.}
+\label{fig:momentum_top_bottom_1y:turnover_sin}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/turnover_con_pandemia.png}
+\caption{Turnover semestral medio con pandemia para Momentum top/bottom 1Y.}
+\label{fig:momentum_top_bottom_1y:turnover_con}
+\end{figure}
+
+\section{Evaluación Económica Monte Carlo P4 en Horizonte Limpio}
+La simulación Monte Carlo P4 se ejecuta únicamente en el Horizonte 3. Por diseño, la utilidad de la empresa es un resultado ex-post asociado al saldo administrado activo y no entra en el optimizador de portafolios. En esta iteración se reportan explícitamente la probabilidad de aceptación inicial, la probabilidad de aceptación del rebalanceo, la probabilidad semanal de abandono y el número de clientes activos al final de las 260 semanas.
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Escenario & Perfil & Riqueza & Utilidad empresa & P acepta inicial & P acepta reb. & P abandono semanal & Clientes iniciales & Clientes finales \\
+\midrule
+sin\_pandemia & Muy conservador & 1.687 & 34 & 98.9\% & 98.9\% & 0.7\% & 1985 & 716 \\
+sin\_pandemia & Conservador & 2.516 & 74 & 97.1\% & 97.1\% & 0.1\% & 1928 & 1650 \\
+sin\_pandemia & Neutro & 2.480 & 72 & 82.7\% & 82.7\% & 0.0\% & 1655 & 1640 \\
+sin\_pandemia & Arriesgado & 1.442 & 21 & 23.4\% & 23.4\% & 0.0\% & 462 & 461 \\
+sin\_pandemia & Muy arriesgado & 1.380 & 14 & 13.8\% & 13.8\% & 0.0\% & 272 & 270 \\
+con\_pandemia & Muy conservador & 1.565 & 31 & 98.2\% & 98.2\% & 0.7\% & 1966 & 700 \\
+con\_pandemia & Conservador & 2.285 & 69 & 95.5\% & 95.5\% & 0.1\% & 1909 & 1632 \\
+con\_pandemia & Neutro & 2.366 & 68 & 78.8\% & 78.8\% & 0.0\% & 1593 & 1576 \\
+con\_pandemia & Arriesgado & 1.614 & 26 & 27.0\% & 27.0\% & 0.0\% & 538 & 520 \\
+con\_pandemia & Muy arriesgado & 1.661 & 23 & 20.4\% & 20.4\% & 0.0\% & 400 & 376 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Resultados P4 y comportamiento de clientes para Momentum top/bottom 1Y.}
+\label{tab:momentum_top_bottom_1y:p4}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{figuras/p4_riqueza_utilidad_sin_pandemia.png}
+\caption{Relación entre riqueza terminal y utilidad ex-post sin pandemia para Momentum top/bottom 1Y.}
+\label{fig:momentum_top_bottom_1y:p4_sin}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{figuras/p4_riqueza_utilidad_con_pandemia.png}
+\caption{Relación entre riqueza terminal y utilidad ex-post con pandemia para Momentum top/bottom 1Y.}
+\label{fig:momentum_top_bottom_1y:p4_con}
+\end{figure}
+
+\section{Discusión de Robustez}
+El contraste con y sin pandemia permite separar rendimiento promedio de resiliencia. Para Momentum top/bottom 1Y, la lectura relevante no es si Black-Litterman domina todos los cruces, sino si la señal conserva un balance defendible entre Sharpe, drawdown, estabilidad de composición y comportamiento económico de los clientes. Los perfiles con mejora financiera pero rotación alta deben considerarse de mayor costo operativo y menor robustez implementable.
+
+\section{Conclusiones}
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+Perfil & Mejora Sharpe media & \% recomendado & Turnover & HHI sector & N efectivo & Lectura \\
+\midrule
+Muy conservador & -1.4\% & 50.0\% & 8.6\% & 0.154 & 169.69 & Recomendable \\
+Conservador & -1.6\% & 62.5\% & 12.4\% & 0.148 & 178.54 & Recomendable \\
+Neutro & -6.1\% & 0.0\% & 24.5\% & 0.142 & 169.99 & No preferente \\
+Arriesgado & -19.8\% & 0.0\% & 51.2\% & 0.232 & 74.40 & No preferente \\
+Muy arriesgado & -1.8\% & 37.5\% & 56.7\% & 0.364 & 21.80 & No preferente \\
+\bottomrule
+\end{tabular}
+}
+\caption{Recomendación segmentada para Momentum top/bottom 1Y.}
+\label{tab:momentum_top_bottom_1y:conclusiones}
+\end{table}
+
+En síntesis, la recomendación metodológica de esta view debe leerse por perfil de riesgo y no como una regla única. Cuando la mejora de Sharpe se sostiene junto con baja rotación y baja concentración, la señal es apta para recomendación directa. Cuando la mejora viene acompañada de turnover elevado o concentración sectorial, su uso debe limitarse a perfiles que toleren cambios frecuentes y mayor exposición táctica.
+\end{document}

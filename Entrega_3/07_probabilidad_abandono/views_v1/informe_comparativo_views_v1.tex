@@ -1,0 +1,61 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\setlength{\parskip}{0.65em}
+\setlength{\parindent}{0pt}
+\title{Comparativo de views con probabilidad de abandono V1}
+\author{FinPUC}
+\date{}
+\begin{document}
+\maketitle
+\section{Objetivo}
+Este informe compara las cuatro views de Black-Litterman usando la misma probabilidad de abandono V1. El foco principal es la dinamica del portafolio, porque determina la implementabilidad del recomendador antes de evaluar la respuesta economica del cliente.
+\section{Resultados de la Dinámica del Portafolio}
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
+\toprule
+View & Turnover & Turn. >20\% & N efectivo & HHI sector & Peso sector lider & Drift L1 & Overlap top-10 & Top-3 retorno sector \\
+\midrule
+Desempleo macro & 7.3\% & 0.0\% & 194.32 & 0.157 & 26.7\% & 0.083 & 80.0\% & 65.2\% \\
+Momentum general & 34.6\% & 54.4\% & 94.21 & 0.261 & 40.8\% & 0.501 & 36.0\% & 81.6\% \\
+Momentum top/bottom 1Y & 30.7\% & 37.5\% & 122.88 & 0.208 & 32.3\% & 0.392 & 50.4\% & 71.8\% \\
+Momentum top market-cap 6M & 30.7\% & 37.5\% & 122.88 & 0.208 & 32.3\% & 0.392 & 50.4\% & 71.8\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Comparacion de dinamica de portafolio entre views con abandono V1.}
+\label{tab:comparativo_v1_dinamica}
+\end{table}
+
+La view con mejor estabilidad dinamica agregada es Desempleo macro, al combinar menor turnover y menor concentracion sectorial. En contraste, la view con mayor mejora promedio de Sharpe es Momentum general, aunque esta lectura debe ser ponderada por su intensidad de rebalanceo y concentracion.
+\section{Resultados Económicos P4}
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+View & Mejora Sharpe & \% recomendado & P abandono sem. & Retencion & Riqueza & Utilidad \\
+\midrule
+Desempleo macro & 2.0\% & 40.0\% & 3.4\% & 84.4\% & 1.735 & 222 \\
+Momentum general & 5.2\% & 40.0\% & 3.6\% & 80.2\% & 3.953 & 412 \\
+Momentum top/bottom 1Y & -6.1\% & 30.0\% & 3.5\% & 82.7\% & 1.883 & 239 \\
+Momentum top market-cap 6M & -6.1\% & 30.0\% & 3.5\% & 82.7\% & 1.883 & 239 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Sintesis economica por view bajo abandono V1.}
+\label{tab:comparativo_v1_p4}
+\end{table}
+
+\section{Conclusiones generales y recomendaciones}
+La recomendacion general es privilegiar la view que logre estabilidad de portafolio antes de maximizar riqueza simulada. Bajo abandono V1, el modulo conductual deja de saturar el abandono cuando las perdidas estan dentro de tolerancia, por lo que las diferencias entre views vuelven a depender principalmente de su estructura financiera: rotacion, diversificacion efectiva y concentracion sectorial.
+Para una implementacion base de FinPUC, Desempleo macro es la candidata mas defendible si se prioriza robustez operacional. Las views de momentum pueden recomendarse de manera tactica cuando la mejora de Sharpe compense su mayor rotacion o concentracion, especialmente en perfiles con mayor tolerancia al riesgo.
+\end{document}
