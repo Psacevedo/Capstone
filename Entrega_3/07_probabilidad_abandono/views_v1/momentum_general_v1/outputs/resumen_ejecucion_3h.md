@@ -50,4 +50,4 @@
 - BL calibrado / sin_pandemia / Arriesgado: riqueza 2291, retiro 3.4%, utilidad 305, score 2562.
 - Markowitz base / sin_pandemia / Arriesgado: riqueza 2255, retiro 0.1%, utilidad 299, score 2553.
 
-Tiempo total: 276.1 segundos.
+Tiempo total: 269.6 segundos.

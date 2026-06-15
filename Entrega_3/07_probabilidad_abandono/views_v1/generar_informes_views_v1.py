@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = Path(__file__).resolve().parent
@@ -125,6 +126,7 @@ def load(view: str) -> Dict[str, pd.DataFrame]:
         "behavior": read_csv(out / "behavior" / "behavior_probabilities_clients_summary.csv"),
         "composition": read_csv(out / "portfolio_dynamics" / "composition_stability.csv"),
         "sector": read_csv(out / "portfolio_dynamics" / "sector_return_concentration_summary.csv"),
+        "semester": read_csv(out / "behavior" / "semester_behavior_timeseries_summary.csv"),
     }
 
 
@@ -141,6 +143,118 @@ def copy_figures(view: str, report_dir: Path) -> None:
         src = src_dir / name
         if src.exists():
             shutil.copy2(src, fig_dir / name)
+
+
+def chart_font(size: int = 14, bold: bool = False) -> ImageFont.ImageFont:
+    font_path = Path("C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf")
+    if font_path.exists():
+        return ImageFont.truetype(str(font_path), size)
+    return ImageFont.load_default()
+
+
+def draw_semester_chart(
+    df: pd.DataFrame,
+    scenario: str,
+    metric: str,
+    title: str,
+    out_path: Path,
+    pct: bool = False,
+) -> None:
+    subset = df[(df["modelo"] == "BL calibrado") & (df["scenario"] == scenario)].copy()
+    width, height = 1100, 650
+    margin_l, margin_r, margin_t, margin_b = 95, 45, 85, 90
+    img = Image.new("RGB", (width, height), "white")
+    draw = ImageDraw.Draw(img)
+    title_font = chart_font(22, bold=True)
+    axis_font = chart_font(13)
+    small_font = chart_font(11)
+    draw.text((margin_l, 28), title, fill=(30, 35, 40), font=title_font)
+    plot_w = width - margin_l - margin_r
+    plot_h = height - margin_t - margin_b
+    x0, y0 = margin_l, height - margin_b
+    draw.line((x0, margin_t, x0, y0), fill=(70, 70, 70), width=2)
+    draw.line((x0, y0, width - margin_r, y0), fill=(70, 70, 70), width=2)
+    ymax = max(float(subset[metric].max()) if not subset.empty else 1.0, 1e-9)
+    if pct:
+        ymax = min(max(ymax * 1.15, 0.05), 1.0)
+    else:
+        ymax *= 1.15
+    ymin = 0.0
+    for i in range(6):
+        y = y0 - plot_h * i / 5
+        val = ymin + (ymax - ymin) * i / 5
+        label = f"{val:.0%}" if pct else f"{val:.0f}"
+        draw.line((x0 - 5, y, width - margin_r, y), fill=(230, 232, 235))
+        draw.text((20, y - 8), label, fill=(75, 75, 75), font=small_font)
+    colors = {
+        "Muy conservador": (32, 92, 132),
+        "Conservador": (59, 133, 95),
+        "Neutro": (142, 109, 45),
+        "Arriesgado": (180, 82, 47),
+        "Muy arriesgado": (120, 76, 145),
+    }
+    x_values = sorted(subset["semester"].unique())
+    if not x_values:
+        img.save(out_path)
+        return
+    x_min, x_max = min(x_values), max(x_values)
+    denom = max(x_max - x_min, 1)
+    for profile in PROFILE_ORDER:
+        prof = subset[subset["portfolio"] == profile].sort_values("semester")
+        if prof.empty:
+            continue
+        points = []
+        for _, row in prof.iterrows():
+            x = x0 + (float(row["semester"]) - x_min) / denom * plot_w
+            y = y0 - (float(row[metric]) - ymin) / max(ymax - ymin, 1e-9) * plot_h
+            points.append((x, y))
+        color = colors[profile]
+        for a, b in zip(points, points[1:]):
+            draw.line((a[0], a[1], b[0], b[1]), fill=color, width=3)
+        for x, y in points:
+            draw.ellipse((x - 4, y - 4, x + 4, y + 4), fill=color)
+    for semester in x_values:
+        x = x0 + (float(semester) - x_min) / denom * plot_w
+        draw.text((x - 5, y0 + 16), str(int(semester)), fill=(50, 50, 50), font=small_font)
+    draw.text((x0 + plot_w / 2 - 35, height - 38), "Semestre", fill=(45, 45, 45), font=axis_font)
+    lx, ly = margin_l, height - 65
+    for profile in PROFILE_ORDER:
+        color = colors[profile]
+        draw.line((lx, ly + 7, lx + 22, ly + 7), fill=color, width=3)
+        draw.text((lx + 28, ly), profile.replace("Muy ", "M. "), fill=(45, 45, 45), font=small_font)
+        lx += 190
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(out_path)
+
+
+def make_semester_figures(view: str, data: Dict[str, pd.DataFrame], report_dir: Path) -> None:
+    fig_dir = report_dir / "figuras"
+    semester = data["semester"]
+    for scenario, label in [("sin_pandemia", "sin pandemia"), ("con_pandemia", "con pandemia")]:
+        draw_semester_chart(
+            semester,
+            scenario,
+            "active_clients_mean",
+            f"Clientes activos por semestre - {label}",
+            fig_dir / f"serie_clientes_{scenario}.png",
+            pct=False,
+        )
+        draw_semester_chart(
+            semester,
+            scenario,
+            "semiannual_abandon_probability",
+            f"Probabilidad semestral de abandono - {label}",
+            fig_dir / f"serie_abandono_{scenario}.png",
+            pct=True,
+        )
+        draw_semester_chart(
+            semester,
+            scenario,
+            "p_accept_rebalance",
+            f"Probabilidad de aceptacion de rebalanceo - {label}",
+            fig_dir / f"serie_aceptacion_{scenario}.png",
+            pct=True,
+        )
 
 
 def p4_behavior(data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
@@ -211,6 +325,7 @@ def write_view_report(view: str) -> None:
     report_dir = ROOT / view / "informe resultados"
     report_dir.mkdir(parents=True, exist_ok=True)
     copy_figures(view, report_dir)
+    make_semester_figures(view, data, report_dir)
     comp = sort_sp(data["comparison"])
     dyn = sort_sp(
         data["turnover"][(data["turnover"]["modelo"] == "BL calibrado") & (data["turnover"]["window_role"] == "test_p4")]
@@ -301,6 +416,42 @@ def write_view_report(view: str) -> None:
             f"Resultados P4 para {label} con abandono V1.",
             f"tab:{view}:p4",
         ),
+        r"\begin{figure}[H]",
+        r"\centering",
+        r"\includegraphics[width=0.86\textwidth]{figuras/serie_clientes_sin_pandemia.png}",
+        f"\\caption{{Clientes activos por semestre sin pandemia para {tex_escape(label)} con abandono V1.}}",
+        f"\\label{{fig:{view}:clientes_sin}}",
+        r"\end{figure}",
+        r"\begin{figure}[H]",
+        r"\centering",
+        r"\includegraphics[width=0.86\textwidth]{figuras/serie_clientes_con_pandemia.png}",
+        f"\\caption{{Clientes activos por semestre con pandemia para {tex_escape(label)} con abandono V1.}}",
+        f"\\label{{fig:{view}:clientes_con}}",
+        r"\end{figure}",
+        r"\begin{figure}[H]",
+        r"\centering",
+        r"\includegraphics[width=0.86\textwidth]{figuras/serie_abandono_sin_pandemia.png}",
+        f"\\caption{{Probabilidad semestral de abandono sin pandemia para {tex_escape(label)} con abandono V1.}}",
+        f"\\label{{fig:{view}:abandono_sin}}",
+        r"\end{figure}",
+        r"\begin{figure}[H]",
+        r"\centering",
+        r"\includegraphics[width=0.86\textwidth]{figuras/serie_abandono_con_pandemia.png}",
+        f"\\caption{{Probabilidad semestral de abandono con pandemia para {tex_escape(label)} con abandono V1.}}",
+        f"\\label{{fig:{view}:abandono_con}}",
+        r"\end{figure}",
+        r"\begin{figure}[H]",
+        r"\centering",
+        r"\includegraphics[width=0.86\textwidth]{figuras/serie_aceptacion_sin_pandemia.png}",
+        f"\\caption{{Probabilidad semestral de aceptación de rebalanceo sin pandemia para {tex_escape(label)} con abandono V1.}}",
+        f"\\label{{fig:{view}:aceptacion_sin}}",
+        r"\end{figure}",
+        r"\begin{figure}[H]",
+        r"\centering",
+        r"\includegraphics[width=0.86\textwidth]{figuras/serie_aceptacion_con_pandemia.png}",
+        f"\\caption{{Probabilidad semestral de aceptación de rebalanceo con pandemia para {tex_escape(label)} con abandono V1.}}",
+        f"\\label{{fig:{view}:aceptacion_con}}",
+        r"\end{figure}",
         r"\begin{figure}[H]",
         r"\centering",
         r"\includegraphics[width=0.86\textwidth]{figuras/fig_probabilidades_sin_pandemia.png}",

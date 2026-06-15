@@ -644,8 +644,9 @@ def summarize_rebalance_dynamics(rebalance_df: pd.DataFrame, out_path: Path) -> 
     return summary
 
 
-def simulate_p4_clean(metrics_df: pd.DataFrame) -> pd.DataFrame:
+def simulate_p4_clean(metrics_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     rows: List[Dict[str, object]] = []
+    timeline_rows: List[Dict[str, object]] = []
     rng = np.random.default_rng(RNG_SEED_P4)
     for _, row in metrics_df.iterrows():
         profile = base.PROFILE_BY_LABEL[row["portfolio"]]
@@ -661,27 +662,80 @@ def simulate_p4_clean(metrics_df: pd.DataFrame) -> pd.DataFrame:
         withdraw_probability_sum = 0.0
         withdraw_probability_count = 0
         withdraw_probability_max = 0.0
+        semester_start_clients = int(active.sum())
+        semester_survival_probability = 1.0
+        semester_weekly_probability_sum = 0.0
+        semester_weeks = 0
+        semester_withdrawals = 0
+
         for _week in range(base.N_WEEKS):
             idx = active & ~withdrawn
-            if not idx.any():
-                break
-            rets = rng.normal(weekly_mu, weekly_sigma, idx.sum())
-            wealth[idx] *= np.maximum(1.0 + rets, 0.01)
-            # La utilidad de empresa depende solo del saldo administrado activo.
-            # No se cobra comision adicional por aceptar rebalanceos/recomendaciones.
-            company[idx] += wealth[idx] * COMPANY_WEEKLY_FEE_RATE
-            loss = np.maximum((base.INITIAL_CAPITAL - wealth[idx]) / base.INITIAL_CAPITAL, 0.0)
-            p_withdraw = np.where(
-                loss > profile.loss_tolerance,
-                1.0 / (1.0 + np.exp(-(loss - profile.loss_tolerance))),
-                0.0,
-            )
-            withdraw_probability_sum += float(p_withdraw.sum())
-            withdraw_probability_count += int(len(p_withdraw))
-            withdraw_probability_max = max(withdraw_probability_max, float(p_withdraw.max(initial=0.0)))
-            withdraw_now = rng.random(idx.sum()) < p_withdraw
-            full_idx = np.where(idx)[0]
-            withdrawn[full_idx[withdraw_now]] = True
+            week_withdrawals = 0
+            mean_weekly_p = 0.0
+            if idx.any():
+                rets = rng.normal(weekly_mu, weekly_sigma, idx.sum())
+                wealth[idx] *= np.maximum(1.0 + rets, 0.01)
+                # La utilidad de empresa depende solo del saldo administrado activo.
+                # No se cobra comision adicional por aceptar rebalanceos/recomendaciones.
+                company[idx] += wealth[idx] * COMPANY_WEEKLY_FEE_RATE
+                loss = np.maximum((base.INITIAL_CAPITAL - wealth[idx]) / base.INITIAL_CAPITAL, 0.0)
+                p_withdraw = np.where(
+                    loss > profile.loss_tolerance,
+                    1.0 / (1.0 + np.exp(-(loss - profile.loss_tolerance))),
+                    0.0,
+                )
+                withdraw_probability_sum += float(p_withdraw.sum())
+                withdraw_probability_count += int(len(p_withdraw))
+                withdraw_probability_max = max(withdraw_probability_max, float(p_withdraw.max(initial=0.0)))
+                mean_weekly_p = float(p_withdraw.mean()) if len(p_withdraw) else 0.0
+                withdraw_now = rng.random(idx.sum()) < p_withdraw
+                week_withdrawals = int(withdraw_now.sum())
+                full_idx = np.where(idx)[0]
+                withdrawn[full_idx[withdraw_now]] = True
+
+            semester_survival_probability *= max(1.0 - mean_weekly_p, 0.0)
+            semester_weekly_probability_sum += mean_weekly_p
+            semester_weeks += 1
+            semester_withdrawals += week_withdrawals
+
+            if (_week + 1) % REBALANCE_WEEKS == 0:
+                semester = int((_week + 1) // REBALANCE_WEEKS)
+                active_end = int((active & ~withdrawn).sum())
+                semester_abandon_probability = 0.0
+                if semester_start_clients > 0:
+                    semester_abandon_probability = 1.0 - semester_survival_probability
+                mean_semester_weekly_p = (
+                    semester_weekly_probability_sum / semester_weeks if semester_weeks else 0.0
+                )
+                realized_semester_abandon_rate = (
+                    semester_withdrawals / semester_start_clients if semester_start_clients else 0.0
+                )
+                timeline_rows.append(
+                    {
+                        "modelo": row["modelo"],
+                        "abandonment_version": ABANDONMENT_VERSION,
+                        "abandonment_formula": ABANDONMENT_FORMULA,
+                        "scenario": row["scenario"],
+                        "window_id": row["window_id"],
+                        "window_role": row["window_role"],
+                        "portfolio": row["portfolio"],
+                        "semester": semester,
+                        "week_end": int(_week + 1),
+                        "semester_start_active_clients": int(semester_start_clients),
+                        "active_clients": int(active_end),
+                        "semester_withdrawals": int(semester_withdrawals),
+                        "p_accept_rebalance": float(p_accept),
+                        "mean_weekly_abandon_probability": float(mean_semester_weekly_p),
+                        "semiannual_abandon_probability": float(semester_abandon_probability),
+                        "realized_semester_abandon_rate": float(realized_semester_abandon_rate),
+                    }
+                )
+                semester_start_clients = active_end
+                semester_survival_probability = 1.0
+                semester_weekly_probability_sum = 0.0
+                semester_weeks = 0
+                semester_withdrawals = 0
+
         initial_active_clients = int(active.sum())
         final_active_clients = int((active & ~withdrawn).sum())
         mean_withdraw_probability = (
@@ -717,8 +771,29 @@ def simulate_p4_clean(metrics_df: pd.DataFrame) -> pd.DataFrame:
                 "p4_score": float(wealth.mean() + company.mean() - base.INITIAL_CAPITAL * withdrawn.mean()),
             }
         )
-    return pd.DataFrame(rows).sort_values("p4_score", ascending=False)
+    p4 = pd.DataFrame(rows).sort_values("p4_score", ascending=False)
+    timeline = pd.DataFrame(timeline_rows)
+    return p4, timeline
 
+
+def summarize_semester_behavior(timeline: pd.DataFrame, out_path: Path) -> pd.DataFrame:
+    summary = (
+        timeline.groupby(["modelo", "scenario", "portfolio", "semester", "week_end"], as_index=False)
+        .agg(
+            n_windows=("window_id", "nunique"),
+            active_clients_mean=("active_clients", "mean"),
+            active_clients_total=("active_clients", "sum"),
+            semester_start_active_clients_mean=("semester_start_active_clients", "mean"),
+            p_accept_rebalance=("p_accept_rebalance", "mean"),
+            mean_weekly_abandon_probability=("mean_weekly_abandon_probability", "mean"),
+            semiannual_abandon_probability=("semiannual_abandon_probability", "mean"),
+            realized_semester_abandon_rate=("realized_semester_abandon_rate", "mean"),
+            semester_withdrawals_mean=("semester_withdrawals", "mean"),
+        )
+        .sort_values(["modelo", "scenario", "portfolio", "semester"])
+    )
+    summary.to_csv(out_path, index=False)
+    return summary
 
 def summarize_p4(p4: pd.DataFrame, out_path: Path) -> pd.DataFrame:
     summary = (
@@ -1182,10 +1257,15 @@ def main() -> None:
         ],
         ignore_index=True,
     )
-    p4 = simulate_p4_clean(p4_input)
+    p4, p4_semester = simulate_p4_clean(p4_input)
     p4.to_csv(TEST_DIR / "p4_test_limpio_detalle.csv", index=False)
+    p4_semester.to_csv(BEHAVIOR_DIR / "semester_behavior_timeseries_detail.csv", index=False)
     p4_summary = summarize_p4(p4, TEST_DIR / "p4_test_limpio_resumen.csv")
     behavior_summary = summarize_behavior(p4, BEHAVIOR_DIR / "behavior_probabilities_clients_summary.csv")
+    semester_behavior_summary = summarize_semester_behavior(
+        p4_semester,
+        BEHAVIOR_DIR / "semester_behavior_timeseries_summary.csv",
+    )
     p4.to_csv(BEHAVIOR_DIR / "behavior_probabilities_clients_detail.csv", index=False)
     draw_behavior_probability_chart(
         behavior_summary,
@@ -1223,6 +1303,7 @@ def main() -> None:
         "weights_rows": len(weights_all),
         "p4_rows": len(p4),
         "behavior_rows": len(behavior_summary),
+        "semester_behavior_rows": len(semester_behavior_summary),
         "elapsed_seconds": round(time.perf_counter() - t0, 1),
     }
     pd.DataFrame([checks]).to_csv(OUTPUT_DIR / "99_checks_validacion_3h.csv", index=False)

@@ -50,4 +50,4 @@
 - Markowitz base / sin_pandemia / Neutro: riqueza 2080, retiro 0.4%, utilidad 290, score 2366.
 - Markowitz base / con_pandemia / Neutro: riqueza 2013, retiro 0.4%, utilidad 284, score 2293.
 
-Tiempo total: 440.1 segundos.
+Tiempo total: 429.0 segundos.
