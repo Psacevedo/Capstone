@@ -665,22 +665,89 @@ def simulate_p4_clean(metrics_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFr
         withdraw_probability_count = 0
         withdraw_probability_max = 0.0
 
+        month_start_wealth = wealth.copy()
+        semester_start_wealth = wealth.copy()
+        cum_loss_initial_week_money = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_loss_initial_week_pct = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_loss_initial_month_money = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_loss_initial_month_pct = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_loss_initial_semester_money = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_loss_initial_semester_pct = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_period_loss_week_money = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_period_loss_week_pct = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_period_loss_month_money = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_period_loss_month_pct = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_period_loss_semester_money = np.zeros(base.N_SIMULATIONS, dtype=float)
+        cum_period_loss_semester_pct = np.zeros(base.N_SIMULATIONS, dtype=float)
+
         for _week in range(base.N_WEEKS):
+            week_number = int(_week + 1)
+            if _week % MONTH_WEEKS == 0:
+                month_start_wealth[active & ~withdrawn] = wealth[active & ~withdrawn]
+            if _week % REBALANCE_WEEKS == 0:
+                semester_start_wealth[active & ~withdrawn] = wealth[active & ~withdrawn]
+
             idx = active & ~withdrawn
             week_withdrawals = 0
             mean_weekly_p = 0.0
             realized_weekly_rate = 0.0
+            loss_metrics = {col: 0.0 for col in ['loss_initial_pct', 'loss_initial_money', 'cumulative_loss_initial_week_pct', 'cumulative_loss_initial_week_money', 'cumulative_loss_initial_month_pct', 'cumulative_loss_initial_month_money', 'cumulative_loss_initial_semester_pct', 'cumulative_loss_initial_semester_money', 'period_loss_wealth_week_pct', 'period_loss_wealth_week_money', 'period_loss_wealth_month_pct', 'period_loss_wealth_month_money', 'period_loss_wealth_semester_pct', 'period_loss_wealth_semester_money', 'cumulative_period_loss_wealth_week_pct', 'cumulative_period_loss_wealth_week_money', 'cumulative_period_loss_wealth_month_pct', 'cumulative_period_loss_wealth_month_money', 'cumulative_period_loss_wealth_semester_pct', 'cumulative_period_loss_wealth_semester_money']}
+
             if idx.any():
                 n_active_start = int(idx.sum())
+                full_idx = np.where(idx)[0]
+                wealth_start_week = wealth[idx].copy()
+                wealth_start_month = month_start_wealth[idx].copy()
+                wealth_start_semester = semester_start_wealth[idx].copy()
+
                 rets = rng.normal(weekly_mu, weekly_sigma, n_active_start)
                 wealth[idx] *= np.maximum(1.0 + rets, RUIN_WEALTH)
                 # La utilidad de empresa depende solo del saldo administrado activo.
                 # No se cobra comision adicional por aceptar rebalanceos/recomendaciones.
                 company[idx] += wealth[idx] * COMPANY_WEEKLY_FEE_RATE
-                loss = np.maximum((base.INITIAL_CAPITAL - wealth[idx]) / base.INITIAL_CAPITAL, 0.0)
+
+                loss_initial_money = np.maximum(base.INITIAL_CAPITAL - wealth[idx], 0.0)
+                loss_initial_pct = loss_initial_money / base.INITIAL_CAPITAL
+                period_loss_week_money = np.maximum(wealth_start_week - wealth[idx], 0.0)
+                period_loss_week_pct = np.divide(
+                    period_loss_week_money,
+                    wealth_start_week,
+                    out=np.zeros_like(period_loss_week_money),
+                    where=wealth_start_week > 0,
+                )
+                period_loss_month_money = np.maximum(wealth_start_month - wealth[idx], 0.0)
+                period_loss_month_pct = np.divide(
+                    period_loss_month_money,
+                    wealth_start_month,
+                    out=np.zeros_like(period_loss_month_money),
+                    where=wealth_start_month > 0,
+                )
+                period_loss_semester_money = np.maximum(wealth_start_semester - wealth[idx], 0.0)
+                period_loss_semester_pct = np.divide(
+                    period_loss_semester_money,
+                    wealth_start_semester,
+                    out=np.zeros_like(period_loss_semester_money),
+                    where=wealth_start_semester > 0,
+                )
+
+                cum_loss_initial_week_money[full_idx] += loss_initial_money
+                cum_loss_initial_week_pct[full_idx] += loss_initial_pct
+                cum_period_loss_week_money[full_idx] += period_loss_week_money
+                cum_period_loss_week_pct[full_idx] += period_loss_week_pct
+                if week_number % MONTH_WEEKS == 0:
+                    cum_loss_initial_month_money[full_idx] += loss_initial_money
+                    cum_loss_initial_month_pct[full_idx] += loss_initial_pct
+                    cum_period_loss_month_money[full_idx] += period_loss_month_money
+                    cum_period_loss_month_pct[full_idx] += period_loss_month_pct
+                if week_number % REBALANCE_WEEKS == 0:
+                    cum_loss_initial_semester_money[full_idx] += loss_initial_money
+                    cum_loss_initial_semester_pct[full_idx] += loss_initial_pct
+                    cum_period_loss_semester_money[full_idx] += period_loss_semester_money
+                    cum_period_loss_semester_pct[full_idx] += period_loss_semester_pct
+
                 behavioral_p = np.where(
-                    loss > profile.loss_tolerance,
-                    1.0 / (1.0 + np.exp(-(loss - profile.loss_tolerance))),
+                    loss_initial_pct > profile.loss_tolerance,
+                    1.0 / (1.0 + np.exp(-(loss_initial_pct - profile.loss_tolerance))),
                     0.0,
                 )
                 ruined = wealth[idx] <= RUIN_WEALTH
@@ -692,14 +759,43 @@ def simulate_p4_clean(metrics_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFr
                 withdraw_now = rng.random(n_active_start) < p_withdraw
                 week_withdrawals = int(withdraw_now.sum())
                 realized_weekly_rate = week_withdrawals / n_active_start if n_active_start else 0.0
-                full_idx = np.where(idx)[0]
                 withdrawn[full_idx[withdraw_now]] = True
+
+                loss_metrics.update(
+                    {
+                        "period_loss_wealth_week_pct": float(period_loss_week_pct.mean()),
+                        "period_loss_wealth_week_money": float(period_loss_week_money.mean()),
+                        "period_loss_wealth_month_pct": float(period_loss_month_pct.mean()),
+                        "period_loss_wealth_month_money": float(period_loss_month_money.mean()),
+                        "period_loss_wealth_semester_pct": float(period_loss_semester_pct.mean()),
+                        "period_loss_wealth_semester_money": float(period_loss_semester_money.mean()),
+                    }
+                )
 
             active_end_mask = active & ~withdrawn
             active_end = int(active_end_mask.sum())
             mean_active_wealth = float(wealth[active_end_mask].mean()) if active_end else 0.0
             mean_active_gain = mean_active_wealth - base.INITIAL_CAPITAL if active_end else -base.INITIAL_CAPITAL
-            week_number = int(_week + 1)
+            loss_metrics.update(
+                {
+                    "loss_initial_pct": float(np.maximum((base.INITIAL_CAPITAL - wealth[active_end_mask]) / base.INITIAL_CAPITAL, 0.0).mean()) if active_end else 1.0,
+                    "loss_initial_money": float(np.maximum(base.INITIAL_CAPITAL - wealth[active_end_mask], 0.0).mean()) if active_end else base.INITIAL_CAPITAL,
+                    "cumulative_loss_initial_week_pct": float(cum_loss_initial_week_pct[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_loss_initial_week_money": float(cum_loss_initial_week_money[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_loss_initial_month_pct": float(cum_loss_initial_month_pct[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_loss_initial_month_money": float(cum_loss_initial_month_money[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_loss_initial_semester_pct": float(cum_loss_initial_semester_pct[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_loss_initial_semester_money": float(cum_loss_initial_semester_money[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_period_loss_wealth_week_pct": float(cum_period_loss_week_pct[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_period_loss_wealth_week_money": float(cum_period_loss_week_money[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_period_loss_wealth_month_pct": float(cum_period_loss_month_pct[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_period_loss_wealth_month_money": float(cum_period_loss_month_money[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_period_loss_wealth_semester_pct": float(cum_period_loss_semester_pct[active_end_mask].mean()) if active_end else 0.0,
+                    "cumulative_period_loss_wealth_semester_money": float(cum_period_loss_semester_money[active_end_mask].mean()) if active_end else 0.0,
+                }
+            )
+            company_revenue_cumulative_mean = float(company.mean())
+            company_revenue_active_mean = float(company[active_end_mask].mean()) if active_end else 0.0
             weekly_rows.append(
                 {
                     "modelo": row["modelo"],
@@ -719,6 +815,10 @@ def simulate_p4_clean(metrics_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFr
                     "realized_weekly_abandon_rate": float(realized_weekly_rate),
                     "mean_active_wealth": mean_active_wealth,
                     "mean_active_gain": mean_active_gain,
+                    "mean_active_loss": loss_metrics["loss_initial_pct"],
+                    "company_revenue_cumulative_mean": company_revenue_cumulative_mean,
+                    "company_revenue_active_mean": company_revenue_active_mean,
+                    **loss_metrics,
                 }
             )
 
@@ -779,6 +879,29 @@ def summarize_weekly_behavior(timeline: pd.DataFrame, out_path: Path) -> pd.Data
             weekly_withdrawals_mean=("weekly_withdrawals", "mean"),
             mean_active_wealth=("mean_active_wealth", "mean"),
             mean_active_gain=("mean_active_gain", "mean"),
+            mean_active_loss=("mean_active_loss", "mean"),
+            company_revenue_cumulative_mean=("company_revenue_cumulative_mean", "mean"),
+            company_revenue_active_mean=("company_revenue_active_mean", "mean"),
+            loss_initial_pct=("loss_initial_pct", "mean"),
+            loss_initial_money=("loss_initial_money", "mean"),
+            cumulative_loss_initial_week_pct=("cumulative_loss_initial_week_pct", "mean"),
+            cumulative_loss_initial_week_money=("cumulative_loss_initial_week_money", "mean"),
+            cumulative_loss_initial_month_pct=("cumulative_loss_initial_month_pct", "mean"),
+            cumulative_loss_initial_month_money=("cumulative_loss_initial_month_money", "mean"),
+            cumulative_loss_initial_semester_pct=("cumulative_loss_initial_semester_pct", "mean"),
+            cumulative_loss_initial_semester_money=("cumulative_loss_initial_semester_money", "mean"),
+            period_loss_wealth_week_pct=("period_loss_wealth_week_pct", "mean"),
+            period_loss_wealth_week_money=("period_loss_wealth_week_money", "mean"),
+            period_loss_wealth_month_pct=("period_loss_wealth_month_pct", "mean"),
+            period_loss_wealth_month_money=("period_loss_wealth_month_money", "mean"),
+            period_loss_wealth_semester_pct=("period_loss_wealth_semester_pct", "mean"),
+            period_loss_wealth_semester_money=("period_loss_wealth_semester_money", "mean"),
+            cumulative_period_loss_wealth_week_pct=("cumulative_period_loss_wealth_week_pct", "mean"),
+            cumulative_period_loss_wealth_week_money=("cumulative_period_loss_wealth_week_money", "mean"),
+            cumulative_period_loss_wealth_month_pct=("cumulative_period_loss_wealth_month_pct", "mean"),
+            cumulative_period_loss_wealth_month_money=("cumulative_period_loss_wealth_month_money", "mean"),
+            cumulative_period_loss_wealth_semester_pct=("cumulative_period_loss_wealth_semester_pct", "mean"),
+            cumulative_period_loss_wealth_semester_money=("cumulative_period_loss_wealth_semester_money", "mean"),
         )
         .sort_values(["modelo", "scenario", "portfolio", "week"])
     )
@@ -805,6 +928,29 @@ def summarize_monthly_behavior(timeline: pd.DataFrame, out_path: Path) -> pd.Dat
             monthly_withdrawals=("weekly_withdrawals", "sum"),
             mean_active_wealth=("mean_active_wealth", "last"),
             mean_active_gain=("mean_active_gain", "last"),
+            mean_active_loss=("mean_active_loss", "last"),
+            company_revenue_cumulative_mean=("company_revenue_cumulative_mean", "last"),
+            company_revenue_active_mean=("company_revenue_active_mean", "last"),
+            loss_initial_pct=("loss_initial_pct", "last"),
+            loss_initial_money=("loss_initial_money", "last"),
+            cumulative_loss_initial_week_pct=("cumulative_loss_initial_week_pct", "last"),
+            cumulative_loss_initial_week_money=("cumulative_loss_initial_week_money", "last"),
+            cumulative_loss_initial_month_pct=("cumulative_loss_initial_month_pct", "last"),
+            cumulative_loss_initial_month_money=("cumulative_loss_initial_month_money", "last"),
+            cumulative_loss_initial_semester_pct=("cumulative_loss_initial_semester_pct", "last"),
+            cumulative_loss_initial_semester_money=("cumulative_loss_initial_semester_money", "last"),
+            period_loss_wealth_week_pct=("period_loss_wealth_week_pct", "last"),
+            period_loss_wealth_week_money=("period_loss_wealth_week_money", "last"),
+            period_loss_wealth_month_pct=("period_loss_wealth_month_pct", "last"),
+            period_loss_wealth_month_money=("period_loss_wealth_month_money", "last"),
+            period_loss_wealth_semester_pct=("period_loss_wealth_semester_pct", "last"),
+            period_loss_wealth_semester_money=("period_loss_wealth_semester_money", "last"),
+            cumulative_period_loss_wealth_week_pct=("cumulative_period_loss_wealth_week_pct", "last"),
+            cumulative_period_loss_wealth_week_money=("cumulative_period_loss_wealth_week_money", "last"),
+            cumulative_period_loss_wealth_month_pct=("cumulative_period_loss_wealth_month_pct", "last"),
+            cumulative_period_loss_wealth_month_money=("cumulative_period_loss_wealth_month_money", "last"),
+            cumulative_period_loss_wealth_semester_pct=("cumulative_period_loss_wealth_semester_pct", "last"),
+            cumulative_period_loss_wealth_semester_money=("cumulative_period_loss_wealth_semester_money", "last"),
         )
     )
     summary = (
@@ -819,6 +965,29 @@ def summarize_monthly_behavior(timeline: pd.DataFrame, out_path: Path) -> pd.Dat
             monthly_withdrawals_mean=("monthly_withdrawals", "mean"),
             mean_active_wealth=("mean_active_wealth", "mean"),
             mean_active_gain=("mean_active_gain", "mean"),
+            mean_active_loss=("mean_active_loss", "mean"),
+            company_revenue_cumulative_mean=("company_revenue_cumulative_mean", "mean"),
+            company_revenue_active_mean=("company_revenue_active_mean", "mean"),
+            loss_initial_pct=("loss_initial_pct", "mean"),
+            loss_initial_money=("loss_initial_money", "mean"),
+            cumulative_loss_initial_week_pct=("cumulative_loss_initial_week_pct", "mean"),
+            cumulative_loss_initial_week_money=("cumulative_loss_initial_week_money", "mean"),
+            cumulative_loss_initial_month_pct=("cumulative_loss_initial_month_pct", "mean"),
+            cumulative_loss_initial_month_money=("cumulative_loss_initial_month_money", "mean"),
+            cumulative_loss_initial_semester_pct=("cumulative_loss_initial_semester_pct", "mean"),
+            cumulative_loss_initial_semester_money=("cumulative_loss_initial_semester_money", "mean"),
+            period_loss_wealth_week_pct=("period_loss_wealth_week_pct", "mean"),
+            period_loss_wealth_week_money=("period_loss_wealth_week_money", "mean"),
+            period_loss_wealth_month_pct=("period_loss_wealth_month_pct", "mean"),
+            period_loss_wealth_month_money=("period_loss_wealth_month_money", "mean"),
+            period_loss_wealth_semester_pct=("period_loss_wealth_semester_pct", "mean"),
+            period_loss_wealth_semester_money=("period_loss_wealth_semester_money", "mean"),
+            cumulative_period_loss_wealth_week_pct=("cumulative_period_loss_wealth_week_pct", "mean"),
+            cumulative_period_loss_wealth_week_money=("cumulative_period_loss_wealth_week_money", "mean"),
+            cumulative_period_loss_wealth_month_pct=("cumulative_period_loss_wealth_month_pct", "mean"),
+            cumulative_period_loss_wealth_month_money=("cumulative_period_loss_wealth_month_money", "mean"),
+            cumulative_period_loss_wealth_semester_pct=("cumulative_period_loss_wealth_semester_pct", "mean"),
+            cumulative_period_loss_wealth_semester_money=("cumulative_period_loss_wealth_semester_money", "mean"),
         )
         .sort_values(["modelo", "scenario", "portfolio", "month"])
     )
@@ -835,6 +1004,29 @@ def summarize_semiannual_gain(timeline: pd.DataFrame, out_path: Path) -> pd.Data
             active_clients=("active_clients", "last"),
             mean_active_wealth=("mean_active_wealth", "last"),
             mean_active_gain=("mean_active_gain", "last"),
+            mean_active_loss=("mean_active_loss", "last"),
+            company_revenue_cumulative_mean=("company_revenue_cumulative_mean", "last"),
+            company_revenue_active_mean=("company_revenue_active_mean", "last"),
+            loss_initial_pct=("loss_initial_pct", "last"),
+            loss_initial_money=("loss_initial_money", "last"),
+            cumulative_loss_initial_week_pct=("cumulative_loss_initial_week_pct", "last"),
+            cumulative_loss_initial_week_money=("cumulative_loss_initial_week_money", "last"),
+            cumulative_loss_initial_month_pct=("cumulative_loss_initial_month_pct", "last"),
+            cumulative_loss_initial_month_money=("cumulative_loss_initial_month_money", "last"),
+            cumulative_loss_initial_semester_pct=("cumulative_loss_initial_semester_pct", "last"),
+            cumulative_loss_initial_semester_money=("cumulative_loss_initial_semester_money", "last"),
+            period_loss_wealth_week_pct=("period_loss_wealth_week_pct", "last"),
+            period_loss_wealth_week_money=("period_loss_wealth_week_money", "last"),
+            period_loss_wealth_month_pct=("period_loss_wealth_month_pct", "last"),
+            period_loss_wealth_month_money=("period_loss_wealth_month_money", "last"),
+            period_loss_wealth_semester_pct=("period_loss_wealth_semester_pct", "last"),
+            period_loss_wealth_semester_money=("period_loss_wealth_semester_money", "last"),
+            cumulative_period_loss_wealth_week_pct=("cumulative_period_loss_wealth_week_pct", "last"),
+            cumulative_period_loss_wealth_week_money=("cumulative_period_loss_wealth_week_money", "last"),
+            cumulative_period_loss_wealth_month_pct=("cumulative_period_loss_wealth_month_pct", "last"),
+            cumulative_period_loss_wealth_month_money=("cumulative_period_loss_wealth_month_money", "last"),
+            cumulative_period_loss_wealth_semester_pct=("cumulative_period_loss_wealth_semester_pct", "last"),
+            cumulative_period_loss_wealth_semester_money=("cumulative_period_loss_wealth_semester_money", "last"),
         )
     )
     summary = (
@@ -844,6 +1036,29 @@ def summarize_semiannual_gain(timeline: pd.DataFrame, out_path: Path) -> pd.Data
             active_clients_mean=("active_clients", "mean"),
             mean_active_wealth=("mean_active_wealth", "mean"),
             mean_active_gain=("mean_active_gain", "mean"),
+            mean_active_loss=("mean_active_loss", "mean"),
+            company_revenue_cumulative_mean=("company_revenue_cumulative_mean", "mean"),
+            company_revenue_active_mean=("company_revenue_active_mean", "mean"),
+            loss_initial_pct=("loss_initial_pct", "mean"),
+            loss_initial_money=("loss_initial_money", "mean"),
+            cumulative_loss_initial_week_pct=("cumulative_loss_initial_week_pct", "mean"),
+            cumulative_loss_initial_week_money=("cumulative_loss_initial_week_money", "mean"),
+            cumulative_loss_initial_month_pct=("cumulative_loss_initial_month_pct", "mean"),
+            cumulative_loss_initial_month_money=("cumulative_loss_initial_month_money", "mean"),
+            cumulative_loss_initial_semester_pct=("cumulative_loss_initial_semester_pct", "mean"),
+            cumulative_loss_initial_semester_money=("cumulative_loss_initial_semester_money", "mean"),
+            period_loss_wealth_week_pct=("period_loss_wealth_week_pct", "mean"),
+            period_loss_wealth_week_money=("period_loss_wealth_week_money", "mean"),
+            period_loss_wealth_month_pct=("period_loss_wealth_month_pct", "mean"),
+            period_loss_wealth_month_money=("period_loss_wealth_month_money", "mean"),
+            period_loss_wealth_semester_pct=("period_loss_wealth_semester_pct", "mean"),
+            period_loss_wealth_semester_money=("period_loss_wealth_semester_money", "mean"),
+            cumulative_period_loss_wealth_week_pct=("cumulative_period_loss_wealth_week_pct", "mean"),
+            cumulative_period_loss_wealth_week_money=("cumulative_period_loss_wealth_week_money", "mean"),
+            cumulative_period_loss_wealth_month_pct=("cumulative_period_loss_wealth_month_pct", "mean"),
+            cumulative_period_loss_wealth_month_money=("cumulative_period_loss_wealth_month_money", "mean"),
+            cumulative_period_loss_wealth_semester_pct=("cumulative_period_loss_wealth_semester_pct", "mean"),
+            cumulative_period_loss_wealth_semester_money=("cumulative_period_loss_wealth_semester_money", "mean"),
         )
         .sort_values(["modelo", "scenario", "portfolio", "semester"])
     )

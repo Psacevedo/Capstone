@@ -50,4 +50,4 @@
 - BL calibrado / con_pandemia / Muy arriesgado: riqueza 1956, retiro 0.2%, utilidad 257, score 2211.
 - BL calibrado / sin_pandemia / Neutro: riqueza 1880, retiro 0.2%, utilidad 266, score 2144.
 
-Tiempo total: 234.5 segundos.
+Tiempo total: 238.9 segundos.

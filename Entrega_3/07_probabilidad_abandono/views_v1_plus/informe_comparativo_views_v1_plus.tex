@@ -26,6 +26,10 @@
 
 \maketitle
 
+\tableofcontents
+
+\newpage
+
 \section{Resultados de la Dinamica del Portafolio}
 
 La comparacion entre views se concentra en estabilidad operativa, concentracion sectorial y persistencia de clientes. La restriccion de ruina queda incorporada de forma homogenea en todas las simulaciones, por lo que las diferencias observadas responden a la view calibrada y no a cambios en la regla de abandono.
@@ -33,40 +37,69 @@ La comparacion entre views se concentra en estabilidad operativa, concentracion 
 \begin{table}[H]
 \centering
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lrrrrrrr}
+\begin{tabular}{lrrrrrrrrr}
 \toprule
-View & Escenario & Modelo & Turnover & HHI sector & P abandono mes & Clientes finales & Ganancia final \\
+View & Escenario & Modelo & Turnover & HHI sector & P abandono mes & Clientes finales & Ganancia final & Perdida final & Utilidad final \\
 \midrule
-Desempleo macro & sin\_pandemia & BL calibrado & 7.4\% & 0.146 & 0.0\% & 858 & 1.817 \\
-Desempleo macro & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 867 & 2.342 \\
-Desempleo macro & con\_pandemia & BL calibrado & 7.2\% & 0.168 & 0.0\% & 844 & 1.668 \\
-Desempleo macro & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 849 & 2.140 \\
-Momentum general & sin\_pandemia & BL calibrado & 39.3\% & 0.226 & 0.0\% & 815 & 2.268 \\
-Momentum general & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 865 & 2.366 \\
-Momentum general & con\_pandemia & BL calibrado & 30.0\% & 0.295 & 0.0\% & 928 & 8.862 \\
-Momentum general & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.138 \\
-Momentum top/bottom 1Y & sin\_pandemia & BL calibrado & 32.3\% & 0.174 & 0.0\% & 862 & 2.075 \\
-Momentum top/bottom 1Y & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 864 & 2.372 \\
-Momentum top/bottom 1Y & con\_pandemia & BL calibrado & 29.0\% & 0.242 & 0.0\% & 833 & 2.047 \\
-Momentum top/bottom 1Y & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.132 \\
-Momentum top market-cap 6M & sin\_pandemia & BL calibrado & 32.3\% & 0.174 & 0.0\% & 862 & 2.075 \\
-Momentum top market-cap 6M & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 864 & 2.372 \\
-Momentum top market-cap 6M & con\_pandemia & BL calibrado & 29.0\% & 0.242 & 0.0\% & 833 & 2.047 \\
-Momentum top market-cap 6M & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.132 \\
+Desempleo macro & sin\_pandemia & BL calibrado & 7.4\% & 0.146 & 0.0\% & 858 & 1.817 & 0.0\% & 227 \\
+Desempleo macro & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 867 & 2.342 & 0.0\% & 258 \\
+Desempleo macro & con\_pandemia & BL calibrado & 7.2\% & 0.168 & 0.0\% & 844 & 1.668 & 0.0\% & 218 \\
+Desempleo macro & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 849 & 2.140 & 0.1\% & 243 \\
+Momentum general & sin\_pandemia & BL calibrado & 39.3\% & 0.226 & 0.0\% & 815 & 2.268 & 0.3\% & 244 \\
+Momentum general & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 865 & 2.366 & 0.0\% & 258 \\
+Momentum general & con\_pandemia & BL calibrado & 30.0\% & 0.295 & 0.0\% & 928 & 8.862 & 0.0\% & 581 \\
+Momentum general & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.138 & 0.1\% & 244 \\
+Momentum top/bottom 1Y & sin\_pandemia & BL calibrado & 32.3\% & 0.174 & 0.0\% & 862 & 2.075 & 0.0\% & 242 \\
+Momentum top/bottom 1Y & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 864 & 2.372 & 0.0\% & 257 \\
+Momentum top/bottom 1Y & con\_pandemia & BL calibrado & 29.0\% & 0.242 & 0.0\% & 833 & 2.047 & 0.1\% & 236 \\
+Momentum top/bottom 1Y & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.132 & 0.1\% & 243 \\
+Momentum top market-cap 6M & sin\_pandemia & BL calibrado & 32.3\% & 0.174 & 0.0\% & 862 & 2.075 & 0.0\% & 242 \\
+Momentum top market-cap 6M & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 864 & 2.372 & 0.0\% & 257 \\
+Momentum top market-cap 6M & con\_pandemia & BL calibrado & 29.0\% & 0.242 & 0.0\% & 833 & 2.047 & 0.1\% & 236 \\
+Momentum top market-cap 6M & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.132 & 0.1\% & 243 \\
 \bottomrule
 \end{tabular}
 }
-\caption{Sintesis comparativa de dinamica, abandono y ganancia final por view.}
+\caption{Sintesis comparativa de dinamica, abandono, riqueza y utilidad final por view.}
 \label{tab:comparativo_views_v1_plus}
+\end{table}
+
+
+\section{Sintesis de desempeno por view}
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrrr}
+\toprule
+View & Mejora Sharpe & Mejora P4 vs MK & BL recomendado & Turnover BL & HHI sector BL & Clientes finales BL & Riqueza BL & Perdida final BL & Utilidad BL \\
+\midrule
+Desempleo macro & 2.0\% & -10.4\% & 40.0\% & 7.3\% & 0.157 & 851 & 1.735 & 0.0\% & 222 \\
+Momentum general & 5.2\% & 85.7\% & 40.0\% & 34.6\% & 0.261 & 872 & 3.953 & 0.2\% & 412 \\
+Momentum top/bottom 1Y & -6.1\% & -4.6\% & 30.0\% & 30.7\% & 0.208 & 848 & 1.883 & 0.1\% & 239 \\
+Momentum top market-cap 6M & -6.1\% & -4.6\% & 30.0\% & 30.7\% & 0.208 & 848 & 1.883 & 0.1\% & 239 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Resumen agregado de desempeno de Black--Litterman calibrado por view.}
+\label{tab:resumen_views_v1_plus}
 \end{table}
 
 
 \section{Discusion comparativa}
 
-Una view es preferible cuando combina bajo turnover, menor concentracion sectorial, abandono mensual controlado y ganancia final positiva en perfiles coherentes con su tolerancia al riesgo. Bajo esta lectura, las views de momentum deben evaluarse con especial atencion en perfiles agresivos, porque pueden elevar la ganancia esperada pero tambien amplificar concentracion y sensibilidad a perdidas acumuladas. La view macro de desempleo funciona como referencia defensiva, ya que tiende a expresar una senal mas agregada y menos dependiente de rankings individuales de activos.
+\paragraph{Desempleo macro.} Fortalezas: mejora de Sharpe de 2.0\%; turnover bajo de 7.3\%; concentracion sectorial contenida, HHI 0.157. Debilidades: retroceso P4 frente a Markowitz de -10.4\%.
+
+\paragraph{Momentum general.} Fortalezas: mejora de Sharpe de 5.2\%; mejora P4 frente a Markowitz de 85.7\%. Debilidades: turnover elevado de 34.6\%; mayor concentracion sectorial, HHI 0.261.
+
+\paragraph{Momentum top/bottom 1Y.} Fortalezas: sin ventajas dominantes frente al benchmark. Debilidades: deterioro de Sharpe de -6.1\%; retroceso P4 frente a Markowitz de -4.6\%; turnover elevado de 30.7\%; mayor concentracion sectorial, HHI 0.208.
+
+\paragraph{Momentum top market-cap 6M.} Fortalezas: sin ventajas dominantes frente al benchmark. Debilidades: deterioro de Sharpe de -6.1\%; retroceso P4 frente a Markowitz de -4.6\%; turnover elevado de 30.7\%; mayor concentracion sectorial, HHI 0.208.
+
+\paragraph{Recomendacion final.} Bajo el criterio conjunto de desempeno fuera de muestra y evaluacion economica P4, la mejor view para calibrar Black--Litterman es Momentum general. En promedio, esta alternativa mejora el score P4 en 85.7\% respecto de Markowitz y aumenta el Sharpe en 5.2\%. La recomendacion debe comunicarse con una salvedad tecnica: su ventaja economica viene acompanada de mayor rotacion y concentracion que la view macro, por lo que exige monitoreo operacional mas estricto.
 
 \section{Conclusiones generales y recomendaciones}
 
-La recomendacion final debe priorizar la view que entregue resiliencia dinamica, no solo mayor riqueza terminal. Para presentacion ante comision, el criterio mas defendible es reportar por perfil la combinacion de Sharpe fuera de muestra, turnover, concentracion sectorial, abandono mensual y clientes finales. Esta arquitectura permite justificar una recomendacion segmentada y evita que una view sea elegida exclusivamente por un resultado economico puntual del Horizonte 3.
+La recomendacion final prioriza una view que no solo eleve la riqueza terminal, sino que tambien preserve una explicacion trazable de riesgo, abandono y utilidad. Con la evidencia agregada, Momentum general domina en desempeno economico y mejora de Sharpe, mientras que Desempleo macro queda como alternativa defensiva por su menor turnover y menor concentracion. Las views Momentum top/bottom 1Y y Momentum top market-cap 6M muestran resultados practicamente equivalentes en esta iteracion; por lo tanto, no justifican mayor complejidad frente a Momentum general salvo que se busque imponer una restriccion explicita sobre el universo de capitalizacion.
 
 \end{document}

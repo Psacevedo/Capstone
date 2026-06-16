@@ -28,6 +28,10 @@
 
 \maketitle
 
+\tableofcontents
+
+\newpage
+
 \section{Analisis de resultados fuera de muestra}
 
 La iteracion v1 plus conserva la probabilidad de abandono tipo umbral logistico y explicita una restriccion de ruina: cuando la riqueza actual del cliente llega a cero, el cliente abandona forzosamente la plataforma. La evaluacion fuera de muestra mantiene la separacion de horizontes y compara Black--Litterman calibrado contra Markowitz base en el Horizonte 3.
@@ -172,35 +176,13 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \subsection{Trayectorias semanales y mensuales}
 
+\subsubsection{BL calibrado - escenario sin pandemia}
+
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_sin_pandemia_bl_calibrado.png}
 \caption{Clientes activos semanales por perfil, BL calibrado, escenario sin pandemia.}
 \label{fig:clientes_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_sin_pandemia_bl_calibrado.png}
-\caption{Probabilidad semanal de abandono por perfil, BL calibrado, escenario sin pandemia.}
-\label{fig:abandono_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_sin_pandemia_bl_calibrado.png}
-\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, BL calibrado, escenario sin pandemia.}
-\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_sin_pandemia_bl_calibrado.png}
-\caption{Ganancia semanal promedio por perfil, BL calibrado, escenario sin pandemia.}
-\label{fig:ganancia_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
 \end{figure}
 
 
@@ -214,6 +196,14 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de abandono por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:abandono_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_sin_pandemia_bl_calibrado.png}
 \caption{Probabilidad mensual de abandono por perfil, BL calibrado, escenario sin pandemia.}
 \label{fig:abandono_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
@@ -222,9 +212,25 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_sin_pandemia_bl_calibrado.png}
 \caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, BL calibrado, escenario sin pandemia.}
 \label{fig:aceptacion_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Ganancia semanal promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:ganancia_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
 \end{figure}
 
 
@@ -246,33 +252,251 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Riqueza semanal promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:riqueza_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Riqueza mensual promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:riqueza_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Riqueza semestral promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:riqueza_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Utilidad acumulada semanal de la empresa por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:utilidad_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Utilidad acumulada mensual de la empresa por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:utilidad_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Utilidad acumulada semestral de la empresa por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:utilidad_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_pct_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_pct_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_pct_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_money_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_money_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_money_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_pct_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_pct_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_pct_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_money_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_money_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_money_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_pct_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_pct_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_pct_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_money_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_money_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_money_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\subsubsection{Markowitz base - escenario sin pandemia}
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_sin_pandemia_markowitz_base.png}
 \caption{Clientes activos semanales por perfil, Markowitz base, escenario sin pandemia.}
 \label{fig:clientes_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_sin_pandemia_markowitz_base.png}
-\caption{Probabilidad semanal de abandono por perfil, Markowitz base, escenario sin pandemia.}
-\label{fig:abandono_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_sin_pandemia_markowitz_base.png}
-\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, Markowitz base, escenario sin pandemia.}
-\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_sin_pandemia_markowitz_base.png}
-\caption{Ganancia semanal promedio por perfil, Markowitz base, escenario sin pandemia.}
-\label{fig:ganancia_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
 \end{figure}
 
 
@@ -286,6 +510,14 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de abandono por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:abandono_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_sin_pandemia_markowitz_base.png}
 \caption{Probabilidad mensual de abandono por perfil, Markowitz base, escenario sin pandemia.}
 \label{fig:abandono_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
@@ -294,9 +526,25 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_sin_pandemia_markowitz_base.png}
 \caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, Markowitz base, escenario sin pandemia.}
 \label{fig:aceptacion_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_sin_pandemia_markowitz_base.png}
+\caption{Ganancia semanal promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:ganancia_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
 \end{figure}
 
 
@@ -318,33 +566,251 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_weekly_sin_pandemia_markowitz_base.png}
+\caption{Riqueza semanal promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_monthly_sin_pandemia_markowitz_base.png}
+\caption{Riqueza mensual promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Riqueza semestral promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_weekly_sin_pandemia_markowitz_base.png}
+\caption{Utilidad acumulada semanal de la empresa por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_monthly_sin_pandemia_markowitz_base.png}
+\caption{Utilidad acumulada mensual de la empresa por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Utilidad acumulada semestral de la empresa por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_weekly_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_pct_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_monthly_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_pct_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_pct_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_weekly_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_money_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_monthly_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_money_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_money_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_weekly_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_pct_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_monthly_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_pct_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_pct_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_weekly_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_money_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_monthly_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_money_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_inicial_acum_money_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_weekly_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_pct_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_monthly_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_pct_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_pct_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_weekly_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_money_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_monthly_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_money_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_period_money_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_weekly_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_monthly_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_weekly_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_monthly_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\subsubsection{BL calibrado - escenario con pandemia}
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_con_pandemia_bl_calibrado.png}
 \caption{Clientes activos semanales por perfil, BL calibrado, escenario con pandemia.}
 \label{fig:clientes_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_con_pandemia_bl_calibrado.png}
-\caption{Probabilidad semanal de abandono por perfil, BL calibrado, escenario con pandemia.}
-\label{fig:abandono_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_con_pandemia_bl_calibrado.png}
-\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, BL calibrado, escenario con pandemia.}
-\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_con_pandemia_bl_calibrado.png}
-\caption{Ganancia semanal promedio por perfil, BL calibrado, escenario con pandemia.}
-\label{fig:ganancia_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
 \end{figure}
 
 
@@ -358,6 +824,14 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de abandono por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:abandono_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_con_pandemia_bl_calibrado.png}
 \caption{Probabilidad mensual de abandono por perfil, BL calibrado, escenario con pandemia.}
 \label{fig:abandono_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
@@ -366,9 +840,25 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_con_pandemia_bl_calibrado.png}
 \caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, BL calibrado, escenario con pandemia.}
 \label{fig:aceptacion_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_con_pandemia_bl_calibrado.png}
+\caption{Ganancia semanal promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:ganancia_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
 \end{figure}
 
 
@@ -390,33 +880,251 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_weekly_con_pandemia_bl_calibrado.png}
+\caption{Riqueza semanal promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:riqueza_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_monthly_con_pandemia_bl_calibrado.png}
+\caption{Riqueza mensual promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:riqueza_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Riqueza semestral promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:riqueza_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_weekly_con_pandemia_bl_calibrado.png}
+\caption{Utilidad acumulada semanal de la empresa por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:utilidad_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_monthly_con_pandemia_bl_calibrado.png}
+\caption{Utilidad acumulada mensual de la empresa por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:utilidad_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Utilidad acumulada semestral de la empresa por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:utilidad_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_weekly_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_pct_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_monthly_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_pct_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_pct_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_weekly_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_money_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_monthly_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_money_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_money_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_weekly_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_pct_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_monthly_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_pct_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_pct_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_weekly_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_money_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_monthly_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_money_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_money_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_weekly_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_pct_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_monthly_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_pct_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_pct_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_weekly_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_money_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_monthly_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_money_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_money_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_weekly_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_monthly_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_weekly_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_monthly_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\subsubsection{Markowitz base - escenario con pandemia}
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_con_pandemia_markowitz_base.png}
 \caption{Clientes activos semanales por perfil, Markowitz base, escenario con pandemia.}
 \label{fig:clientes_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_con_pandemia_markowitz_base.png}
-\caption{Probabilidad semanal de abandono por perfil, Markowitz base, escenario con pandemia.}
-\label{fig:abandono_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_con_pandemia_markowitz_base.png}
-\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, Markowitz base, escenario con pandemia.}
-\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_con_pandemia_markowitz_base.png}
-\caption{Ganancia semanal promedio por perfil, Markowitz base, escenario con pandemia.}
-\label{fig:ganancia_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
 \end{figure}
 
 
@@ -430,6 +1138,14 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de abandono por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:abandono_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_con_pandemia_markowitz_base.png}
 \caption{Probabilidad mensual de abandono por perfil, Markowitz base, escenario con pandemia.}
 \label{fig:abandono_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
@@ -438,9 +1154,25 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_con_pandemia_markowitz_base.png}
 \caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, Markowitz base, escenario con pandemia.}
 \label{fig:aceptacion_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_con_pandemia_markowitz_base.png}
+\caption{Ganancia semanal promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:ganancia_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
 \end{figure}
 
 
@@ -457,6 +1189,246 @@ Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\
 \includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_con_pandemia_markowitz_base.png}
 \caption{Ganancia semestral promedio por perfil, Markowitz base, escenario con pandemia.}
 \label{fig:ganancia_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_weekly_con_pandemia_markowitz_base.png}
+\caption{Riqueza semanal promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_monthly_con_pandemia_markowitz_base.png}
+\caption{Riqueza mensual promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/riqueza_semiannual_con_pandemia_markowitz_base.png}
+\caption{Riqueza semestral promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_weekly_con_pandemia_markowitz_base.png}
+\caption{Utilidad acumulada semanal de la empresa por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_monthly_con_pandemia_markowitz_base.png}
+\caption{Utilidad acumulada mensual de la empresa por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/utilidad_semiannual_con_pandemia_markowitz_base.png}
+\caption{Utilidad acumulada semestral de la empresa por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_weekly_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_pct_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_monthly_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_pct_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_pct_semiannual_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_pct_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_weekly_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_money_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_monthly_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_money_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_money_semiannual_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_money_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_weekly_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_pct_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_monthly_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_pct_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_pct_semiannual_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_pct_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_weekly_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_money_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_monthly_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_money_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_inicial_acum_money_semiannual_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada contra capital inicial por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_inicial_acum_money_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_weekly_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_pct_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_monthly_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_pct_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_pct_semiannual_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_pct_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_weekly_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_money_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_monthly_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_money_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_period_money_semiannual_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_period_money_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_weekly_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_monthly_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_pct_semiannual_con_pandemia_markowitz_base.png}
+\caption{Perdida porcentual acumulada periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_pct_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_weekly_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_monthly_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/perdida_riqueza_acum_period_money_semiannual_con_pandemia_markowitz_base.png}
+\caption{Perdida monetaria acumulada periodica contra riqueza por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:perdida_riqueza_acum_period_money_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
 \end{figure}
 
 

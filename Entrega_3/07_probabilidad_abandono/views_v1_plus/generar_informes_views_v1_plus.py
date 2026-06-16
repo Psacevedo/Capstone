@@ -28,6 +28,48 @@ PROFILE_COLORS = {
 SCENARIOS = ["sin_pandemia", "con_pandemia"]
 MODELS = ["BL calibrado", "Markowitz base"]
 
+FIGURE_SPECS = [
+    ("weekly", "week", "active_clients_mean", "clientes_weekly", "Clientes activos semanales", False, "clientes activos semanales"),
+    ("monthly", "month", "active_clients_mean", "clientes_monthly", "Clientes activos mensuales", False, "clientes activos mensuales"),
+    ("weekly", "week", "mean_weekly_abandon_probability", "abandono_weekly", "Probabilidad semanal de abandono", True, "probabilidad semanal de abandono"),
+    ("monthly", "month", "monthly_abandon_probability", "abandono_monthly", "Probabilidad mensual de abandono", True, "probabilidad mensual de abandono"),
+    ("weekly", "week", "p_accept_rebalance", "aceptacion_weekly", "Probabilidad semanal de aceptacion de rebalanceo", True, "probabilidad semanal de aceptacion de rebalanceo"),
+    ("monthly", "month", "p_accept_rebalance", "aceptacion_monthly", "Probabilidad mensual de aceptacion de rebalanceo", True, "probabilidad mensual de aceptacion de rebalanceo"),
+    ("weekly", "week", "mean_active_gain", "ganancia_weekly", "Ganancia semanal promedio por cliente activo", False, "ganancia semanal promedio"),
+    ("monthly", "month", "mean_active_gain", "ganancia_monthly", "Ganancia mensual promedio por cliente activo", False, "ganancia mensual promedio"),
+    ("semiannual_gain", "semester", "mean_active_gain", "ganancia_semiannual", "Ganancia semestral promedio por cliente activo", False, "ganancia semestral promedio"),
+    ("weekly", "week", "mean_active_wealth", "riqueza_weekly", "Riqueza semanal promedio por cliente activo", False, "riqueza semanal promedio"),
+    ("monthly", "month", "mean_active_wealth", "riqueza_monthly", "Riqueza mensual promedio por cliente activo", False, "riqueza mensual promedio"),
+    ("semiannual_gain", "semester", "mean_active_wealth", "riqueza_semiannual", "Riqueza semestral promedio por cliente activo", False, "riqueza semestral promedio"),
+    ("weekly", "week", "company_revenue_cumulative_mean", "utilidad_weekly", "Utilidad acumulada semanal de la empresa", False, "utilidad acumulada semanal de la empresa"),
+    ("monthly", "month", "company_revenue_cumulative_mean", "utilidad_monthly", "Utilidad acumulada mensual de la empresa", False, "utilidad acumulada mensual de la empresa"),
+    ("semiannual_gain", "semester", "company_revenue_cumulative_mean", "utilidad_semiannual", "Utilidad acumulada semestral de la empresa", False, "utilidad acumulada semestral de la empresa"),
+    ("weekly", "week", "loss_initial_pct", "perdida_inicial_pct_weekly", "Perdida porcentual semanal contra capital inicial", True, "perdida porcentual contra capital inicial"),
+    ("monthly", "month", "loss_initial_pct", "perdida_inicial_pct_monthly", "Perdida porcentual mensual contra capital inicial", True, "perdida porcentual contra capital inicial"),
+    ("semiannual_gain", "semester", "loss_initial_pct", "perdida_inicial_pct_semiannual", "Perdida porcentual semestral contra capital inicial", True, "perdida porcentual contra capital inicial"),
+    ("weekly", "week", "loss_initial_money", "perdida_inicial_money_weekly", "Perdida monetaria semanal contra capital inicial", False, "perdida monetaria contra capital inicial"),
+    ("monthly", "month", "loss_initial_money", "perdida_inicial_money_monthly", "Perdida monetaria mensual contra capital inicial", False, "perdida monetaria contra capital inicial"),
+    ("semiannual_gain", "semester", "loss_initial_money", "perdida_inicial_money_semiannual", "Perdida monetaria semestral contra capital inicial", False, "perdida monetaria contra capital inicial"),
+    ("weekly", "week", "cumulative_loss_initial_week_pct", "perdida_inicial_acum_pct_weekly", "Perdida porcentual acumulada semanal contra capital inicial", True, "perdida porcentual acumulada contra capital inicial"),
+    ("monthly", "month", "cumulative_loss_initial_month_pct", "perdida_inicial_acum_pct_monthly", "Perdida porcentual acumulada mensual contra capital inicial", True, "perdida porcentual acumulada contra capital inicial"),
+    ("semiannual_gain", "semester", "cumulative_loss_initial_semester_pct", "perdida_inicial_acum_pct_semiannual", "Perdida porcentual acumulada semestral contra capital inicial", True, "perdida porcentual acumulada contra capital inicial"),
+    ("weekly", "week", "cumulative_loss_initial_week_money", "perdida_inicial_acum_money_weekly", "Perdida monetaria acumulada semanal contra capital inicial", False, "perdida monetaria acumulada contra capital inicial"),
+    ("monthly", "month", "cumulative_loss_initial_month_money", "perdida_inicial_acum_money_monthly", "Perdida monetaria acumulada mensual contra capital inicial", False, "perdida monetaria acumulada contra capital inicial"),
+    ("semiannual_gain", "semester", "cumulative_loss_initial_semester_money", "perdida_inicial_acum_money_semiannual", "Perdida monetaria acumulada semestral contra capital inicial", False, "perdida monetaria acumulada contra capital inicial"),
+    ("weekly", "week", "period_loss_wealth_week_pct", "perdida_riqueza_period_pct_weekly", "Perdida porcentual periodica semanal contra riqueza", True, "perdida porcentual periodica contra riqueza"),
+    ("monthly", "month", "period_loss_wealth_month_pct", "perdida_riqueza_period_pct_monthly", "Perdida porcentual periodica mensual contra riqueza", True, "perdida porcentual periodica contra riqueza"),
+    ("semiannual_gain", "semester", "period_loss_wealth_semester_pct", "perdida_riqueza_period_pct_semiannual", "Perdida porcentual periodica semestral contra riqueza", True, "perdida porcentual periodica contra riqueza"),
+    ("weekly", "week", "period_loss_wealth_week_money", "perdida_riqueza_period_money_weekly", "Perdida monetaria periodica semanal contra riqueza", False, "perdida monetaria periodica contra riqueza"),
+    ("monthly", "month", "period_loss_wealth_month_money", "perdida_riqueza_period_money_monthly", "Perdida monetaria periodica mensual contra riqueza", False, "perdida monetaria periodica contra riqueza"),
+    ("semiannual_gain", "semester", "period_loss_wealth_semester_money", "perdida_riqueza_period_money_semiannual", "Perdida monetaria periodica semestral contra riqueza", False, "perdida monetaria periodica contra riqueza"),
+    ("weekly", "week", "cumulative_period_loss_wealth_week_pct", "perdida_riqueza_acum_period_pct_weekly", "Perdida porcentual acumulada periodica semanal contra riqueza", True, "perdida porcentual acumulada periodica contra riqueza"),
+    ("monthly", "month", "cumulative_period_loss_wealth_month_pct", "perdida_riqueza_acum_period_pct_monthly", "Perdida porcentual acumulada periodica mensual contra riqueza", True, "perdida porcentual acumulada periodica contra riqueza"),
+    ("semiannual_gain", "semester", "cumulative_period_loss_wealth_semester_pct", "perdida_riqueza_acum_period_pct_semiannual", "Perdida porcentual acumulada periodica semestral contra riqueza", True, "perdida porcentual acumulada periodica contra riqueza"),
+    ("weekly", "week", "cumulative_period_loss_wealth_week_money", "perdida_riqueza_acum_period_money_weekly", "Perdida monetaria acumulada periodica semanal contra riqueza", False, "perdida monetaria acumulada periodica contra riqueza"),
+    ("monthly", "month", "cumulative_period_loss_wealth_month_money", "perdida_riqueza_acum_period_money_monthly", "Perdida monetaria acumulada periodica mensual contra riqueza", False, "perdida monetaria acumulada periodica contra riqueza"),
+    ("semiannual_gain", "semester", "cumulative_period_loss_wealth_semester_money", "perdida_riqueza_acum_period_money_semiannual", "Perdida monetaria acumulada periodica semestral contra riqueza", False, "perdida monetaria acumulada periodica contra riqueza"),
+]
+
 
 def read_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
@@ -135,7 +177,7 @@ def draw_line_chart(
     y_max = max(0.0, float(y_vals.max()) if len(y_vals) else 1.0)
     if y_is_pct:
         y_min = 0.0
-        y_max = min(max(y_max * 1.15, 0.05), 1.0)
+        y_max = max(y_max * 1.15, 0.05)
     elif y_min < 0:
         pad = max((y_max - y_min) * 0.10, 1.0)
         y_min -= pad
@@ -242,18 +284,7 @@ def make_figures(view: str, data: Dict[str, pd.DataFrame], report_dir: Path) -> 
     fig_dir = report_dir / "figuras"
     fig_dir.mkdir(parents=True, exist_ok=True)
     figures: List[str] = []
-    chart_specs = [
-        ("weekly", "week", "active_clients_mean", "clientes_weekly", "Clientes activos semanales", False),
-        ("monthly", "month", "active_clients_mean", "clientes_monthly", "Clientes activos mensuales", False),
-        ("weekly", "week", "mean_weekly_abandon_probability", "abandono_weekly", "Probabilidad semanal de abandono", True),
-        ("monthly", "month", "monthly_abandon_probability", "abandono_monthly", "Probabilidad mensual de abandono", True),
-        ("weekly", "week", "p_accept_rebalance", "aceptacion_weekly", "Probabilidad semanal de aceptacion de rebalanceo", True),
-        ("monthly", "month", "p_accept_rebalance", "aceptacion_monthly", "Probabilidad mensual de aceptacion de rebalanceo", True),
-        ("weekly", "week", "mean_active_gain", "ganancia_weekly", "Ganancia semanal promedio por cliente activo", False),
-        ("monthly", "month", "mean_active_gain", "ganancia_monthly", "Ganancia mensual promedio por cliente activo", False),
-        ("semiannual_gain", "semester", "mean_active_gain", "ganancia_semiannual", "Ganancia semestral promedio por cliente activo", False),
-    ]
-    for dataset, x_col, y_col, prefix, title, pct in chart_specs:
+    for dataset, x_col, y_col, prefix, title, pct, _caption_metric in FIGURE_SPECS:
         for scenario in SCENARIOS:
             for model in MODELS:
                 filename = f"{prefix}_{scenario}_{model_slug(model)}.png"
@@ -328,6 +359,8 @@ def write_view_report(view: str, meta: Dict[str, str], data: Dict[str, pd.DataFr
         r"\date{}",
         r"\begin{document}",
         r"\maketitle",
+        r"\tableofcontents",
+        r"\newpage",
         r"\section{Analisis de resultados fuera de muestra}",
         "La iteracion v1 plus conserva la probabilidad de abandono tipo umbral logistico y explicita una restriccion de ruina: cuando la riqueza actual del cliente llega a cero, el cliente abandona forzosamente la plataforma. La evaluacion fuera de muestra mantiene la separacion de horizontes y compara Black--Litterman calibrado contra Markowitz base en el Horizonte 3.",
         latex_table(
@@ -403,55 +436,15 @@ def write_view_report(view: str, meta: Dict[str, str], data: Dict[str, pd.DataFr
         for model in MODELS:
             slug = model_slug(model)
             clean = scenario_label(scenario)
-            sections.extend(
-                [
+            sections.append(rf"\subsubsection{{{tex_escape(model)} - escenario {tex_escape(clean)}}}")
+            for _dataset, _x_col, _y_col, prefix, _title, _pct, caption_metric in FIGURE_SPECS:
+                sections.append(
                     figure_block(
-                        f"clientes_weekly_{scenario}_{slug}.png",
-                        f"Clientes activos semanales por perfil, {model}, escenario {clean}.",
-                        f"fig:clientes_weekly_{view}_{scenario}_{slug}",
-                    ),
-                    figure_block(
-                        f"abandono_weekly_{scenario}_{slug}.png",
-                        f"Probabilidad semanal de abandono por perfil, {model}, escenario {clean}.",
-                        f"fig:abandono_weekly_{view}_{scenario}_{slug}",
-                    ),
-                    figure_block(
-                        f"aceptacion_weekly_{scenario}_{slug}.png",
-                        f"Probabilidad semanal de aceptacion de rebalanceo por perfil, {model}, escenario {clean}.",
-                        f"fig:aceptacion_weekly_{view}_{scenario}_{slug}",
-                    ),
-                    figure_block(
-                        f"ganancia_weekly_{scenario}_{slug}.png",
-                        f"Ganancia semanal promedio por perfil, {model}, escenario {clean}.",
-                        f"fig:ganancia_weekly_{view}_{scenario}_{slug}",
-                    ),
-                    figure_block(
-                        f"clientes_monthly_{scenario}_{slug}.png",
-                        f"Clientes activos mensuales por perfil, {model}, escenario {clean}.",
-                        f"fig:clientes_monthly_{view}_{scenario}_{slug}",
-                    ),
-                    figure_block(
-                        f"abandono_monthly_{scenario}_{slug}.png",
-                        f"Probabilidad mensual de abandono por perfil, {model}, escenario {clean}.",
-                        f"fig:abandono_monthly_{view}_{scenario}_{slug}",
-                    ),
-                    figure_block(
-                        f"aceptacion_monthly_{scenario}_{slug}.png",
-                        f"Probabilidad mensual de aceptacion de rebalanceo por perfil, {model}, escenario {clean}.",
-                        f"fig:aceptacion_monthly_{view}_{scenario}_{slug}",
-                    ),
-                    figure_block(
-                        f"ganancia_monthly_{scenario}_{slug}.png",
-                        f"Ganancia mensual promedio por perfil, {model}, escenario {clean}.",
-                        f"fig:ganancia_monthly_{view}_{scenario}_{slug}",
-                    ),
-                    figure_block(
-                        f"ganancia_semiannual_{scenario}_{slug}.png",
-                        f"Ganancia semestral promedio por perfil, {model}, escenario {clean}.",
-                        f"fig:ganancia_semiannual_{view}_{scenario}_{slug}",
-                    ),
-                ]
-            )
+                        f"{prefix}_{scenario}_{slug}.png",
+                        f"{caption_metric.capitalize()} por perfil, {model}, escenario {clean}.",
+                        f"fig:{prefix}_{view}_{scenario}_{slug}",
+                    )
+                )
 
     sections.extend(
         [
@@ -480,20 +473,105 @@ def comparative_table(rows: Iterable[Dict[str, object]], caption: str, label: st
             ("monthly_abandon_probability", "P abandono mes", "pct"),
             ("final_active_clients_mean", "Clientes finales", "int"),
             ("mean_active_gain_final", "Ganancia final", "money"),
+            ("mean_active_loss_final", "Perdida final", "pct"),
+            ("company_revenue_final", "Utilidad final", "money"),
         ],
         caption,
         label,
     )
 
 
+def view_summary_table(rows: Iterable[Dict[str, object]], caption: str, label: str) -> str:
+    df = pd.DataFrame(rows)
+    return latex_table(
+        df,
+        [
+            ("view", "View", "text"),
+            ("sharpe_improvement_mean", "Mejora Sharpe", "pct"),
+            ("p4_score_improvement", "Mejora P4 vs MK", "pct"),
+            ("pct_recomendado", "BL recomendado", "pct"),
+            ("turnover_bl", "Turnover BL", "pct"),
+            ("sector_hhi_bl", "HHI sector BL", "num3"),
+            ("final_clients_bl", "Clientes finales BL", "int"),
+            ("terminal_wealth_bl", "Riqueza BL", "money"),
+            ("final_loss_bl", "Perdida final BL", "pct"),
+            ("company_revenue_bl", "Utilidad BL", "money"),
+        ],
+        caption,
+        label,
+    )
+
+
+def comparative_diagnosis(summary_rows: List[Dict[str, object]]) -> str:
+    ordered = sorted(summary_rows, key=lambda row: row["p4_score_improvement"], reverse=True)
+    best = ordered[0]
+    pieces = []
+    for row in summary_rows:
+        strengths = []
+        weaknesses = []
+        if row["sharpe_improvement_mean"] > 0:
+            strengths.append(f"mejora de Sharpe de {fmt_pct(row['sharpe_improvement_mean'])}")
+        else:
+            weaknesses.append(f"deterioro de Sharpe de {fmt_pct(row['sharpe_improvement_mean'])}")
+        if row["p4_score_improvement"] > 0:
+            strengths.append(f"mejora P4 frente a Markowitz de {fmt_pct(row['p4_score_improvement'])}")
+        else:
+            weaknesses.append(f"retroceso P4 frente a Markowitz de {fmt_pct(row['p4_score_improvement'])}")
+        if row["turnover_bl"] <= 0.10:
+            strengths.append(f"turnover bajo de {fmt_pct(row['turnover_bl'])}")
+        else:
+            weaknesses.append(f"turnover elevado de {fmt_pct(row['turnover_bl'])}")
+        if row["sector_hhi_bl"] <= 0.20:
+            strengths.append(f"concentracion sectorial contenida, HHI {fmt_num(row['sector_hhi_bl'])}")
+        else:
+            weaknesses.append(f"mayor concentracion sectorial, HHI {fmt_num(row['sector_hhi_bl'])}")
+        pieces.append(
+            f"\\paragraph{{{tex_escape(row['view'])}.}} "
+            f"Fortalezas: {'; '.join(strengths) if strengths else 'sin ventajas dominantes frente al benchmark'}. "
+            f"Debilidades: {'; '.join(weaknesses) if weaknesses else 'no presenta debilidades materiales bajo los criterios agregados'}."
+        )
+    recommendation = (
+        f"\\paragraph{{Recomendacion final.}} Bajo el criterio conjunto de desempeno fuera de muestra y evaluacion economica P4, "
+        f"la mejor view para calibrar Black--Litterman es {tex_escape(best['view'])}. En promedio, esta alternativa mejora el score P4 "
+        f"en {fmt_pct(best['p4_score_improvement'])} respecto de Markowitz y aumenta el Sharpe en {fmt_pct(best['sharpe_improvement_mean'])}. "
+        "La recomendacion debe comunicarse con una salvedad tecnica: su ventaja economica viene acompanada de mayor rotacion y concentracion que la view macro, por lo que exige monitoreo operacional mas estricto."
+    )
+    return "\n\n".join(pieces + [recommendation])
+
+
 def write_comparative_report(all_data: Dict[str, Dict[str, pd.DataFrame]]) -> None:
     rows = []
+    summary_rows = []
     for view, data in all_data.items():
         label = VIEWS[view]["label"]
         dyn = data["turnover"][data["turnover"]["window_role"] == "test_p4"]
         monthly = data["monthly"]
         final_month = monthly["month"].max()
         monthly_final = monthly[monthly["month"] == final_month]
+        comparison = data["comparison"]
+        p4 = data["p4"]
+        bl = p4[p4["modelo"] == "BL calibrado"]
+        mk = p4[p4["modelo"] == "Markowitz base"]
+        matched = bl.merge(mk, on=["scenario", "portfolio"], suffixes=("_bl", "_mk"))
+        p4_score_improvement = float(
+            ((matched["p4_score_mean_bl"] - matched["p4_score_mean_mk"]) / matched["p4_score_mean_mk"].abs()).mean()
+        )
+        dyn_bl = dyn[dyn["modelo"] == "BL calibrado"]
+        monthly_bl = monthly_final[monthly_final["modelo"] == "BL calibrado"]
+        summary_rows.append(
+            {
+                "view": label,
+                "sharpe_improvement_mean": comparison["mejora_pct_sharpe_mean"].mean(),
+                "p4_score_improvement": p4_score_improvement,
+                "pct_recomendado": comparison["pct_recomendado"].mean(),
+                "turnover_bl": dyn_bl["turnover_mean"].mean(),
+                "sector_hhi_bl": dyn_bl["sector_hhi_mean"].mean(),
+                "final_clients_bl": bl["final_active_clients_mean"].mean(),
+                "terminal_wealth_bl": bl["terminal_wealth_mean"].mean(),
+                "final_loss_bl": monthly_bl["mean_active_loss"].mean(),
+                "company_revenue_bl": bl["company_revenue_mean"].mean(),
+            }
+        )
         for scenario in SCENARIOS:
             for model in MODELS:
                 dyn_s = dyn[(dyn["scenario"] == scenario) & (dyn["modelo"] == model)]
@@ -510,10 +588,13 @@ def write_comparative_report(all_data: Dict[str, Dict[str, pd.DataFrame]]) -> No
                         "monthly_abandon_probability": mon_s["monthly_abandon_probability"].mean(),
                         "final_active_clients_mean": mon_s["active_clients_mean"].mean(),
                         "mean_active_gain_final": mon_s["mean_active_gain"].mean(),
+                        "mean_active_loss_final": mon_s["mean_active_loss"].mean(),
+                        "company_revenue_final": mon_s["company_revenue_cumulative_mean"].mean(),
                     }
                 )
     comp = pd.DataFrame(rows)
     comp.to_csv(ROOT / "comparativo_views_v1_plus.csv", index=False)
+    pd.DataFrame(summary_rows).to_csv(ROOT / "comparativo_resumen_views_v1_plus.csv", index=False)
     body = [
         r"\documentclass[11pt]{article}",
         r"\usepackage[spanish]{babel}",
@@ -529,17 +610,25 @@ def write_comparative_report(all_data: Dict[str, Dict[str, pd.DataFrame]]) -> No
         r"\date{}",
         r"\begin{document}",
         r"\maketitle",
+        r"\tableofcontents",
+        r"\newpage",
         r"\section{Resultados de la Dinamica del Portafolio}",
         "La comparacion entre views se concentra en estabilidad operativa, concentracion sectorial y persistencia de clientes. La restriccion de ruina queda incorporada de forma homogenea en todas las simulaciones, por lo que las diferencias observadas responden a la view calibrada y no a cambios en la regla de abandono.",
         comparative_table(
             rows,
-            "Sintesis comparativa de dinamica, abandono y ganancia final por view.",
+            "Sintesis comparativa de dinamica, abandono, riqueza y utilidad final por view.",
             "tab:comparativo_views_v1_plus",
         ),
+        r"\section{Sintesis de desempeno por view}",
+        view_summary_table(
+            summary_rows,
+            "Resumen agregado de desempeno de Black--Litterman calibrado por view.",
+            "tab:resumen_views_v1_plus",
+        ),
         r"\section{Discusion comparativa}",
-        "Una view es preferible cuando combina bajo turnover, menor concentracion sectorial, abandono mensual controlado y ganancia final positiva en perfiles coherentes con su tolerancia al riesgo. Bajo esta lectura, las views de momentum deben evaluarse con especial atencion en perfiles agresivos, porque pueden elevar la ganancia esperada pero tambien amplificar concentracion y sensibilidad a perdidas acumuladas. La view macro de desempleo funciona como referencia defensiva, ya que tiende a expresar una senal mas agregada y menos dependiente de rankings individuales de activos.",
+        comparative_diagnosis(summary_rows),
         r"\section{Conclusiones generales y recomendaciones}",
-        "La recomendacion final debe priorizar la view que entregue resiliencia dinamica, no solo mayor riqueza terminal. Para presentacion ante comision, el criterio mas defendible es reportar por perfil la combinacion de Sharpe fuera de muestra, turnover, concentracion sectorial, abandono mensual y clientes finales. Esta arquitectura permite justificar una recomendacion segmentada y evita que una view sea elegida exclusivamente por un resultado economico puntual del Horizonte 3.",
+        "La recomendacion final prioriza una view que no solo eleve la riqueza terminal, sino que tambien preserve una explicacion trazable de riesgo, abandono y utilidad. Con la evidencia agregada, Momentum general domina en desempeno economico y mejora de Sharpe, mientras que Desempleo macro queda como alternativa defensiva por su menor turnover y menor concentracion. Las views Momentum top/bottom 1Y y Momentum top market-cap 6M muestran resultados practicamente equivalentes en esta iteracion; por lo tanto, no justifican mayor complejidad frente a Momentum general salvo que se busque imponer una restriccion explicita sobre el universo de capitalizacion.",
         r"\end{document}",
     ]
     (ROOT / "informe_comparativo_views_v1_plus.tex").write_text("\n\n".join(body), encoding="utf-8")
