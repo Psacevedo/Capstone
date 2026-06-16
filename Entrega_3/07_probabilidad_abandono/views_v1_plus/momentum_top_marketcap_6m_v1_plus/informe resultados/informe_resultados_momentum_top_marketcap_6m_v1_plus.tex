@@ -1,0 +1,471 @@
+\documentclass[11pt]{article}
+
+\usepackage[spanish]{babel}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath}
+
+\usepackage{booktabs}
+
+\usepackage{graphicx}
+
+\usepackage{float}
+
+\usepackage{geometry}
+
+\geometry{margin=2.4cm}
+
+\title{Informe de resultados: Momentum top market-cap 6M v1 plus}
+
+\author{FinPUC}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Analisis de resultados fuera de muestra}
+
+La iteracion v1 plus conserva la probabilidad de abandono tipo umbral logistico y explicita una restriccion de ruina: cuando la riqueza actual del cliente llega a cero, el cliente abandona forzosamente la plataforma. La evaluacion fuera de muestra mantiene la separacion de horizontes y compara Black--Litterman calibrado contra Markowitz base en el Horizonte 3.
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+Escenario & Perfil & Sharpe BL & Sharpe MK & Mejora Sharpe & Drawdown BL & Drawdown MK & BL recomendado \\
+\midrule
+sin\_pandemia & Muy conservador & 1.748 & 1.736 & 0.7\% & -10.0\% & -10.3\% & 100.0\% \\
+sin\_pandemia & Conservador & 1.754 & 1.728 & 1.5\% & -9.9\% & -11.0\% & 100.0\% \\
+sin\_pandemia & Neutro & 1.708 & 1.747 & -2.2\% & -10.1\% & -13.0\% & 0.0\% \\
+sin\_pandemia & Arriesgado & 1.299 & 1.513 & -14.2\% & -14.2\% & -18.2\% & 0.0\% \\
+sin\_pandemia & Muy arriesgado & 1.185 & 1.198 & -1.1\% & -21.7\% & -26.5\% & 0.0\% \\
+con\_pandemia & Muy conservador & 1.639 & 1.699 & -3.6\% & -9.2\% & -9.0\% & 0.0\% \\
+con\_pandemia & Conservador & 1.667 & 1.749 & -4.7\% & -9.4\% & -9.0\% & 25.0\% \\
+con\_pandemia & Neutro & 1.595 & 1.773 & -10.1\% & -11.0\% & -10.9\% & 0.0\% \\
+con\_pandemia & Arriesgado & 1.045 & 1.391 & -25.4\% & -19.5\% & -18.7\% & 0.0\% \\
+con\_pandemia & Muy arriesgado & 0.926 & 0.933 & -2.5\% & -29.0\% & -27.6\% & 75.0\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Comparacion fuera de muestra para Momentum top market-cap 6M.}
+\label{tab:test_momentum_top_marketcap_6m_v1_plus}
+\end{table}
+
+
+\section{Resultados de la dinamica de portafolio}
+
+La dinamica del portafolio se interpreta desde la estabilidad operativa. Turnover bajo indica menor intensidad de transaccion semestral; HHI y peso del sector dominante permiten identificar si el desempeno proviene de una exposicion diversificada o de apuestas concentradas.
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+Modelo & Escenario & Perfil & Turnover & Turnover max. & N efectivo & HHI sector & Sector top \\
+\midrule
+BL calibrado & sin\_pandemia & Muy conservador & 8.9\% & 11.9\% & 224.87 & 0.144 & 27.2\% \\
+Markowitz base & sin\_pandemia & Muy conservador & 5.6\% & 6.4\% & 203.23 & 0.151 & 28.4\% \\
+BL calibrado & sin\_pandemia & Conservador & 12.6\% & 18.8\% & 238.56 & 0.140 & 26.5\% \\
+Markowitz base & sin\_pandemia & Conservador & 5.8\% & 7.2\% & 194.60 & 0.150 & 28.7\% \\
+BL calibrado & sin\_pandemia & Neutro & 24.5\% & 38.2\% & 235.30 & 0.135 & 24.7\% \\
+Markowitz base & sin\_pandemia & Neutro & 8.1\% & 10.0\% & 148.30 & 0.152 & 29.3\% \\
+BL calibrado & sin\_pandemia & Arriesgado & 54.2\% & 81.6\% & 109.89 & 0.196 & 32.3\% \\
+Markowitz base & sin\_pandemia & Arriesgado & 12.4\% & 13.2\% & 64.35 & 0.184 & 30.5\% \\
+BL calibrado & sin\_pandemia & Muy arriesgado & 61.4\% & 94.0\% & 32.13 & 0.255 & 39.4\% \\
+Markowitz base & sin\_pandemia & Muy arriesgado & 13.0\% & 13.9\% & 19.72 & 0.273 & 43.2\% \\
+BL calibrado & con\_pandemia & Muy conservador & 8.3\% & 12.0\% & 114.50 & 0.165 & 25.1\% \\
+Markowitz base & con\_pandemia & Muy conservador & 5.0\% & 6.6\% & 106.76 & 0.164 & 24.9\% \\
+BL calibrado & con\_pandemia & Conservador & 12.1\% & 19.8\% & 118.52 & 0.157 & 24.3\% \\
+Markowitz base & con\_pandemia & Conservador & 5.9\% & 7.7\% & 107.08 & 0.156 & 23.6\% \\
+BL calibrado & con\_pandemia & Neutro & 24.5\% & 43.6\% & 104.69 & 0.149 & 21.9\% \\
+Markowitz base & con\_pandemia & Neutro & 8.4\% & 10.7\% & 89.27 & 0.144 & 22.5\% \\
+BL calibrado & con\_pandemia & Arriesgado & 48.1\% & 91.7\% & 38.91 & 0.267 & 42.1\% \\
+Markowitz base & con\_pandemia & Arriesgado & 13.4\% & 17.7\% & 42.73 & 0.182 & 26.9\% \\
+BL calibrado & con\_pandemia & Muy arriesgado & 52.1\% & 100.0\% & 11.47 & 0.474 & 59.1\% \\
+Markowitz base & con\_pandemia & Muy arriesgado & 14.1\% & 18.2\% & 13.97 & 0.243 & 40.1\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Dinamica de portafolio para Momentum top market-cap 6M.}
+\label{tab:dinamica_momentum_top_marketcap_6m_v1_plus}
+\end{table}
+
+
+\section{Evaluacion Economica Monte Carlo P4 en Horizonte Limpio}
+
+En la view Momentum top market-cap 6M, la lectura economica del Horizonte 3 se realiza sin retroalimentar la utilidad de empresa al optimizador. El mayor score P4 promedio dentro de Black--Litterman se observa en el perfil Muy arriesgado bajo escenario con\_pandemia, mientras que la mayor presion mensual de abandono aparece en Muy conservador bajo con\_pandemia. Esta distincion es central: la recomendacion financiera se evalua por desempeno y estabilidad del portafolio, y la utilidad corporativa queda como consecuencia ex-post del saldo administrado que permanece activo.
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Modelo & Escenario & Perfil & Riqueza & Utilidad empresa & P acepta reb. & P abandono sem. & P abandono mes & Clientes finales \\
+\midrule
+BL calibrado & sin\_pandemia & Muy conservador & 1.426 & 124 & 55.6\% & 0.6\% & 1.2\% & 438 \\
+Markowitz base & sin\_pandemia & Muy conservador & 1.413 & 121 & 55.7\% & 0.6\% & 1.2\% & 434 \\
+Markowitz base & sin\_pandemia & Conservador & 1.853 & 250 & 54.4\% & 0.1\% & 0.3\% & 925 \\
+BL calibrado & sin\_pandemia & Conservador & 1.833 & 249 & 54.4\% & 0.1\% & 0.3\% & 929 \\
+Markowitz base & sin\_pandemia & Neutro & 2.080 & 290 & 52.5\% & 0.0\% & 0.0\% & 1044 \\
+BL calibrado & sin\_pandemia & Neutro & 1.947 & 275 & 52.0\% & 0.0\% & 0.0\% & 1037 \\
+Markowitz base & sin\_pandemia & Arriesgado & 2.234 & 295 & 49.7\% & 0.0\% & 0.0\% & 971 \\
+BL calibrado & sin\_pandemia & Arriesgado & 1.965 & 266 & 48.5\% & 0.0\% & 0.0\% & 969 \\
+Markowitz base & sin\_pandemia & Muy arriesgado & 2.634 & 331 & 48.6\% & 0.0\% & 0.0\% & 945 \\
+BL calibrado & sin\_pandemia & Muy arriesgado & 2.300 & 297 & 47.7\% & 0.0\% & 0.0\% & 939 \\
+Markowitz base & con\_pandemia & Muy conservador & 1.328 & 107 & 55.1\% & 0.6\% & 1.3\% & 403 \\
+BL calibrado & con\_pandemia & Muy conservador & 1.327 & 108 & 55.0\% & 0.6\% & 1.3\% & 409 \\
+Markowitz base & con\_pandemia & Conservador & 1.772 & 243 & 54.0\% & 0.0\% & 0.2\% & 944 \\
+BL calibrado & con\_pandemia & Conservador & 1.736 & 238 & 53.8\% & 0.1\% & 0.2\% & 932 \\
+Markowitz base & con\_pandemia & Neutro & 2.013 & 284 & 52.2\% & 0.0\% & 0.0\% & 1052 \\
+BL calibrado & con\_pandemia & Neutro & 1.856 & 259 & 51.7\% & 0.0\% & 0.0\% & 1002 \\
+Markowitz base & con\_pandemia & Arriesgado & 2.222 & 293 & 49.5\% & 0.0\% & 0.0\% & 973 \\
+BL calibrado & con\_pandemia & Arriesgado & 1.966 & 263 & 48.5\% & 0.0\% & 0.1\% & 944 \\
+BL calibrado & con\_pandemia & Muy arriesgado & 2.472 & 310 & 47.8\% & 0.0\% & 0.2\% & 880 \\
+Markowitz base & con\_pandemia & Muy arriesgado & 2.292 & 291 & 47.6\% & 0.0\% & 0.1\% & 880 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Resultados economicos P4 con restriccion de ruina para Momentum top market-cap 6M.}
+\label{tab:p4_momentum_top_marketcap_6m_v1_plus}
+\end{table}
+
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Modelo & Escenario & Perfil & P inicial & P reb. & P sem. & P mes & Clientes iniciales & Clientes finales \\
+\midrule
+BL calibrado & sin\_pandemia & Muy conservador & 55.6\% & 55.6\% & 0.6\% & 1.2\% & 1120 & 438 \\
+Markowitz base & sin\_pandemia & Muy conservador & 55.7\% & 55.7\% & 0.6\% & 1.2\% & 1110 & 434 \\
+BL calibrado & sin\_pandemia & Conservador & 54.4\% & 54.4\% & 0.1\% & 0.3\% & 1104 & 929 \\
+Markowitz base & sin\_pandemia & Conservador & 54.4\% & 54.4\% & 0.1\% & 0.3\% & 1114 & 925 \\
+BL calibrado & sin\_pandemia & Neutro & 52.0\% & 52.0\% & 0.0\% & 0.0\% & 1046 & 1037 \\
+Markowitz base & sin\_pandemia & Neutro & 52.5\% & 52.5\% & 0.0\% & 0.0\% & 1053 & 1044 \\
+BL calibrado & sin\_pandemia & Arriesgado & 48.5\% & 48.5\% & 0.0\% & 0.0\% & 976 & 969 \\
+Markowitz base & sin\_pandemia & Arriesgado & 49.7\% & 49.7\% & 0.0\% & 0.0\% & 976 & 971 \\
+BL calibrado & sin\_pandemia & Muy arriesgado & 47.7\% & 47.7\% & 0.0\% & 0.0\% & 958 & 939 \\
+Markowitz base & sin\_pandemia & Muy arriesgado & 48.6\% & 48.6\% & 0.0\% & 0.0\% & 962 & 945 \\
+BL calibrado & con\_pandemia & Muy conservador & 55.0\% & 55.0\% & 0.6\% & 1.3\% & 1106 & 409 \\
+Markowitz base & con\_pandemia & Muy conservador & 55.1\% & 55.1\% & 0.6\% & 1.3\% & 1099 & 403 \\
+BL calibrado & con\_pandemia & Conservador & 53.8\% & 53.8\% & 0.1\% & 0.2\% & 1096 & 932 \\
+Markowitz base & con\_pandemia & Conservador & 54.0\% & 54.0\% & 0.0\% & 0.2\% & 1068 & 944 \\
+BL calibrado & con\_pandemia & Neutro & 51.7\% & 51.7\% & 0.0\% & 0.0\% & 1014 & 1002 \\
+Markowitz base & con\_pandemia & Neutro & 52.2\% & 52.2\% & 0.0\% & 0.0\% & 1060 & 1052 \\
+BL calibrado & con\_pandemia & Arriesgado & 48.5\% & 48.5\% & 0.0\% & 0.1\% & 983 & 944 \\
+Markowitz base & con\_pandemia & Arriesgado & 49.5\% & 49.5\% & 0.0\% & 0.0\% & 980 & 973 \\
+BL calibrado & con\_pandemia & Muy arriesgado & 47.8\% & 47.8\% & 0.0\% & 0.2\% & 970 & 880 \\
+Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\% & 944 & 880 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Probabilidades de comportamiento y clientes activos para Momentum top market-cap 6M.}
+\label{tab:behavior_momentum_top_marketcap_6m_v1_plus}
+\end{table}
+
+
+\subsection{Trayectorias semanales y mensuales}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Clientes activos semanales por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:clientes_weekly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de abandono por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:abandono_weekly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:aceptacion_weekly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Ganancia semanal promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:ganancia_weekly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Clientes activos mensuales por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:clientes_monthly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad mensual de abandono por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:abandono_monthly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:aceptacion_monthly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Ganancia mensual promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:ganancia_monthly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Ganancia semestral promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:ganancia_semiannual_momentum_top_marketcap_6m_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_sin_pandemia_markowitz_base.png}
+\caption{Clientes activos semanales por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:clientes_weekly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de abandono por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:abandono_weekly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:aceptacion_weekly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_sin_pandemia_markowitz_base.png}
+\caption{Ganancia semanal promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:ganancia_weekly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_monthly_sin_pandemia_markowitz_base.png}
+\caption{Clientes activos mensuales por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:clientes_monthly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad mensual de abandono por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:abandono_monthly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:aceptacion_monthly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_monthly_sin_pandemia_markowitz_base.png}
+\caption{Ganancia mensual promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:ganancia_monthly_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Ganancia semestral promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:ganancia_semiannual_momentum_top_marketcap_6m_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_con_pandemia_bl_calibrado.png}
+\caption{Clientes activos semanales por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:clientes_weekly_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de abandono por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:abandono_weekly_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:aceptacion_weekly_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_con_pandemia_bl_calibrado.png}
+\caption{Ganancia semanal promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:ganancia_weekly_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_monthly_con_pandemia_bl_calibrado.png}
+\caption{Clientes activos mensuales por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:clientes_monthly_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad mensual de abandono por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:abandono_monthly_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:aceptacion_monthly_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_monthly_con_pandemia_bl_calibrado.png}
+\caption{Ganancia mensual promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:ganancia_monthly_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Ganancia semestral promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:ganancia_semiannual_momentum_top_marketcap_6m_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_con_pandemia_markowitz_base.png}
+\caption{Clientes activos semanales por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:clientes_weekly_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de abandono por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:abandono_weekly_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:aceptacion_weekly_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_con_pandemia_markowitz_base.png}
+\caption{Ganancia semanal promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:ganancia_weekly_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_monthly_con_pandemia_markowitz_base.png}
+\caption{Clientes activos mensuales por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:clientes_monthly_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad mensual de abandono por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:abandono_monthly_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:aceptacion_monthly_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_monthly_con_pandemia_markowitz_base.png}
+\caption{Ganancia mensual promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:ganancia_monthly_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_con_pandemia_markowitz_base.png}
+\caption{Ganancia semestral promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:ganancia_semiannual_momentum_top_marketcap_6m_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\section{Discusion de Robustez}
+
+La robustez se evalua comparando la persistencia de clientes, la probabilidad de abandono y la ganancia promedio a traves de escenarios con y sin pandemia. El objetivo no es que una view domine en todas las trayectorias, sino que mantenga una relacion defendible entre retorno, riesgo, permanencia de clientes y estabilidad operativa.
+
+\section{Conclusiones}
+
+La version v1 plus mejora la interpretabilidad del modulo P4 porque separa abandono conductual y ruina economica. La restriccion de ruina evita que un cliente sin capital siga contabilizado como activo, mientras que las trayectorias semanales y mensuales permiten observar si la retencion se explica por ausencia de perdidas, tolerancia del perfil o simplemente por baja volatilidad de corto plazo.
+
+\end{document}

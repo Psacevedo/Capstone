@@ -1,0 +1,72 @@
+\documentclass[11pt]{article}
+
+\usepackage[spanish]{babel}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage[T1]{fontenc}
+
+\usepackage{booktabs}
+
+\usepackage{graphicx}
+
+\usepackage{float}
+
+\usepackage{geometry}
+
+\geometry{margin=2.4cm}
+
+\title{Informe comparativo views v1 plus}
+
+\author{FinPUC}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Resultados de la Dinamica del Portafolio}
+
+La comparacion entre views se concentra en estabilidad operativa, concentracion sectorial y persistencia de clientes. La restriccion de ruina queda incorporada de forma homogenea en todas las simulaciones, por lo que las diferencias observadas responden a la view calibrada y no a cambios en la regla de abandono.
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+View & Escenario & Modelo & Turnover & HHI sector & P abandono mes & Clientes finales & Ganancia final \\
+\midrule
+Desempleo macro & sin\_pandemia & BL calibrado & 7.4\% & 0.146 & 0.0\% & 858 & 1.817 \\
+Desempleo macro & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 867 & 2.342 \\
+Desempleo macro & con\_pandemia & BL calibrado & 7.2\% & 0.168 & 0.0\% & 844 & 1.668 \\
+Desempleo macro & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 849 & 2.140 \\
+Momentum general & sin\_pandemia & BL calibrado & 39.3\% & 0.226 & 0.0\% & 815 & 2.268 \\
+Momentum general & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 865 & 2.366 \\
+Momentum general & con\_pandemia & BL calibrado & 30.0\% & 0.295 & 0.0\% & 928 & 8.862 \\
+Momentum general & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.138 \\
+Momentum top/bottom 1Y & sin\_pandemia & BL calibrado & 32.3\% & 0.174 & 0.0\% & 862 & 2.075 \\
+Momentum top/bottom 1Y & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 864 & 2.372 \\
+Momentum top/bottom 1Y & con\_pandemia & BL calibrado & 29.0\% & 0.242 & 0.0\% & 833 & 2.047 \\
+Momentum top/bottom 1Y & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.132 \\
+Momentum top market-cap 6M & sin\_pandemia & BL calibrado & 32.3\% & 0.174 & 0.0\% & 862 & 2.075 \\
+Momentum top market-cap 6M & sin\_pandemia & Markowitz base & 9.0\% & 0.182 & 0.0\% & 864 & 2.372 \\
+Momentum top market-cap 6M & con\_pandemia & BL calibrado & 29.0\% & 0.242 & 0.0\% & 833 & 2.047 \\
+Momentum top market-cap 6M & con\_pandemia & Markowitz base & 9.4\% & 0.178 & 0.0\% & 850 & 2.132 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Sintesis comparativa de dinamica, abandono y ganancia final por view.}
+\label{tab:comparativo_views_v1_plus}
+\end{table}
+
+
+\section{Discusion comparativa}
+
+Una view es preferible cuando combina bajo turnover, menor concentracion sectorial, abandono mensual controlado y ganancia final positiva en perfiles coherentes con su tolerancia al riesgo. Bajo esta lectura, las views de momentum deben evaluarse con especial atencion en perfiles agresivos, porque pueden elevar la ganancia esperada pero tambien amplificar concentracion y sensibilidad a perdidas acumuladas. La view macro de desempleo funciona como referencia defensiva, ya que tiende a expresar una senal mas agregada y menos dependiente de rankings individuales de activos.
+
+\section{Conclusiones generales y recomendaciones}
+
+La recomendacion final debe priorizar la view que entregue resiliencia dinamica, no solo mayor riqueza terminal. Para presentacion ante comision, el criterio mas defendible es reportar por perfil la combinacion de Sharpe fuera de muestra, turnover, concentracion sectorial, abandono mensual y clientes finales. Esta arquitectura permite justificar una recomendacion segmentada y evita que una view sea elegida exclusivamente por un resultado economico puntual del Horizonte 3.
+
+\end{document}

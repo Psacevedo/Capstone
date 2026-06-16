@@ -1,0 +1,471 @@
+\documentclass[11pt]{article}
+
+\usepackage[spanish]{babel}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath}
+
+\usepackage{booktabs}
+
+\usepackage{graphicx}
+
+\usepackage{float}
+
+\usepackage{geometry}
+
+\geometry{margin=2.4cm}
+
+\title{Informe de resultados: Desempleo macro v1 plus}
+
+\author{FinPUC}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Analisis de resultados fuera de muestra}
+
+La iteracion v1 plus conserva la probabilidad de abandono tipo umbral logistico y explicita una restriccion de ruina: cuando la riqueza actual del cliente llega a cero, el cliente abandona forzosamente la plataforma. La evaluacion fuera de muestra mantiene la separacion de horizontes y compara Black--Litterman calibrado contra Markowitz base en el Horizonte 3.
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+Escenario & Perfil & Sharpe BL & Sharpe MK & Mejora Sharpe & Drawdown BL & Drawdown MK & BL recomendado \\
+\midrule
+sin\_pandemia & Muy conservador & 1.738 & 1.736 & 0.2\% & -10.2\% & -10.3\% & 100.0\% \\
+sin\_pandemia & Conservador & 1.718 & 1.728 & -0.6\% & -10.1\% & -11.0\% & 0.0\% \\
+sin\_pandemia & Neutro & 1.664 & 1.747 & -4.8\% & -10.2\% & -13.0\% & 0.0\% \\
+sin\_pandemia & Arriesgado & 1.562 & 1.513 & 3.2\% & -12.1\% & -18.2\% & 100.0\% \\
+sin\_pandemia & Muy arriesgado & 1.154 & 1.198 & -3.7\% & -21.1\% & -26.5\% & 0.0\% \\
+con\_pandemia & Muy conservador & 1.625 & 1.699 & -4.4\% & -9.1\% & -9.0\% & 0.0\% \\
+con\_pandemia & Conservador & 1.638 & 1.749 & -6.5\% & -9.2\% & -9.0\% & 0.0\% \\
+con\_pandemia & Neutro & 1.660 & 1.773 & -6.0\% & -9.4\% & -10.9\% & 25.0\% \\
+con\_pandemia & Arriesgado & 1.644 & 1.391 & 19.9\% & -11.1\% & -18.7\% & 75.0\% \\
+con\_pandemia & Muy arriesgado & 1.119 & 0.933 & 23.1\% & -22.8\% & -27.6\% & 100.0\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Comparacion fuera de muestra para Desempleo macro.}
+\label{tab:test_desempleo_macro_v1_plus}
+\end{table}
+
+
+\section{Resultados de la dinamica de portafolio}
+
+La dinamica del portafolio se interpreta desde la estabilidad operativa. Turnover bajo indica menor intensidad de transaccion semestral; HHI y peso del sector dominante permiten identificar si el desempeno proviene de una exposicion diversificada o de apuestas concentradas.
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+Modelo & Escenario & Perfil & Turnover & Turnover max. & N efectivo & HHI sector & Sector top \\
+\midrule
+BL calibrado & sin\_pandemia & Muy conservador & 7.0\% & 7.1\% & 221.21 & 0.147 & 27.5\% \\
+Markowitz base & sin\_pandemia & Muy conservador & 5.6\% & 6.4\% & 203.23 & 0.151 & 28.4\% \\
+BL calibrado & sin\_pandemia & Conservador & 7.0\% & 7.2\% & 233.51 & 0.144 & 27.2\% \\
+Markowitz base & sin\_pandemia & Conservador & 5.8\% & 7.2\% & 194.60 & 0.150 & 28.7\% \\
+BL calibrado & sin\_pandemia & Neutro & 6.9\% & 7.2\% & 271.13 & 0.137 & 26.2\% \\
+Markowitz base & sin\_pandemia & Neutro & 8.1\% & 10.0\% & 148.30 & 0.152 & 29.3\% \\
+BL calibrado & sin\_pandemia & Arriesgado & 6.9\% & 7.1\% & 360.45 & 0.124 & 21.8\% \\
+Markowitz base & sin\_pandemia & Arriesgado & 12.4\% & 13.2\% & 64.35 & 0.184 & 30.5\% \\
+BL calibrado & sin\_pandemia & Muy arriesgado & 9.2\% & 10.0\% & 163.27 & 0.178 & 32.1\% \\
+Markowitz base & sin\_pandemia & Muy arriesgado & 13.0\% & 13.9\% & 19.72 & 0.273 & 43.2\% \\
+BL calibrado & con\_pandemia & Muy conservador & 6.3\% & 7.6\% & 112.55 & 0.169 & 25.7\% \\
+Markowitz base & con\_pandemia & Muy conservador & 5.0\% & 6.6\% & 106.76 & 0.164 & 24.9\% \\
+BL calibrado & con\_pandemia & Conservador & 6.2\% & 7.4\% & 118.08 & 0.166 & 25.0\% \\
+Markowitz base & con\_pandemia & Conservador & 5.9\% & 7.7\% & 107.08 & 0.156 & 23.6\% \\
+BL calibrado & con\_pandemia & Neutro & 6.4\% & 7.3\% & 136.34 & 0.158 & 23.5\% \\
+Markowitz base & con\_pandemia & Neutro & 8.4\% & 10.7\% & 89.27 & 0.144 & 22.5\% \\
+BL calibrado & con\_pandemia & Arriesgado & 7.0\% & 7.6\% & 205.71 & 0.135 & 20.1\% \\
+Markowitz base & con\_pandemia & Arriesgado & 13.4\% & 17.7\% & 42.73 & 0.182 & 26.9\% \\
+BL calibrado & con\_pandemia & Muy arriesgado & 9.9\% & 14.0\% & 120.96 & 0.214 & 37.9\% \\
+Markowitz base & con\_pandemia & Muy arriesgado & 14.1\% & 18.2\% & 13.97 & 0.243 & 40.1\% \\
+\bottomrule
+\end{tabular}
+}
+\caption{Dinamica de portafolio para Desempleo macro.}
+\label{tab:dinamica_desempleo_macro_v1_plus}
+\end{table}
+
+
+\section{Evaluacion Economica Monte Carlo P4 en Horizonte Limpio}
+
+En la view Desempleo macro, la lectura economica del Horizonte 3 se realiza sin retroalimentar la utilidad de empresa al optimizador. El mayor score P4 promedio dentro de Black--Litterman se observa en el perfil Muy arriesgado bajo escenario con\_pandemia, mientras que la mayor presion mensual de abandono aparece en Muy conservador bajo con\_pandemia. Esta distincion es central: la recomendacion financiera se evalua por desempeno y estabilidad del portafolio, y la utilidad corporativa queda como consecuencia ex-post del saldo administrado que permanece activo.
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Modelo & Escenario & Perfil & Riqueza & Utilidad empresa & P acepta reb. & P abandono sem. & P abandono mes & Clientes finales \\
+\midrule
+BL calibrado & sin\_pandemia & Muy conservador & 1.434 & 124 & 55.7\% & 0.6\% & 1.2\% & 434 \\
+Markowitz base & sin\_pandemia & Muy conservador & 1.385 & 114 & 55.7\% & 0.6\% & 1.3\% & 405 \\
+BL calibrado & sin\_pandemia & Conservador & 1.839 & 250 & 54.3\% & 0.1\% & 0.3\% & 931 \\
+Markowitz base & sin\_pandemia & Conservador & 1.831 & 243 & 54.4\% & 0.1\% & 0.3\% & 902 \\
+Markowitz base & sin\_pandemia & Neutro & 2.107 & 299 & 52.5\% & 0.0\% & 0.0\% & 1082 \\
+BL calibrado & sin\_pandemia & Neutro & 1.880 & 266 & 51.6\% & 0.0\% & 0.0\% & 1033 \\
+Markowitz base & sin\_pandemia & Arriesgado & 2.256 & 302 & 49.7\% & 0.0\% & 0.0\% & 992 \\
+BL calibrado & sin\_pandemia & Arriesgado & 1.810 & 248 & 47.9\% & 0.0\% & 0.0\% & 965 \\
+Markowitz base & sin\_pandemia & Muy arriesgado & 2.592 & 330 & 48.6\% & 0.0\% & 0.1\% & 954 \\
+BL calibrado & sin\_pandemia & Muy arriesgado & 1.863 & 246 & 46.0\% & 0.0\% & 0.0\% & 925 \\
+Markowitz base & con\_pandemia & Muy conservador & 1.339 & 110 & 55.1\% & 0.6\% & 1.2\% & 416 \\
+BL calibrado & con\_pandemia & Muy conservador & 1.313 & 105 & 54.9\% & 0.7\% & 1.3\% & 399 \\
+Markowitz base & con\_pandemia & Conservador & 1.781 & 246 & 54.0\% & 0.1\% & 0.2\% & 959 \\
+BL calibrado & con\_pandemia & Conservador & 1.709 & 234 & 53.7\% & 0.1\% & 0.2\% & 927 \\
+Markowitz base & con\_pandemia & Neutro & 1.985 & 276 & 52.2\% & 0.0\% & 0.0\% & 1017 \\
+BL calibrado & con\_pandemia & Neutro & 1.775 & 253 & 51.3\% & 0.0\% & 0.0\% & 1025 \\
+Markowitz base & con\_pandemia & Arriesgado & 2.226 & 294 & 49.5\% & 0.0\% & 0.0\% & 977 \\
+BL calibrado & con\_pandemia & Arriesgado & 1.774 & 240 & 47.9\% & 0.0\% & 0.0\% & 946 \\
+Markowitz base & con\_pandemia & Muy arriesgado & 2.302 & 289 & 47.6\% & 0.0\% & 0.1\% & 874 \\
+BL calibrado & con\_pandemia & Muy arriesgado & 1.956 & 257 & 46.2\% & 0.0\% & 0.0\% & 926 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Resultados economicos P4 con restriccion de ruina para Desempleo macro.}
+\label{tab:p4_desempleo_macro_v1_plus}
+\end{table}
+
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Modelo & Escenario & Perfil & P inicial & P reb. & P sem. & P mes & Clientes iniciales & Clientes finales \\
+\midrule
+BL calibrado & sin\_pandemia & Muy conservador & 55.7\% & 55.7\% & 0.6\% & 1.2\% & 1121 & 434 \\
+Markowitz base & sin\_pandemia & Muy conservador & 55.7\% & 55.7\% & 0.6\% & 1.3\% & 1088 & 405 \\
+BL calibrado & sin\_pandemia & Conservador & 54.3\% & 54.3\% & 0.1\% & 0.3\% & 1088 & 931 \\
+Markowitz base & sin\_pandemia & Conservador & 54.4\% & 54.4\% & 0.1\% & 0.3\% & 1083 & 902 \\
+BL calibrado & sin\_pandemia & Neutro & 51.6\% & 51.6\% & 0.0\% & 0.0\% & 1037 & 1033 \\
+Markowitz base & sin\_pandemia & Neutro & 52.5\% & 52.5\% & 0.0\% & 0.0\% & 1097 & 1082 \\
+BL calibrado & sin\_pandemia & Arriesgado & 47.9\% & 47.9\% & 0.0\% & 0.0\% & 965 & 965 \\
+Markowitz base & sin\_pandemia & Arriesgado & 49.7\% & 49.7\% & 0.0\% & 0.0\% & 998 & 992 \\
+BL calibrado & sin\_pandemia & Muy arriesgado & 46.0\% & 46.0\% & 0.0\% & 0.0\% & 927 & 925 \\
+Markowitz base & sin\_pandemia & Muy arriesgado & 48.6\% & 48.6\% & 0.0\% & 0.1\% & 983 & 954 \\
+BL calibrado & con\_pandemia & Muy conservador & 54.9\% & 54.9\% & 0.7\% & 1.3\% & 1110 & 399 \\
+Markowitz base & con\_pandemia & Muy conservador & 55.1\% & 55.1\% & 0.6\% & 1.2\% & 1109 & 416 \\
+BL calibrado & con\_pandemia & Conservador & 53.7\% & 53.7\% & 0.1\% & 0.2\% & 1088 & 927 \\
+Markowitz base & con\_pandemia & Conservador & 54.0\% & 54.0\% & 0.1\% & 0.2\% & 1097 & 959 \\
+BL calibrado & con\_pandemia & Neutro & 51.3\% & 51.3\% & 0.0\% & 0.0\% & 1030 & 1025 \\
+Markowitz base & con\_pandemia & Neutro & 52.2\% & 52.2\% & 0.0\% & 0.0\% & 1026 & 1017 \\
+BL calibrado & con\_pandemia & Arriesgado & 47.9\% & 47.9\% & 0.0\% & 0.0\% & 946 & 946 \\
+Markowitz base & con\_pandemia & Arriesgado & 49.5\% & 49.5\% & 0.0\% & 0.0\% & 984 & 977 \\
+BL calibrado & con\_pandemia & Muy arriesgado & 46.2\% & 46.2\% & 0.0\% & 0.0\% & 929 & 926 \\
+Markowitz base & con\_pandemia & Muy arriesgado & 47.6\% & 47.6\% & 0.0\% & 0.1\% & 941 & 874 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Probabilidades de comportamiento y clientes activos para Desempleo macro.}
+\label{tab:behavior_desempleo_macro_v1_plus}
+\end{table}
+
+
+\subsection{Trayectorias semanales y mensuales}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Clientes activos semanales por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:clientes_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de abandono por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:abandono_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_sin_pandemia_bl_calibrado.png}
+\caption{Ganancia semanal promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:ganancia_weekly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Clientes activos mensuales por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:clientes_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad mensual de abandono por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:abandono_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:aceptacion_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_monthly_sin_pandemia_bl_calibrado.png}
+\caption{Ganancia mensual promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:ganancia_monthly_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_sin_pandemia_bl_calibrado.png}
+\caption{Ganancia semestral promedio por perfil, BL calibrado, escenario sin pandemia.}
+\label{fig:ganancia_semiannual_desempleo_macro_v1_plus_sin_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_sin_pandemia_markowitz_base.png}
+\caption{Clientes activos semanales por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:clientes_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de abandono por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:abandono_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_sin_pandemia_markowitz_base.png}
+\caption{Ganancia semanal promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:ganancia_weekly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_monthly_sin_pandemia_markowitz_base.png}
+\caption{Clientes activos mensuales por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:clientes_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad mensual de abandono por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:abandono_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_sin_pandemia_markowitz_base.png}
+\caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:aceptacion_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_monthly_sin_pandemia_markowitz_base.png}
+\caption{Ganancia mensual promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:ganancia_monthly_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_sin_pandemia_markowitz_base.png}
+\caption{Ganancia semestral promedio por perfil, Markowitz base, escenario sin pandemia.}
+\label{fig:ganancia_semiannual_desempleo_macro_v1_plus_sin_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_con_pandemia_bl_calibrado.png}
+\caption{Clientes activos semanales por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:clientes_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de abandono por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:abandono_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_con_pandemia_bl_calibrado.png}
+\caption{Ganancia semanal promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:ganancia_weekly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_monthly_con_pandemia_bl_calibrado.png}
+\caption{Clientes activos mensuales por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:clientes_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad mensual de abandono por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:abandono_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_con_pandemia_bl_calibrado.png}
+\caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:aceptacion_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_monthly_con_pandemia_bl_calibrado.png}
+\caption{Ganancia mensual promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:ganancia_monthly_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_con_pandemia_bl_calibrado.png}
+\caption{Ganancia semestral promedio por perfil, BL calibrado, escenario con pandemia.}
+\label{fig:ganancia_semiannual_desempleo_macro_v1_plus_con_pandemia_bl_calibrado}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_weekly_con_pandemia_markowitz_base.png}
+\caption{Clientes activos semanales por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:clientes_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_weekly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de abandono por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:abandono_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_weekly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad semanal de aceptacion de rebalanceo por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:aceptacion_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_weekly_con_pandemia_markowitz_base.png}
+\caption{Ganancia semanal promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:ganancia_weekly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/clientes_monthly_con_pandemia_markowitz_base.png}
+\caption{Clientes activos mensuales por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:clientes_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/abandono_monthly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad mensual de abandono por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:abandono_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/aceptacion_monthly_con_pandemia_markowitz_base.png}
+\caption{Probabilidad mensual de aceptacion de rebalanceo por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:aceptacion_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_monthly_con_pandemia_markowitz_base.png}
+\caption{Ganancia mensual promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:ganancia_monthly_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/ganancia_semiannual_con_pandemia_markowitz_base.png}
+\caption{Ganancia semestral promedio por perfil, Markowitz base, escenario con pandemia.}
+\label{fig:ganancia_semiannual_desempleo_macro_v1_plus_con_pandemia_markowitz_base}
+\end{figure}
+
+
+\section{Discusion de Robustez}
+
+La robustez se evalua comparando la persistencia de clientes, la probabilidad de abandono y la ganancia promedio a traves de escenarios con y sin pandemia. El objetivo no es que una view domine en todas las trayectorias, sino que mantenga una relacion defendible entre retorno, riesgo, permanencia de clientes y estabilidad operativa.
+
+\section{Conclusiones}
+
+La version v1 plus mejora la interpretabilidad del modulo P4 porque separa abandono conductual y ruina economica. La restriccion de ruina evita que un cliente sin capital siga contabilizado como activo, mientras que las trayectorias semanales y mensuales permiten observar si la retencion se explica por ausencia de perdidas, tolerancia del perfil o simplemente por baja volatilidad de corto plazo.
+
+\end{document}
