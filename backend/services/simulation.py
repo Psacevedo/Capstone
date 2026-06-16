@@ -34,7 +34,7 @@ def _p1_withdrawal(loss_pct: np.ndarray, tolerance: float) -> np.ndarray:
     p = np.zeros_like(loss_pct, dtype=float)
     mask = loss_pct > tolerance
     z = np.clip(LOGISTIC_SENSITIVITY * (loss_pct[mask] - tolerance), -60, 60)
-    p[mask] = 1.0 / (1.0 + np.exp(-z))
+    p[mask] = 0.10 / (1.0 + np.exp(-z))
     return p
 
 

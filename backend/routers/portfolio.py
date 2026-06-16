@@ -81,9 +81,9 @@ router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 _CACHE_5M = "public, max-age=300"
 TARGET_HOLDINGS_DEFAULT = 10
-TARGET_HOLDINGS_MAX = 30
-MIN_OPTIMIZER_UNIVERSE = 20
-MAX_OPTIMIZER_UNIVERSE = 40
+TARGET_HOLDINGS_MAX = 20
+MIN_OPTIMIZER_UNIVERSE = 50
+MAX_OPTIMIZER_UNIVERSE = 200
 DEFAULT_RISK_FREE_RATE = 0.02  # 2% anual (Entrega 2)
 DEFAULT_COMMISSION_RATE = 0.01
 # Rebalanceo semestral: 126 dias habiles ~ 26 semanas (Entrega 2)
@@ -777,7 +777,7 @@ def _black_litterman_ann_returns(
     # Supuestos fijos de Entrega 2 (ignoramos lo que mande el frontend)
     risk_free_rate = 0.02  # Rf = 2% (Supuestos F1)
     lambda_risk = 2.5      # delta fallback (Supuestos H2)
-    tau = 0.05             # tau = 0.05 (Supuestos H1)
+    tau = 0.20             # tau = 0.20 calibrado (Entrega 3, validacion 3-horizonte)
 
     # Covarianza anualizada con shrinkage (Entrega 2)
     ann_cov = np.cov(returns_matrix.T) * 252 if returns_matrix.shape[1] > 1 else np.array([[returns_matrix.var() * 252]])

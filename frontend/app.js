@@ -684,18 +684,28 @@ function renderEfficientFrontierChart(result, targetId = "frontier-chart") {
       x,
       y,
       type: "scatter",
-      mode: "lines+markers",
+      mode: "lines",
       name: "Frontera eficiente",
-      line: { color: "#0078bf", width: 2 },
-      marker: { size: 6 },
+      line: { color: "#0078bf", width: 2, shape: "spline" },
+      hovertemplate: "Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>",
+    },
+    {
+      x,
+      y,
+      type: "scatter",
+      mode: "markers",
+      name: "Puntos frontera",
+      marker: { size: 5, color: "#0078bf", opacity: 0.6 },
+      showlegend: false,
       hovertemplate: "Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>",
     },
   ];
 
+  const annotations = [];
   const frontierMarkers = result.frontier_markers || {};
   [
-    { key: "gmv_point", name: "Minima varianza global", color: "#2f6f6d", symbol: "diamond" },
-    { key: "max_sharpe_point", name: "Markowitz maximo Sharpe", color: "#0f4c81", symbol: "circle" },
+    { key: "gmv_point", name: "Minima varianza", color: "#2f6f6d", symbol: "diamond" },
+    { key: "max_sharpe_point", name: "Maximo Sharpe", color: "#0f4c81", symbol: "circle" },
     { key: "max_return_point", name: "Maximo retorno", color: "#b34a3c", symbol: "triangle-up" },
   ].forEach(markerDef => {
     const point = frontierMarkers[markerDef.key] || result[markerDef.key];
@@ -704,10 +714,13 @@ function renderEfficientFrontierChart(result, targetId = "frontier-chart") {
         x: [point.volatility_pct],
         y: [point.expected_return_pct],
         type: "scatter",
-        mode: "markers",
+        mode: "markers+text",
         name: point.label || markerDef.name,
-        marker: { size: 10, color: markerDef.color, symbol: markerDef.symbol, line: { color: "#ffffff", width: 1 } },
-        hovertemplate: `${esc(point.label || markerDef.name)}<br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>`,
+        text: [markerDef.name],
+        textposition: "top center",
+        textfont: { size: 9, color: markerDef.color },
+        marker: { size: 12, color: markerDef.color, symbol: markerDef.symbol, line: { color: "#ffffff", width: 1.5 } },
+        hovertemplate: `${esc(point.label || markerDef.name)}<br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<br>Sharpe: ${point.sharpe_ratio ?? "—"}<extra></extra>`,
       });
     }
   });
@@ -717,19 +730,23 @@ function renderEfficientFrontierChart(result, targetId = "frontier-chart") {
       x: [metrics.volatility_pct],
       y: [metrics.expected_return_pct],
       type: "scatter",
-      mode: "markers",
-      name: "Portafolio",
-      marker: { size: 12, color: "#c49b25", line: { color: "#0d1117", width: 2 } },
-      hovertemplate: "Portafolio<br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>",
+      mode: "markers+text",
+      name: "Tu portafolio",
+      text: ["TU PORT"],
+      textposition: "middle left",
+      textfont: { size: 10, color: "#c49b25", family: "monospace" },
+      marker: { size: 16, color: "#c49b25", symbol: "star", line: { color: "#0d1117", width: 2.5 } },
+      hovertemplate: "<b>Tu portafolio</b><br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<br>Sharpe: " + (metrics.sharpe_ratio ?? "—") + "<extra></extra>",
     });
   }
 
   Plotly.newPlot(el, traces, {
     ...PLOTLY_LAYOUT_BASE,
-    margin: { t: 12, r: 20, b: 60, l: 70 },
-    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: { text: "Volatilidad (%)", font: { size: 11 } } },
-    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: { text: "Retorno esperado (%)", font: { size: 11 } } },
+    margin: { t: 20, r: 20, b: 60, l: 70 },
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: { text: "Volatilidad (%)", font: { size: 11 } }, showspikes: true, spikemode: "across" },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: { text: "Retorno esperado (%)", font: { size: 11 } }, showspikes: true, spikemode: "across" },
     legend: { orientation: "h", y: -0.25 },
+    hovermode: "closest",
   }, PLOTLY_CONFIG);
 }
 
@@ -1579,11 +1596,14 @@ PLOTLY_LAYOUT_BASE.yaxis = { gridcolor: "#d8d2c8", linecolor: "#d8d2c8", zerolin
 PF.activeNav = "recommendation";
 PF.currentModule = "acciones";
 PF.selectedProfile = "neutro";
+PF.selectedMethodology = "";
 PF.lastInputs = {
   capital: 1000,
   targetHoldings: 10,
   candidatePoolSize: "",
   sector: "",
+  methodology: "",
+  blViewType: "desempleo",
 };
 
 const PF_PROFILES = {
@@ -1594,6 +1614,7 @@ const PF_PROFILES = {
     desc: "No admite perdidas sobre el capital.",
     universe: "30-50 acciones, Utilities y Consumer Defensive, sesgo a dividendos.",
     method: "Minima varianza global",
+    methodId: "minima_varianza_global",
     cvar: "99%",
   },
   conservador: {
@@ -1603,6 +1624,7 @@ const PF_PROFILES = {
     desc: "Tolera perdidas minimas y privilegia estabilidad.",
     universe: "50-80 acciones con sesgo a dividendos y menor volatilidad.",
     method: "Minima varianza global",
+    methodId: "minima_varianza_global",
     cvar: "95%",
   },
   neutro: {
@@ -1612,6 +1634,7 @@ const PF_PROFILES = {
     desc: "Equilibra retorno esperado y riesgo.",
     universe: "80-120 acciones sobre el universo de acciones.",
     method: "Media-varianza de Markowitz",
+    methodId: "markowitz_media_varianza",
     cvar: "90%",
   },
   arriesgado: {
@@ -1621,6 +1644,7 @@ const PF_PROFILES = {
     desc: "Acepta mas volatilidad para capturar crecimiento.",
     universe: "100-150 acciones con mas exposicion a sectores de crecimiento.",
     method: "Media-varianza de Markowitz",
+    methodId: "markowitz_media_varianza",
     cvar: "85%",
   },
   muy_arriesgado: {
@@ -1630,6 +1654,7 @@ const PF_PROFILES = {
     desc: "Opera sobre el universo de acciones completo.",
     universe: "universo de acciones completo, con holdings finales recortados al objetivo.",
     method: "Maximo retorno esperado",
+    methodId: "maximo_retorno",
     cvar: "80%",
   },
 };
@@ -1739,22 +1764,38 @@ function pfSelectProfile(key) {
   renderMethodologySummary(key);
 }
 
+function onMethodologyChange() {
+  const sel = document.getElementById("pf-methodology");
+  const blGroup = document.getElementById("pf-bl-view-group");
+  if (!sel) return;
+  PF.lastInputs.methodology = sel.value;
+  if (blGroup) blGroup.style.display = sel.value === "black_litterman_markowitz" ? "" : "none";
+  const blViewEl = document.getElementById("pf-bl-view");
+  if (blViewEl) PF.lastInputs.blViewType = blViewEl.value;
+  renderMethodologySummary(PF.selectedProfile);
+}
+
 function renderMethodologySummary(profileKey) {
   const profile = PF_PROFILES[profileKey];
   const box = document.getElementById("pf-methodology-summary");
   if (!profile || !box) return;
 
+  const selectedMeth = PF.lastInputs.methodology || "";
+  const effectiveMethod = selectedMeth || profile.method;
+  const isBL = selectedMeth === "black_litterman_markowitz";
+  const blViewLabel = isBL ? ` · View: ${PF.lastInputs.blViewType || "momentum"}` : "";
+
   box.innerHTML = `
     <div class="methodology-chip-row">
       <span class="methodology-chip">Motor activo: Modelo base FinPUC</span>
-      <span class="methodology-chip">Constructor: ${profile.method}</span>
+      <span class="methodology-chip">Constructor: ${effectiveMethod}${blViewLabel}</span>
       <span class="methodology-chip">CVaR beta = ${profile.cvar}</span>
       <span class="methodology-chip">alpha_p = ${profile.alpha}</span>
     </div>
     <div class="methodology-copy">
       El backend resuelve automaticamente la estrategia segun el perfil, aplica filtros de calidad,
       calcula CVaR historico, genera escenarios y reporta validacion out-of-sample.
-      Black-Litterman queda declarado como fase futura del informe.
+      ${isBL ? "Black-Litterman activo: combina la prior de equilibrio del mercado con views subjetivas del analista via actualizacion bayesiana." : "Black-Litterman queda declarado como fase futura del informe."}
     </div>
     <div class="methodology-copy methodology-copy-muted">Subuniverso recomendado: ${profile.universe}</div>
   `;
@@ -1814,7 +1855,7 @@ function renderPfForm() {
           <div class="form-group">
             <label class="form-label">Holdings finales</label>
             <select id="pf-target-holdings" class="form-select">
-              ${[5, 8, 10, 12, 15, 20, 25, 30].map(v => `<option value="${v}" ${PF.lastInputs.targetHoldings === v ? "selected" : ""}>${v} acciones</option>`).join("")}
+              ${[5, 8, 10, 12, 15, 20].map(v => `<option value="${v}" ${PF.lastInputs.targetHoldings === v ? "selected" : ""}>${v} acciones</option>`).join("")}
             </select>
           </div>
           <div class="form-group">
@@ -1835,6 +1876,28 @@ function renderPfForm() {
             <select id="pf-sector" class="form-select">
               <option value="">Todos los sectores</option>
               ${sectorOptions}
+            </select>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:14px">
+          <div class="form-group">
+            <label class="form-label">Metodologia de estimacion</label>
+            <select id="pf-methodology" class="form-select" onchange="onMethodologyChange()">
+              <option value="">Automatica por perfil</option>
+              <option value="equiponderado">Equiponderado</option>
+              <option value="markowitz_media_varianza">Markowitz media-varianza</option>
+              <option value="minima_varianza_global">Minima varianza global</option>
+              <option value="maximo_retorno">Maximo retorno</option>
+              <option value="black_litterman_markowitz">Black-Litterman</option>
+            </select>
+          </div>
+          <div class="form-group" id="pf-bl-view-group" style="display:none">
+            <label class="form-label">View de Black-Litterman</label>
+            <select id="pf-bl-view" class="form-select">
+              <option value="desempleo" ${(PF.lastInputs.blViewType === "desempleo") ? "selected" : ""}>Desempleo (macro calibrada)</option>
+              <option value="momentum">Momentum 1Y (20 long / 20 short)</option>
+              <option value="momentum_top20_6m">Momentum Top20 6M (10 long / 10 short)</option>
+              <option value="momentum_top20_bottom20_1y">Momentum Top40 1Y (20 long / 20 short)</option>
             </select>
           </div>
         </div>
@@ -1871,6 +1934,12 @@ function renderPfForm() {
 
   const sectorEl = document.getElementById("pf-sector");
   if (sectorEl) sectorEl.value = PF.lastInputs.sector || "";
+  const methEl = document.getElementById("pf-methodology");
+  if (methEl) methEl.value = PF.lastInputs.methodology || "";
+  if (PF.lastInputs.methodology === "black_litterman_markowitz") {
+    const blGroup = document.getElementById("pf-bl-view-group");
+    if (blGroup) blGroup.style.display = "";
+  }
   renderMethodologySummary(PF.selectedProfile);
 }
 
@@ -1879,6 +1948,8 @@ async function submitPortfolioForm() {
   const targetHoldings = parseInt(document.getElementById("pf-target-holdings")?.value, 10) || 10;
   const candidatePoolValue = document.getElementById("pf-candidate-pool")?.value || "";
   const sector = document.getElementById("pf-sector")?.value || "";
+  const methodology = document.getElementById("pf-methodology")?.value || "";
+  const blViewType = document.getElementById("pf-bl-view")?.value || "desempleo";
   const btn = document.getElementById("pf-submit-btn");
   const loading = document.getElementById("pf-loading");
 
@@ -1887,16 +1958,26 @@ async function submitPortfolioForm() {
     targetHoldings,
     candidatePoolSize: candidatePoolValue,
     sector,
+    methodology,
+    blViewType,
   };
+
+  const profile = PF_PROFILES[PF.selectedProfile];
+  const effectiveMethodology = methodology || (profile ? profile.methodId : "markowitz_media_varianza");
 
   const payload = {
     initial_capital: capital,
     profile: PF.selectedProfile,
     strategy: "auto",
     target_holdings: targetHoldings,
+    methodology_id: effectiveMethodology,
   };
   if (candidatePoolValue) payload.candidate_pool_size = parseInt(candidatePoolValue, 10);
   if (sector) payload.sector = sector;
+
+  if (effectiveMethodology === "black_litterman_markowitz") {
+    payload.parameter_values = { bl_view_type: blViewType };
+  }
 
   if (btn) btn.disabled = true;
   if (loading) loading.style.display = "inline";
@@ -2057,8 +2138,95 @@ function renderPfResult(result, capital) {
         </tbody>
       </table>
     </div>
+
+    <div class="detail-grid">
+      <div class="pf-card" style="min-height:380px">
+        <div class="pf-section-title">Distribucion del portafolio</div>
+        <div id="pf-donut-chart" style="width:100%;height:330px"></div>
+      </div>
+      <div class="pf-card" style="min-height:380px">
+        <div class="pf-section-title">Contribucion al retorno esperado</div>
+        <div id="pf-waterfall-chart" style="width:100%;height:330px"></div>
+      </div>
+    </div>
   `;
+
+  setTimeout(() => {
+    renderDonutChart(result.portfolio);
+    renderWaterfallChart(result.portfolio, result.metrics?.expected_return_pct || 0);
+  }, 200);
   queueMathTypeset();
+}
+
+function renderDonutChart(portfolio) {
+  const el = document.getElementById("pf-donut-chart");
+  if (!el || !portfolio || !portfolio.length) return;
+
+  const labels = portfolio.slice(0, 12).map(p => p.ticker);
+  const values = portfolio.slice(0, 12).map(p => parseFloat((p.weight * 100).toFixed(1)));
+  const othersWeight = portfolio.slice(12).reduce((sum, p) => sum + p.weight * 100, 0);
+  if (othersWeight > 0) {
+    labels.push("Otros");
+    values.push(parseFloat(othersWeight.toFixed(1)));
+  }
+
+  const trace = {
+    labels, values,
+    type: "pie", hole: 0.5,
+    textinfo: "label+percent",
+    textposition: "outside",
+    marker: {
+      colors: [
+        "#c49b25", "#2e4b6e", "#8b6b3d", "#4a7c59", "#b85c3a",
+        "#3a6b8b", "#7c5a3a", "#5a8b6b", "#a04a3a", "#2a5b7e",
+        "#8a7a3a", "#4a6c5a", "#8a8a8a",
+      ],
+    },
+  };
+
+  Plotly.newPlot("pf-donut-chart", [trace], {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 10, r: 10, b: 10, l: 10 },
+    showlegend: true,
+    legend: { orientation: "v", x: 1.05, y: 0.5, font: { size: 10 } },
+  }, PLOTLY_CONFIG);
+}
+
+function renderWaterfallChart(portfolio, totalReturnPct) {
+  const el = document.getElementById("pf-waterfall-chart");
+  if (!el || !portfolio || !portfolio.length) return;
+
+  const topItems = portfolio.slice(0, 10);
+  const contributions = topItems.map(p => parseFloat(((p.weight || 0) * (p.cagr_pct || 0)).toFixed(2)));
+  const othersContrib = portfolio.slice(10).reduce((sum, p) => sum + (p.weight || 0) * (p.cagr_pct || 0), 0);
+  if (othersContrib !== 0 && Math.abs(othersContrib) > 0.01) {
+    topItems.push({ ticker: "Otros", short_name: "Otras posiciones" });
+    contributions.push(parseFloat(othersContrib.toFixed(2)));
+  }
+
+  const xLabels = topItems.map(p => p.ticker);
+  const measures = contributions.map((_, i) => i === contributions.length - 1 ? "total" : "relative");
+  const texts = contributions.map(c => (c >= 0 ? "+" : "") + c.toFixed(2) + "%");
+  const totalLabel = `${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct}%`;
+
+  const trace = {
+    x: [...xLabels, "Retorno total"],
+    y: [...contributions, parseFloat(totalReturnPct.toFixed(2))],
+    text: [...texts, totalLabel],
+    textposition: "outside",
+    type: "waterfall",
+    connector: { line: { color: "#d8d2c8" } },
+    increasing: { marker: { color: "#4a7c59" } },
+    decreasing: { marker: { color: "#b85c3a" } },
+    totals: { marker: { color: "#c49b25" } },
+  };
+
+  Plotly.newPlot("pf-waterfall-chart", [trace], {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 10, r: 20, b: 80, l: 60 },
+    xaxis: { tickangle: -45, tickfont: { size: 9 } },
+    yaxis: { title: "Contribucion (%)", tickformat: ".1f" },
+  }, PLOTLY_CONFIG);
 }
 
 async function fetchBenchmarkComparison(targetId = "benchmark-comparison") {
@@ -2947,6 +3115,7 @@ const PF_NAV_ITEMS = [
   { id: "methodologies", label: "Metodologias" },
   { id: "results", label: "Resultados" },
   { id: "references", label: "Datos y referencias" },
+  { id: "flow", label: "Flujo del cliente" },
 ];
 
 Object.assign(PF, {
@@ -3268,16 +3437,19 @@ async function switchModule(mod) {
   const tabUniverse = document.getElementById("tab-acciones");
   const tabFinpuc = document.getElementById("tab-portafolios");
   const tabBusiness = document.getElementById("tab-business");
+  const tabEntrega3 = document.getElementById("tab-entrega3");
   const sectorLabel = document.getElementById("sector-label");
   const sectorList = document.getElementById("sector-list");
   const portNav = document.getElementById("portfolio-nav");
   const bizNav = document.getElementById("business-nav");
+  const e3Nav = document.getElementById("entrega3-nav");
 
-  [tabUniverse, tabFinpuc, tabBusiness].forEach(t => t && t.classList.remove("active"));
+  [tabUniverse, tabFinpuc, tabBusiness, tabEntrega3].forEach(t => t && t.classList.remove("active"));
   sectorLabel.style.display = "none";
   sectorList.style.display = "none";
   portNav.style.display = "none";
   if (bizNav) bizNav.style.display = "none";
+  if (e3Nav) e3Nav.style.display = "none";
 
   if (mod === "portafolios") {
     tabFinpuc.classList.add("active");
@@ -3300,6 +3472,14 @@ async function switchModule(mod) {
     if (bizNav) bizNav.style.display = "block";
     setBizNavActive("revenue");
     renderBizRevenue();
+    return;
+  }
+
+  if (mod === "entrega3") {
+    tabEntrega3.classList.add("active");
+    if (e3Nav) e3Nav.style.display = "block";
+    setE3NavActive("calibracion");
+    renderE3Calibracion();
     return;
   }
 
@@ -4468,6 +4648,7 @@ async function pfNavGo(section) {
   else if (section === "methodologies") renderMethodologies();
   else if (section === "results") renderResultsView();
   else if (section === "references") renderReferencesView();
+  else if (section === "flow") renderClientFlow();
   else if (section === "methods") renderMethodologies();
   else renderRecommend();
 }
@@ -4874,8 +5055,407 @@ function removeBlView(index) {
 }
 
 // ============================================================
-// Modulo FinPUC Business
+// Flujo tipico del cliente
 // ============================================================
+
+function renderClientFlow() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Sistema FinPUC</div>
+        <h2 class="hero-title">Flujo tipico del cliente</h2>
+        <p class="hero-copy">Recorrido completo de un cliente desde el onboarding hasta el cierre del horizonte de inversion de 5 anos, mostrando cada etapa del proceso FinPUC.</p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Diagrama del proceso</div>
+        <div class="timeline">
+          <div class="timeline-step">
+            <strong>1. Onboarding y perfil de riesgo</strong>
+            <p>El cliente define su capital inicial C<sub>0</sub> (desde $1,000 USD) y su tolerancia a la perdida alpha<sub>p</sub>. El sistema clasifica al cliente en uno de 5 perfiles: Muy conservador (0%), Conservador (5%), Neutro (15%), Arriesgado (30%) o Muy arriesgado (40%).</p>
+            <span class="field-ref">Referencia: Seccion 2.2.2 / Tabla 2.1</span>
+          </div>
+          <div class="timeline-step">
+            <strong>2. Seleccion de universo y metodologia</strong>
+            <p>Segun el perfil, FinPUC selecciona un subuniverso de acciones (40-636 candidatas), aplica filtros de calidad (F5), y elige la metodologia de optimizacion: Minima varianza, Markowitz media-varianza, Maximo retorno, Black-Litterman o Equiponderado.</p>
+            <span class="field-ref">Referencia: Seccion 2.3 / Supuestos C1-C5, E1-E3</span>
+          </div>
+          <div class="timeline-step">
+            <strong>3. Optimizacion del portafolio</strong>
+            <p>El motor de optimizacion (SLSQP via scipy) resuelve el problema: max w'*mu - 0.5*gamma*w'*Sigma*w sujeto a restricciones de peso maximo, volatilidad maxima y presupuesto completo. Para Black-Litterman, mu se ajusta con la view calibrada de la Entrega 3: <strong>Desempleo macro</strong> (tau=0.20, conf=0.50, beta_macro=1.5, q_scale=1.5).</p>
+            <span class="field-ref">Referencia: Seccion 2.4 / Ecuacion 3.1</span>
+          </div>
+          <div class="timeline-step">
+            <strong>4. Recomendacion al cliente (P2)</strong>
+            <p>FinPUC emite una recomendacion con el portafolio optimizado. El cliente decide si acepta o rechaza segun la funcion logistica P<sub>2</sub> = 1 / (1 + exp(-s * (retorno_ofrecido - tolerancia))). Sensibilidad s = 20.</p>
+            <span class="field-ref">Referencia: Seccion 4 / Ecuacion 4.6</span>
+          </div>
+          <div class="timeline-step">
+            <strong>5. Cobro de comision</strong>
+            <p>Si el cliente acepta, FinPUC cobra una comision k=1% anual (prorrateada semanalmente) sobre el capital gestionado, mas un 5% de turnover sobre el capital aceptado en cada rebalanceo.</p>
+            <span class="field-ref">Referencia: Seccion 2.4 / Supuestos F2, K7</span>
+          </div>
+          <div class="timeline-step">
+            <strong>6. Evolucion del capital</strong>
+            <p>El capital evoluciona semanalmente: V<sub>t</sub> = V<sub>t-1</sub> * (1 + r<sub>t</sub>) - comision. Los retornos r<sub>t</sub> siguen una distribucion normal con media y volatilidad del portafolio optimizado, truncadas a [-95%, +150%] semanal.</p>
+            <span class="field-ref">Referencia: Seccion 4 / P4 Monte Carlo</span>
+          </div>
+          <div class="timeline-step">
+            <strong>7. Evaluacion de retiro (P1)</strong>
+            <p>Cada semana se evalua si el cliente se retira: P<sub>1</sub> = 0.10 / (1 + exp(-20 * (perdida - alpha<sub>p</sub>))) con <strong>cap semanal del 10%</strong> (calibracion V3, Entrega 3). La perdida se mide respecto al capital inicial C<sub>0</sub>. Si el cliente se retira, FinPUC deja de percibir comisiones.</p>
+            <span class="field-ref">Referencia: Seccion 4 / Ecuacion 4.6</span>
+          </div>
+          <div class="timeline-step">
+            <strong>8. Rebalanceo periodico</strong>
+            <p>Cada 26 semanas (rebalanceo semestral), FinPUC re-optimiza el portafolio con datos actualizados y emite una nueva recomendacion. El ciclo recomendar → aceptar → cobrar → evolucionar se repite.</p>
+            <span class="field-ref">Referencia: Supuestos J1 / Seccion 2.2</span>
+          </div>
+          <div class="timeline-step">
+            <strong>9. Cierre (semana 260, ano 5)</strong>
+            <p>Al final del horizonte de 5 anos, se calcula el Score P4 = E[Riqueza] + E[Utilidad] - C<sub>0</sub> * TasaRetiro. Este score combina el exito del cliente, la rentabilidad de FinPUC y la retencion.</p>
+            <span class="field-ref">Referencia: Seccion 4 / Score P4</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="pf-card">
+          <div class="pf-section-title">Metricas clave por etapa</div>
+          <div class="data-list">
+            <div><span>Perfiles de riesgo</span><strong>5 niveles (0% a 40%)</strong></div>
+            <div><span>Universo de acciones</span><strong>~601 acciones (filtro F5)</strong></div>
+            <div><span>Metodologias activas</span><strong>Markowitz, MinVar, MaxRet, BL (Desempleo calibrado), Equiponderado</strong></div>
+            <div><span>BL: tau calibrado</span><strong>0.20 (Entrega 3)</strong></div>
+            <div><span>BL: confianza</span><strong>0.50 (Desempleo macro)</strong></div>
+            <div><span>BL: beta macro</span><strong>1.5, q_scale = 1.5</strong></div>
+            <div><span>Sensibilidad P1/P2</span><strong>s = 20, cap P1 semanal = 10% (V3)</strong></div>
+            <div><span>Comision anual</span><strong>k = 1% (prorrateo semanal)</strong></div>
+            <div><span>Turnover aceptacion</span><strong>5% de la riqueza actual</strong></div>
+            <div><span>Rebalanceo</span><strong>Semanal (simulacion), Semestral (optimizacion)</strong></div>
+            <div><span>Horizonte</span><strong>5 anos (260 semanas)</strong></div>
+            <div><span>Simulaciones</span><strong>5,000 trayectorias Monte Carlo</strong></div>
+            <div><span>Score P4</span><strong>Riqueza + Utilidad - C0 * TasaRetiro</strong></div>
+          </div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-section-title">Funciones de comportamiento</div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
+            <p style="margin:0 0 8px"><strong>P<sub>1</sub> — Probabilidad de retiro</strong></p>
+            <p style="font-size:0.95em;margin:0;color:var(--fg-muted)">
+              P<sub>1</sub>(perdida) = 0.10 / (1 + e<sup>-20 * (perdida - alpha<sub>p</sub>)</sup>)
+            </p>
+            <p style="font-size:0.8em;color:var(--fg-muted);margin:4px 0 0">Cap semanal 10% (V3 calibrado). Medida contra C<sub>0</sub>, no contra maximo historico</p>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
+            <p style="margin:0 0 8px"><strong>P<sub>2</sub> — Probabilidad de aceptacion</strong></p>
+            <p style="font-size:0.95em;margin:0;color:var(--fg-muted)">
+              P<sub>2</sub>(retorno) = 1 / (1 + e<sup>-20 * (retorno - alpha<sub>p</sub>)</sup>)
+            </p>
+            <p style="font-size:0.8em;color:var(--fg-muted);margin:4px 0 0">A mayor retorno ofrecido, mayor probabilidad de aceptar</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  queueMathTypeset();
+}
+
+// ============================================================
+// Modulo Resultados Entrega 3
+// ============================================================
+
+const E3_NAV_ITEMS = [
+  { id: "calibracion", label: "Calibracion BL" },
+  { id: "validacion", label: "Validacion" },
+  { id: "views", label: "Comparacion Views" },
+  { id: "score", label: "Score P4" },
+];
+
+let e3ActiveNav = "calibracion";
+
+function setE3NavActive(section) {
+  e3ActiveNav = section;
+  document.querySelectorAll("#entrega3-nav .portfolio-nav-item").forEach(el => el.classList.remove("active"));
+  const target = document.getElementById("e3nav-" + section);
+  if (target) target.classList.add("active");
+}
+
+function e3NavGo(section) {
+  setE3NavActive(section);
+  if (section === "calibracion") renderE3Calibracion();
+  else if (section === "validacion") renderE3Validacion();
+  else if (section === "views") renderE3Views();
+  else if (section === "score") renderE3Score();
+}
+
+function renderE3Calibracion() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Resultados Entrega 3</div>
+        <h2 class="hero-title">Calibracion secuencial Black-Litterman</h2>
+        <p class="hero-copy">Calibracion en 5 etapas sobre el perfil Neutro con split 7y/2y. Cada etapa selecciona la configuracion ganadora antes de pasar a la siguiente. View resultante: <strong>Desempleo macro</strong>.</p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Etapas de calibracion</div>
+        <div class="timeline">
+          <div class="timeline-step">
+            <strong>Etapa 1 — Familia de view</strong>
+            <p>Se prueban 4 familias: momentum, desempleo, momentum top20 6M, momentum top40 1Y. <strong>Ganador: Desempleo macro</strong> (Score 0.595, Sharpe 1.579, Delta +0.076 vs Markowitz).</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Etapa 2 — Estructura de P</strong>
+            <p>Sobre desempleo, se varia desempleo asumido (3.5%, 4.0%, 4.5%) y beta macro (0.5, 1.0, 1.5). <strong>Ganador: U=4.0%, β=1.5</strong> (Score 0.650, Sharpe 1.713, Delta +0.009).</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Etapa 3 — Intensidad de Q</strong>
+            <p>Se escala Q con factores 0.5, 1.0, 1.5, 2.0. <strong>Ganador: q_scale=1.5</strong> (Score 0.650, Sharpe 1.715, Delta +0.010).</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Etapa 4 — Confianza Omega</strong>
+            <p>Se varia la confianza (0.10, 0.20, 0.35, 0.50, 0.65, 0.80). <strong>Ganador inicial: conf=0.20</strong> (Sharpe 1.722). Validacion 3-horizonte selecciona <strong>conf=0.50</strong>.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Etapa 5 — Tau (incertidumbre prior)</strong>
+            <p>Se varia tau (0.01, 0.05, 0.10, 0.20, 0.30). <strong>Ganador: tau=0.200</strong> (Score 0.976, Sharpe 1.730, Delta +0.025).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Parametros finales calibrados</div>
+        <div class="detail-grid">
+          <div class="pf-card">
+            <div class="data-list">
+              <div><span>Familia</span><strong>Desempleo macro</strong></div>
+              <div><span>Desempleo asumido</span><strong>4.0% (bajo neutro 5.0%)</strong></div>
+              <div><span>Beta macro</span><strong>1.5</strong></div>
+              <div><span>q_scale (intensidad Q)</span><strong>1.5</strong></div>
+              <div><span>Confianza Omega</span><strong>0.50</strong></div>
+              <div><span>Tau</span><strong>0.200</strong></div>
+            </div>
+          </div>
+          <div class="pf-card">
+            <div class="pf-section-title">Mejora Sharpe por perfil (con pandemia)</div>
+            <div id="e3-sharpe-chart" style="width:100%;height:280px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">BL vs Markowitz por perfil</div>
+        <table class="pf-table">
+          <thead><tr><th>Perfil</th><th>Dataset</th><th>Sharpe BL</th><th>Sharpe MK</th><th>Mejora</th><th>Drawdown BL</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td>Muy arriesgado</td><td>con_pandemia</td><td>1.08</td><td>0.71</td><td style="color:#4a7c59;font-weight:700">+51.7%</td><td>-24.7%</td><td><span class="methodology-chip">Recomendado</span></td></tr>
+            <tr><td>Arriesgado</td><td>con_pandemia</td><td>1.71</td><td>1.17</td><td style="color:#4a7c59;font-weight:700">+46.7%</td><td>-11.9%</td><td><span class="methodology-chip">Recomendado</span></td></tr>
+            <tr><td>Neutro</td><td>con_pandemia</td><td>1.79</td><td>1.66</td><td style="color:#4a7c59">+7.8%</td><td>-9.3%</td><td><span class="methodology-chip">Recomendado</span></td></tr>
+            <tr><td>Conservador</td><td>con_pandemia</td><td>1.78</td><td>1.78</td><td>+0.2%</td><td>-9.0%</td><td><span class="methodology-chip">Recomendado</span></td></tr>
+            <tr><td>Muy conservador</td><td>con_pandemia</td><td>1.77</td><td>1.79</td><td style="color:#b85c3a">-0.9%</td><td>-8.9%</td><td><span style="background:#d8d2c8;color:#1c2733;font-size:0.7em;padding:2px 8px;border-radius:3px">No dominante</span></td></tr>
+            <tr><td>Arriesgado</td><td>sin_pandemia</td><td>1.57</td><td>1.51</td><td style="color:#4a7c59">+3.5%</td><td>-12.6%</td><td><span class="methodology-chip">Recomendado</span></td></tr>
+            <tr><td>Neutro</td><td>sin_pandemia</td><td>1.67</td><td>1.75</td><td style="color:#b85c3a">-4.5%</td><td>-10.3%</td><td><span style="background:#d8d2c8;color:#1c2733;font-size:0.7em;padding:2px 8px;border-radius:3px">No dominante</span></td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.82em;color:var(--fg-muted);margin-top:8px">Validacion robusta final: BL Neutro sin_pandemia → Sharpe 1.44 vs MK 1.63 (-11.7%). BL no es universalmente dominante, pero gana en perfiles de alto riesgo bajo escenarios de estres.</p>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    const el = document.getElementById("e3-sharpe-chart");
+    if (!el) return;
+    const profiles = ["Muy<br>conservador", "Conservador", "Neutro", "Arriesgado", "Muy<br>arriesgado"];
+    const blSharpe = [1.77, 1.78, 1.79, 1.71, 1.08];
+    const mkSharpe = [1.79, 1.78, 1.66, 1.17, 0.71];
+    Plotly.newPlot("e3-sharpe-chart", [
+      { x: profiles, y: blSharpe, type: "bar", name: "BL calibrado", marker: { color: "#c49b25" }, text: blSharpe.map(v => v.toFixed(2)), textposition: "outside" },
+      { x: profiles, y: mkSharpe, type: "bar", name: "Markowitz base", marker: { color: "#2e4b6e" }, text: mkSharpe.map(v => v.toFixed(2)), textposition: "outside" },
+    ], {
+      ...PLOTLY_LAYOUT_BASE, barmode: "group", margin: { t: 10, r: 10, b: 60, l: 50 },
+      yaxis: { title: "Sharpe", tickformat: ".2f" },
+      legend: { orientation: "h", y: -0.3 },
+    }, PLOTLY_CONFIG);
+  }, 200);
+}
+
+function renderE3Validacion() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Resultados Entrega 3</div>
+        <h2 class="hero-title">Validacion 3-horizonte rolling</h2>
+        <p class="hero-copy">Validacion out-of-sample con 22 ventanas rolling (60% calibracion, 20% validacion, 20% test P4). Parametros congelados tras calibracion y evaluados en ventanas no vistas.</p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Resultados out-of-sample (BL calibrado vs Markowitz)</div>
+        <table class="pf-table">
+          <thead><tr><th>Horizonte</th><th>Dataset</th><th>Perfil</th><th>Mejora Sharpe</th><th>Delta Drawdown</th><th>% Ventanas Rec</th></tr></thead>
+          <tbody>
+            <tr><td>test_p4</td><td>con_pandemia</td><td>Muy arriesgado</td><td style="color:#4a7c59;font-weight:700">+23.1%</td><td>+4.7pp</td><td>100%</td></tr>
+            <tr><td>test_p4</td><td>con_pandemia</td><td>Arriesgado</td><td style="color:#4a7c59;font-weight:700">+19.9%</td><td>+7.6pp</td><td>75%</td></tr>
+            <tr><td>test_p4</td><td>sin_pandemia</td><td>Arriesgado</td><td style="color:#4a7c59">+3.2%</td><td>+6.1pp</td><td>100%</td></tr>
+            <tr><td>validacion</td><td>con_pandemia</td><td>Muy arriesgado</td><td style="color:#4a7c59">+3.0%</td><td>+6.3pp</td><td>66.7%</td></tr>
+            <tr><td>test_p4</td><td>sin_pandemia</td><td>Muy conservador</td><td>+0.2%</td><td>+0.1pp</td><td>100%</td></tr>
+            <tr><td>validacion</td><td>sin_pandemia</td><td>Conservador</td><td style="color:#b85c3a">-2.2%</td><td>+0.6pp</td><td>0%</td></tr>
+            <tr><td>validacion</td><td>con_pandemia</td><td>Conservador</td><td style="color:#b85c3a">-3.0%</td><td>-0.1pp</td><td>33.3%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="detail-grid">
+        <div class="pf-card">
+          <div class="pf-section-title">Dinamica del portafolio (BL calibrado)</div>
+          <table class="pf-table">
+            <thead><tr><th>Perfil</th><th>Turnover</th><th>N Efectivo</th><th>Sector HHI</th></tr></thead>
+            <tbody>
+              <tr><td>Muy conservador</td><td>6.3%</td><td>112.6</td><td>0.169</td></tr>
+              <tr><td>Conservador</td><td>6.2%</td><td>118.1</td><td>0.166</td></tr>
+              <tr><td>Neutro</td><td>6.4%</td><td>136.3</td><td>0.158</td></tr>
+              <tr><td>Arriesgado</td><td>7.0%</td><td>205.7</td><td>0.135</td></tr>
+              <tr><td>Muy arriesgado</td><td>9.9%</td><td>121.0</td><td>0.214</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:0.82em;color:var(--fg-muted);margin-top:8px"><strong>Hallazgo clave:</strong> Desempleo produce turnover 6-10% (vs 40-60% del momentum). Alta diversificacion (N efectivo 112-360). Baja concentracion sectorial (HHI 0.12-0.21).</p>
+        </div>
+        <div class="pf-card">
+          <div class="pf-section-title">P4 Scores (validacion)</div>
+          <table class="pf-table">
+            <thead><tr><th>Metodo</th><th>Perfil</th><th>Riqueza</th><th>Retiro</th><th>Score</th></tr></thead>
+            <tbody>
+              <tr><td>MK base</td><td>Neutro</td><td>$2,797</td><td>0.9%</td><td style="font-weight:700;color:#c49b25">2,982</td></tr>
+              <tr><td>MK base</td><td>Neutro</td><td>$2,623</td><td>0.7%</td><td>2,792</td></tr>
+              <tr><td>MK base</td><td>Conservador</td><td>$2,508</td><td>15.8%</td><td>2,546</td></tr>
+              <tr><td>BL calibrado</td><td>Conservador</td><td>$2,452</td><td>16.8%</td><td>2,475</td></tr>
+              <tr><td>BL calibrado</td><td>Neutro</td><td>$2,291</td><td>0.7%</td><td>2,428</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderE3Views() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Resultados Entrega 3</div>
+        <h2 class="hero-title">Comparacion de views Black-Litterman</h2>
+        <p class="hero-copy">Cuatro vistas evaluadas individualmente con calibracion secuencial completa. Desempleo macro es la view recomendada por estabilidad, baja rotacion y diversificacion.</p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Resumen comparativo</div>
+        <table class="pf-table">
+          <thead><tr><th>View</th><th>Tau</th><th>Confianza</th><th>Mejor Sharpe test</th><th>Turnover</th><th>N Efectivo</th><th>HHI</th><th>Ver ejecto</th></tr></thead>
+          <tbody>
+            <tr style="border-left:4px solid #c49b25">
+              <td><strong>Desempleo macro</strong></td><td>0.20</td><td>0.50</td><td style="color:#4a7c59">+23.1%</td><td>6-10%</td><td>112-360</td><td>0.12-0.21</td>
+              <td><span class="methodology-chip">Preferente</span></td>
+            </tr>
+            <tr>
+              <td>Momentum general</td><td>0.01</td><td>0.80</td><td style="color:#4a7c59">+75.6%</td><td style="color:#b85c3a">13-60%</td><td style="color:#b85c3a">6-223</td><td style="color:#b85c3a">0.17-0.55</td>
+              <td><span style="background:#d8d2c8;color:#1c2733;font-size:0.7em;padding:2px 8px;border-radius:3px">Condicional</span></td>
+            </tr>
+            <tr>
+              <td>Momentum top20 6M</td><td>0.20</td><td>0.80</td><td style="color:#b85c3a">-2.5%</td><td style="color:#b85c3a">8-61%</td><td>12-239</td><td>0.14-0.47</td>
+              <td><span style="background:#d8d2c8;color:#1c2733;font-size:0.7em;padding:2px 8px;border-radius:3px">No preferente</span></td>
+            </tr>
+            <tr>
+              <td>Momentum top-bottom 1Y</td><td>0.20</td><td>0.80</td><td>+1.5%</td><td style="color:#b85c3a">8-61%</td><td>12-239</td><td>0.14-0.47</td>
+              <td><span style="background:#d8d2c8;color:#1c2733;font-size:0.7em;padding:2px 8px;border-radius:3px">No preferente</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="detail-grid">
+        <div class="pf-card" style="min-height:340px">
+          <div class="pf-section-title">Turnover por view y perfil</div>
+          <div id="e3-turnover-chart" style="width:100%;height:280px"></div>
+        </div>
+        <div class="pf-card" style="min-height:340px">
+          <div class="pf-section-title">Conclusion</div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px">
+            <p style="margin:0 0 12px"><strong>Desempleo macro es la view mas defendible</strong> cuando se prioriza estabilidad, baja rotacion y diversificacion sectorial.</p>
+            <p style="margin:0 0 8px;font-size:0.9em;color:var(--fg-muted)">Momentum general tiene mejor Sharpe in-sample (+30.3%) pero sufre rotacion extrema (hasta 60%), concentracion (N efectivo = 6.4 para muy arriesgado) y dominancia sectorial (HHI hasta 0.55).</p>
+            <p style="margin:0;font-size:0.9em;color:var(--fg-muted)">Las dos vistas de market cap (top20 6M y top-bottom 1Y) convergen a configuraciones identicas y muestran mejora de Sharpe negativa o marginal en la mayoria de los perfiles.</p>
+            <p style="margin:12px 0 0;font-size:0.85em"><strong>Recomendacion final:</strong> Desempleo macro como view principal. Momentum como tactico condicional en escenarios de alto crecimiento.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    const el = document.getElementById("e3-turnover-chart");
+    if (!el) return;
+    const profiles = ["Muy conservador", "Conservador", "Neutro", "Arriesgado", "Muy arriesgado"];
+    Plotly.newPlot("e3-turnover-chart", [
+      { x: profiles, y: [6.3, 6.2, 6.4, 7.0, 9.9], type: "bar", name: "Desempleo", marker: { color: "#c49b25" } },
+      { x: profiles, y: [13, 15, 18, 40, 60], type: "bar", name: "Momentum", marker: { color: "#b85c3a" } },
+      { x: profiles, y: [8, 10, 15, 35, 61], type: "bar", name: "MarketCap", marker: { color: "#2e4b6e" } },
+    ], {
+      ...PLOTLY_LAYOUT_BASE, barmode: "group", margin: { t: 10, r: 10, b: 60, l: 50 },
+      yaxis: { title: "Turnover (%)", tickformat: ".0f" },
+      legend: { orientation: "h", y: -0.35 },
+    }, PLOTLY_CONFIG);
+  }, 200);
+}
+
+function renderE3Score() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Resultados Entrega 3</div>
+        <h2 class="hero-title">Score P4 — Rankings finales</h2>
+        <p class="hero-copy">Ranking de las mejores combinaciones metodologia × perfil × escenario evaluadas en la validacion 3-horizonte. Score P4 = Riqueza + Utilidad - C0 × TasaRetiro.</p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Top 10 combinaciones (validacion 3-horizonte)</div>
+        <table class="pf-table">
+          <thead><tr><th>#</th><th>Metodo</th><th>Dataset</th><th>Perfil</th><th>Riqueza</th><th>Retiro</th><th>Utilidad</th><th>Score P4</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Markowitz base</td><td>sin_pandemia</td><td>Neutro</td><td>$2,797</td><td>0.9%</td><td>$194</td><td style="font-weight:700;color:#c49b25">2,982</td></tr>
+            <tr><td>2</td><td>Markowitz base</td><td>con_pandemia</td><td>Neutro</td><td>$2,623</td><td>0.7%</td><td>$176</td><td style="font-weight:700;color:#c49b25">2,792</td></tr>
+            <tr><td>3</td><td>Markowitz base</td><td>sin_pandemia</td><td>Conservador</td><td>$2,508</td><td>15.8%</td><td>$196</td><td>2,546</td></tr>
+            <tr><td>4</td><td>Markowitz base</td><td>con_pandemia</td><td>Conservador</td><td>$2,369</td><td>13.0%</td><td>$188</td><td>2,427</td></tr>
+            <tr><td>5</td><td>BL calibrado</td><td>sin_pandemia</td><td>Conservador</td><td>$2,452</td><td>16.8%</td><td>$192</td><td>2,475</td></tr>
+            <tr><td>6</td><td>BL calibrado</td><td>sin_pandemia</td><td>Neutro</td><td>$2,291</td><td>0.7%</td><td>$144</td><td>2,428</td></tr>
+            <tr><td>7</td><td>BL calibrado</td><td>con_pandemia</td><td>Conservador</td><td>$2,241</td><td>14.2%</td><td>$178</td><td>2,278</td></tr>
+            <tr><td>8</td><td>BL calibrado</td><td>con_pandemia</td><td>Neutro</td><td>$2,124</td><td>0.5%</td><td>$125</td><td>2,243</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="detail-grid">
+        <div class="pf-card">
+          <div class="pf-section-title">Interpretacion</div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px">
+            <p style="margin:0 0 12px"><strong>Markowitz base lidera en Score P4</strong> para perfiles Neutro y Conservador. Esto se debe a que la comision k=1% no penaliza la simplicidad del modelo base, y el BL calibrado con desempleo no genera suficiente retorno extra para compensar el turnover en escenarios sin pandemia.</p>
+            <p style="margin:0 0 8px;font-size:0.9em;color:var(--fg-muted)">BL calibrado muestra su fortaleza en <strong>perfiles de alto riesgo bajo escenarios de estres</strong> (Sharpe +51.7% para Muy arriesgado con pandemia), pero el Score P4 actual recompensa mas la retencion que el exceso de retorno.</p>
+            <p style="margin:0;font-size:0.9em;color:var(--fg-muted)">El Score P4 podria recalibrarse para dar mas peso al retorno esperado (lambda > 0.5 en la formulacion multiobjetivo) si se prioriza la generacion de riqueza sobre la retencion.</p>
+          </div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-section-title">Metricas por componente</div>
+          <table class="pf-table">
+            <thead><tr><th>Componente</th><th>Min</th><th>Media</th><th>Max</th></tr></thead>
+            <tbody>
+              <tr><td>Riqueza final</td><td>$2,124</td><td>$2,413</td><td>$2,797</td></tr>
+              <tr><td>Tasa de retiro</td><td>0.5%</td><td>7.9%</td><td>16.8%</td></tr>
+              <tr><td>Utilidad FinPUC</td><td>$125</td><td>$174</td><td>$196</td></tr>
+              <tr><td>Score P4</td><td>2,243</td><td>2,521</td><td>2,982</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 const BIZ_NAV_ITEMS = [
   { id: "revenue", label: "Modelo de ingresos" },
@@ -5020,6 +5600,12 @@ function renderBizCommissions() {
           Estos supuestos simplifican el modelo real de comisiones bursatiles. En una implementacion real, habria que considerar
           costos de transaccion, impuestos, spreads bid-ask y restricciones de liquidez que afectarian la rentabilidad neta.
         </p>
+        <div style="margin-top:12px;padding:12px;background:#fff8e1;border-left:3px solid #c49b25;border-radius:6px;font-size:0.82em">
+          <strong>Pendiente Entrega 3:</strong> La optimizacion del k% y la frecuencia de cobro requiere ejecutar
+          <code>01_simulacion_k/simulacion_comisiones_k.ipynb</code> (sensibilidad k% sobre 8 valores: 0.25% a 5.0%)
+          y <code>02_simulacion_lambda/simulacion_lambda_multiobjetivo.ipynb</code> (balance λ cliente vs empresa).
+          Los valores actuales (k=1%, semanal, turnover=5%) corresponden a la linea base de la Entrega 2.
+        </div>
       </div>
     </div>
   `;
@@ -5038,12 +5624,13 @@ function renderBizClient() {
         <div class="academic-card">
           <h4>P<sub>1</sub> — Probabilidad de retiro</h4>
           <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0;text-align:center;font-size:1.05em">
-            P<sub>1</sub>(x<sub>1</sub>) = 1 / [1 + exp(−20 · (x<sub>1</sub> − x̂<sub>1</sub>))]
+            P<sub>1</sub>(x<sub>1</sub>) = 0.10 / [1 + exp(−20 · (x<sub>1</sub> − x̂<sub>1</sub>))]
           </div>
           <p style="font-size:0.9em;color:var(--fg-muted)">
             x<sub>1</sub> = perdida actual / C<sub>0</sub> (medida contra capital inicial)<br>
             x̂<sub>1</sub> = tolerancia del perfil (0%, 5%, 15%, 30%, 40%)<br>
             s = 20 (sensibilidad logistica)<br>
+            <strong>Cap semanal: 10% maximo</strong> (calibrado en Entrega 3, Version 3)<br>
             <strong>Solo se activa si x<sub>1</sub> > x̂<sub>1</sub></strong>
           </p>
         </div>
@@ -5148,17 +5735,19 @@ function renderBizScore() {
 
       <div class="academic-grid">
         <div class="academic-card">
-          <h4>De Informe 1 a Entrega 2</h4>
+          <h4>Resultado empirico (Entrega 2)</h4>
           <p style="font-size:0.9em;color:var(--fg-muted)">
-            El Informe 1 propuso <strong>optimizar directamente</strong> la funcion escalarizada λ·f<sub>1</sub>+(1−λ)·f<sub>2</sub>.
-            La Entrega 2 <strong>separo</strong> el problema: primero optimiza el retorno (Markowitz/BL), luego simula el comportamiento del cliente (Monte Carlo), y finalmente <strong>ordena</strong> con Score P4. Esta separacion es mas simple de implementar y permite comparar metodologias sin elegir λ.
+            Con el Scoring P4, la mejor combinacion fue <strong>BL Momentum Top20 6M + Muy arriesgado + Con pandemia</strong>:
+            Score P4 = <strong>9,417</strong> (riqueza $8,974 + utilidad $474 − $1,000×0.031).
           </p>
         </div>
         <div class="academic-card">
-          <h4>Resultado empirico</h4>
+          <h4>Resultado empirico (Entrega 3)</h4>
           <p style="font-size:0.9em;color:var(--fg-muted)">
-            Con el Scoring P4, la mejor combinacion es <strong>Black-Litterman Momentum Top20 6M + Muy arriesgado + Con pandemia</strong>:
-            Score P4 = <strong>9,417</strong> (riqueza $8,974 + utilidad $474 − $1,000×0.031). Esto demuestra que retorno del cliente y utilidad de la empresa pueden crecer juntos cuando el portafolio es bueno.
+            Validacion 3-horizonte con BL Desempleo calibrado (tau=0.20, conf=0.50):
+            <strong>Markowitz base + Neutro sin pandemia lidera</strong> con Score P4 = <strong>2,982</strong>
+            (riqueza $2,797 + utilidad $194 − $1,000×0.009).
+            BL gana en Sharpe (+51.7% muy arriesgado) pero el Score P4 actual favorece la retencion.
           </p>
         </div>
       </div>
