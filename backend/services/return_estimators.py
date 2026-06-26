@@ -133,8 +133,8 @@ def black_litterman_ann_returns(
     market_weights = market_caps / market_caps.sum()
     prior = np.full(len(tickers), risk_free_rate, dtype=float) + lambda_risk * (ann_cov @ market_weights)
 
-    from ..routers.portfolio import _parse_views_json
-    p_matrix, q_vector, views_used = _parse_views_json(parameter_values.get("views_json"), tickers)
+    from ..routers.portfolio import parse_views_json
+    p_matrix, q_vector, views_used = parse_views_json(parameter_values.get("views_json"), tickers)
     omega = np.eye(len(q_vector), dtype=float) * omega_diag
 
     tau_sigma = tau * ann_cov

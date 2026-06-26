@@ -26,8 +26,15 @@ DEFENSIVE_SECTORS = [
 # Parametros por tipo de view (misma nomenclatura que los notebooks)
 VIEW_CONFIGS = {
     "momentum": {
-        "label": "Momentum (1Y, 20 long / 20 short)",
+        "label": "Momentum general (1Y, 20 long / 20 short)",
         "description": "Top-20 y bottom-20 por retorno acumulado en 252 dias. Opera sobre el universo completo.",
+        "confidence": 0.50,
+        "lookback": 252,
+        "top_bottom": 20,
+    },
+    "momentum_general": {
+        "label": "Momentum general (E3 — 1Y, 20 long / 20 short)",
+        "description": "Calibracion Momentum general de Entrega 3: lookback 252d, top/bottom 20, pesos iguales, confianza 0.50.",
         "confidence": 0.50,
         "lookback": 252,
         "top_bottom": 20,
@@ -42,7 +49,6 @@ VIEW_CONFIGS = {
         "unemployment_rate": 0.04,
         "unemployment_neutral": 0.05,
         "macro_beta": 1.5,
-        "q_scale": 1.5,
     },
     "momentum_top20_6m": {
         "label": "Momentum Top20 6M (10 long / 10 short)",
@@ -111,8 +117,7 @@ def build_desempleo_view(
     """Construye view de desempleo: long cyclical / short defensive."""
     confidence = config["confidence"]
     signal = config["unemployment_neutral"] - config["unemployment_rate"]
-    q_scale = config.get("q_scale", 1.0)
-    q_value = abs(signal) * config["macro_beta"] * q_scale / TRADING_DAYS_PER_YEAR
+    q_value = abs(signal) * config["macro_beta"] / TRADING_DAYS_PER_YEAR
 
     cyclical_idx = []
     defensive_idx = []
@@ -210,6 +215,8 @@ def build_bl_view(
         )
 
     if view_type == "momentum":
+        return build_momentum_view(tickers, returns_matrix, config)
+    elif view_type == "momentum_general":
         return build_momentum_view(tickers, returns_matrix, config)
     elif view_type == "desempleo":
         return build_desempleo_view(tickers, metadata, config)

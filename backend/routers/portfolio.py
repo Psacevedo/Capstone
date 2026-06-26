@@ -74,18 +74,21 @@ from ..utils.portfolio_resolver import (
 )
 from ..utils.views_and_loadings import parse_views_json
 from ..services.bl_views import build_bl_view, VIEW_CONFIGS
+from ..services.view_ranking import compute_view_ranking
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 _CACHE_5M = "public, max-age=300"
-TARGET_HOLDINGS_DEFAULT = 10
-TARGET_HOLDINGS_MAX = 20
-MIN_OPTIMIZER_UNIVERSE = 50
-MAX_OPTIMIZER_UNIVERSE = 200
+TARGET_HOLDINGS_DEFAULT = 15
+TARGET_HOLDINGS_MAX = 80
+MIN_OPTIMIZER_UNIVERSE = 20
+MAX_OPTIMIZER_UNIVERSE = 80
 DEFAULT_RISK_FREE_RATE = 0.02  # 2% anual (Entrega 2)
 DEFAULT_COMMISSION_RATE = 0.01
+# En V1+ (Entrega 3) la empresa gana una comisión fija mensual sobre el saldo administrado activo.
+DEFAULT_COMPANY_MONTHLY_FEE_RATE = 0.005  # 0,5% mensual
 # Rebalanceo semestral: 126 dias habiles ~ 26 semanas (Entrega 2)
 DEFAULT_REBALANCE_FREQ_WEEKS = 26
 PARAMETER_GROUP_ORDER = [
@@ -204,7 +207,7 @@ RISK_PROFILES = {
         "max_sector_fraction": 0.30,
     },
     "neutro": {
-        "alpha_p": 0.15,
+        "alpha_p": 0.10,
         "label": "Neutro",
         "description": "Equilibra retorno esperado y riesgo.",
         "candidate_pool_default": 100,
@@ -220,7 +223,7 @@ RISK_PROFILES = {
         "max_sector_fraction": 0.25,
     },
     "arriesgado": {
-        "alpha_p": 0.30,
+        "alpha_p": 0.15,
         "label": "Arriesgado",
         "description": "Acepta mas volatilidad para capturar crecimiento.",
         "candidate_pool_default": 125,
@@ -236,7 +239,7 @@ RISK_PROFILES = {
         "max_sector_fraction": 0.30,
     },
     "muy_arriesgado": {
-        "alpha_p": 0.40,
+        "alpha_p": 0.20,
         "label": "Muy arriesgado",
         "description": "Opera sobre el universo de acciones completo.",
         "candidate_pool_default": None,
@@ -324,7 +327,7 @@ def resolve_methodology_id(req: OptimizeRequest) -> str:
 
 def resolve_target_holdings(req: OptimizeRequest) -> int:
     value = req.target_holdings or req.n_stocks or TARGET_HOLDINGS_DEFAULT
-    return max(3, min(int(value), TARGET_HOLDINGS_MAX))
+    return max(2, min(int(value), TARGET_HOLDINGS_MAX))
 
 
 def resolve_profile(req: OptimizeRequest) -> Tuple[str, Dict, float]:
@@ -353,7 +356,7 @@ def resolve_candidate_pool_size(profile_cfg: Dict, requested: Optional[int], f5_
 def optimizer_universe_size(candidate_pool_size: int, target_holdings: int) -> int:
     return min(
         candidate_pool_size,
-        max(MIN_OPTIMIZER_UNIVERSE, target_holdings * 4),
+        max(MIN_OPTIMIZER_UNIVERSE, target_holdings * 6),
         MAX_OPTIMIZER_UNIVERSE,
     )
 
@@ -774,10 +777,10 @@ def _black_litterman_ann_returns(
     returns_matrix: np.ndarray,
     parameter_values: Dict[str, object],
 ) -> Tuple[np.ndarray, Dict]:
-    # Supuestos fijos de Entrega 2 (ignoramos lo que mande el frontend)
-    risk_free_rate = 0.02  # Rf = 2% (Supuestos F1)
-    lambda_risk = 2.5      # delta fallback (Supuestos H2)
-    tau = 0.20             # tau = 0.20 calibrado (Entrega 3, validacion 3-horizonte)
+    # Supuestos calibrados de Entrega 3 (BL Desempleo macro)
+    risk_free_rate = 0.02
+    lambda_risk = 2.5
+    tau = 0.20
 
     # Covarianza anualizada con shrinkage (Entrega 2)
     ann_cov = np.cov(returns_matrix.T) * 252 if returns_matrix.shape[1] > 1 else np.array([[returns_matrix.var() * 252]])
@@ -857,7 +860,7 @@ def _estimate_returns(
         return _capm_ann_returns(tickers, metadata, parameter_values)
     if methodology_id == "fama_french_markowitz":
         return _fama_french_ann_returns(tickers, metadata, parameter_values)
-    if methodology_id in {"black_litterman_markowitz", "finpuc_hibrido"}:
+    if methodology_id in {"black_litterman_markowitz", "black_litterman_momentum_general", "finpuc_hibrido"}:
         return _black_litterman_ann_returns(tickers, metadata, returns_matrix, parameter_values)
     raise HTTPException(status_code=400, detail="Metodologia no soportada.")
 
@@ -1044,10 +1047,38 @@ def build_universe(
 
 def build_weekly_cycle(parameter_values: Optional[Dict[str, object]] = None) -> Dict:
     params = parameter_values or {}
+    abandonment_policy = str(params.get("abandonment_policy") or "legacy")
+
     commission_rate_pct = _normalize_numeric(params.get("commission_rate_pct"), 1.0) or 1.0
     p2_acceptance_prob_pct = _normalize_numeric(params.get("p2_acceptance_prob_pct"), 70.0) or 70.0
     p1_drawdown_pct = _normalize_numeric(params.get("p1_withdrawal_drawdown_pct"), 20.0) or 20.0
     cash_buffer_pct = _normalize_numeric(params.get("cash_buffer_pct"), 5.0)
+
+    if abandonment_policy == "v1_plus":
+        return {
+            "cadence": "Semanal",
+            "trigger": "Evaluacion semanal de clientes activos",
+            "rebalancing": "El simulador V1+ modela una dinamica semanal del cliente.",
+            "client_acceptance": (
+                "Aceptacion inicial V1+: sigmoid(retorno esperado - tolerancia)."
+            ),
+            "client_withdrawal": (
+                "Abandono V1+: umbral logistico sobre perdida vs tolerancia y ruina (wealth<=0)."
+            ),
+            "commissions": "Comision mensual empresa = 0,5% sobre saldo administrado activo.",
+            "dividends": (
+                "Los dividendos del dataset alimentan la logica de caja chica; "
+                f"la reserva referencial reportada es {round(cash_buffer_pct or 0.0, 2)}%."
+                if cash_buffer_pct is not None
+                else "Los dividendos del dataset alimentan la logica de caja chica."
+            ),
+            "rebalance_frequency": "weekly",
+            "withdrawal_frequency": "weekly",
+            "rebalance_freq_weeks": 1,
+            "horizon_years_default": 3,
+            "time_budget_seconds": 10,
+        }
+
     return {
         "cadence": "Mensual",
         "trigger": "Cierre mensual de cartera",
@@ -2197,8 +2228,9 @@ def get_ticker_return_diagnostics(
 
 @router.post("/simulate")
 def simulate_portfolio(req: SimulateRequest):
-    commission_rate = req.commission_rate_pct / 100.0
-    accept_prob = req.p2_acceptance_prob_pct / 100.0 if req.p2_acceptance_prob_pct is not None else None
+    # V1+ (Entrega 3): la comision es un fee mensual de la empresa y no descuenta del capital del cliente.
+    commission_rate = 0.0
+    accept_prob = None
     rebalance_boost = req.rebalance_return_boost_pct / 100.0
     result = simulate_client_behavior(
         initial_capital=req.initial_capital,
@@ -2211,24 +2243,25 @@ def simulate_portfolio(req: SimulateRequest):
         n_simulations=req.n_simulations,
         rebalance_freq_weeks=req.rebalance_freq_weeks,
         rebalance_return_boost=rebalance_boost,
+        abandonment_policy="v1_plus",
+        company_monthly_fee_rate=DEFAULT_COMPANY_MONTHLY_FEE_RATE,
+        ruin_wealth=0.0,
     )
     result["weekly_cycle"] = build_weekly_cycle(
         {
+            "abandonment_policy": "v1_plus",
             "commission_rate_pct": req.commission_rate_pct,
             "p2_acceptance_prob_pct": req.p2_acceptance_prob_pct or 50.0,
             "p1_withdrawal_drawdown_pct": req.max_loss_pct * 100.0,
         }
     )
     result["assumptions"] = {
-        "commission_rate_pct": round(req.commission_rate_pct, 2),
-        "acceptance_model": (
-            f"P2 logistica (s=20): aceptacion calculada desde retorno ofrecido vs tolerancia."
-            if accept_prob is None
-            else f"Aproximacion operacional de P2 con probabilidad base {round(accept_prob * 100, 2)}%."
-        ),
-        "withdrawal_model": f"P1 logistica (s=20): retiro evaluado semanalmente contra perdida sobre tolerancia de {round(req.max_loss_pct * 100, 2)}%.",
-        "rebalance_frequency": "Semanal",
-        "withdrawal_frequency": "Semanal",
+        "abandonment_policy": "v1_plus",
+        "commission_company_monthly_fee_rate": round(DEFAULT_COMPANY_MONTHLY_FEE_RATE * 100, 4),
+        "acceptance_model": "Aceptacion inicial V1+: sigmoid(expected_return - loss_tolerance).",
+        "withdrawal_model": "Abandono V1+: umbral logistico sobre perdida vs tolerancia y ruina (wealth<=0).",
+        "rebalance_frequency": "weekly (simulador V1+)",
+        "withdrawal_frequency": "weekly (simulador V1+)",
         "rebalance_freq_weeks": req.rebalance_freq_weeks,
         "rebalance_freq_months": result.get("rebalance_freq_months"),
         "rebalance_return_boost_pct": round(req.rebalance_return_boost_pct, 2),
@@ -2242,26 +2275,34 @@ def simulate_portfolio(req: SimulateRequest):
 
 RECOMMEND_METHODOLOGIES = [
     "markowitz_media_varianza",
-    "minima_varianza_global",
-    "equiponderado",
     "black_litterman_markowitz",
+    "black_litterman_momentum_general",
 ]
 
 RECOMMEND_LABELS = {
     "markowitz_media_varianza": "Markowitz media-varianza",
-    "minima_varianza_global": "Minima varianza global",
-    "equiponderado": "Equiponderado top-20",
     "black_litterman_markowitz": "Black-Litterman Momentum Top20 6M",
+    "black_litterman_momentum_general": "Black-Litterman Momentum General (E3)",
 }
 
 BL_VIEW_FOR_RECOMMEND = "momentum_top20_6m"
+BL_VIEW_FOR_RECOMMEND_MOMENTUM_GENERAL = "momentum_general"
 
 
 class RecommendRequest(BaseModel):
     profile: str = Field(default="neutro", description="muy_conservador|conservador|neutro|arriesgado|muy_arriesgado")
     initial_capital: float = Field(default=1000, gt=0)
-    target_holdings: int = Field(default=10, ge=3, le=20)
+    target_holdings: int = Field(default=15, ge=2, le=80)
     sector: Optional[str] = None
+    parameter_values: Dict[str, object] = Field(default_factory=dict)
+    scenario: str = Field(default="con_pandemia", description="con_pandemia|sin_pandemia")
+
+
+class OverviewRequest(BaseModel):
+    initial_capital: float = Field(default=1000, gt=0)
+    target_holdings: int = Field(default=15, ge=2, le=80)
+    years: int = Field(default=5, ge=1, le=10)
+    profile: Optional[str] = Field(default=None, description="Filtrar por perfil; si se omite evalúa todos")
 
 
 def _run_single_optimization(
@@ -2273,6 +2314,9 @@ def _run_single_optimization(
     sector: Optional[str],
     initial_capital: float,
     bl_view_type: Optional[str] = None,
+    parameter_values: Optional[Dict] = None,
+    scenario: str = "con_pandemia",
+    n_simulations: int = 2000,
 ) -> Optional[Dict]:
     """Ejecuta una optimizacion individual y retorna el resultado simplificado."""
     splits = get_split_dates()
@@ -2295,14 +2339,24 @@ def _run_single_optimization(
     optimizer_candidates = candidates[:opt_size]
     optimizer_tickers = [c["ticker"] for c in optimizer_candidates]
 
+    # Fecha fin segun escenario
+    cal_end = "2020-02-01" if scenario == "sin_pandemia" else splits["calibration_end"]
+
     # Datos de calibracion
-    calibration_series = fetch_price_series(db, optimizer_tickers, splits["calibration_start"], splits["calibration_end"])
+    calibration_series = fetch_price_series(db, optimizer_tickers, splits["calibration_start"], cal_end)
     valid_tickers, returns_matrix = align_return_matrix(calibration_series, optimizer_tickers)
+    if len(valid_tickers) < 5:
+        return None
 
     # Parametros
-    parameter_values = {}
+    pv = dict(parameter_values) if parameter_values else {}
     if methodology_id == "black_litterman_markowitz":
-        parameter_values["bl_view_type"] = bl_view_type or BL_VIEW_FOR_RECOMMEND
+        if "views_json" not in pv and "bl_view_type" not in pv:
+            pv["bl_view_type"] = bl_view_type or BL_VIEW_FOR_RECOMMEND
+        methodology = get_methodology("black_litterman_markowitz")
+    elif methodology_id == "black_litterman_momentum_general":
+        if "views_json" not in pv and "bl_view_type" not in pv:
+            pv["bl_view_type"] = BL_VIEW_FOR_RECOMMEND_MOMENTUM_GENERAL
         methodology = get_methodology("black_litterman_markowitz")
     elif methodology_id in {"markowitz_media_varianza", "minima_varianza_global"}:
         methodology = get_methodology("markowitz_media_varianza")
@@ -2310,9 +2364,7 @@ def _run_single_optimization(
         methodology = get_methodology(methodology_id)
 
     # Estimacion de retornos
-    ann_returns, estimation_info = _estimate_returns(
-        methodology_id, valid_tickers, metadata, returns_matrix, parameter_values,
-    )
+    ann_returns, estimation_info = _estimate_returns(methodology_id, valid_tickers, metadata, returns_matrix, pv)
     risk_free_rate = DEFAULT_RISK_FREE_RATE
     cvar_level = profile_cfg["cvar_level"]
 
@@ -2322,32 +2374,36 @@ def _run_single_optimization(
         risk_free_rate, profile_key=profile_key, profile_cfg=profile_cfg,
     )
 
-    metrics = portfolio_metrics(optimized_weights, returns_matrix, ann_returns, risk_free_rate)
-    cvar_value = compute_cvar(optimized_weights, returns_matrix, confidence_level=cvar_level)
+    # Trim portfolio
+    selected_tickers, selected_weights, sub_returns, sub_ann = trim_portfolio(
+        valid_tickers, optimized_weights, returns_matrix, ann_returns, target_holdings,
+    )
 
-    # Escenarios
-    commission_rate = DEFAULT_COMMISSION_RATE
-    scenarios = project_scenarios(
+    metrics = portfolio_metrics(selected_weights, sub_returns, sub_ann, risk_free_rate)
+    cvar_value = compute_cvar(selected_weights, sub_returns, confidence_level=cvar_level)
+
+    # Escenarios de proyeccion
+    scenarios_commission_rate = 0.0
+    escenarios = project_scenarios(
         initial_capital=initial_capital,
         expected_return=metrics["expected_return_pct"] / 100.0,
         volatility=metrics["volatility_pct"] / 100.0,
-        years=5, commission_rate=commission_rate,
+        years=5, commission_rate=scenarios_commission_rate,
     )
 
-    # Simulacion rapida (Score P4)
+    # Simulacion con desglose semestral
     simulation = simulate_client_behavior(
         initial_capital=initial_capital,
         expected_return=metrics["expected_return_pct"] / 100.0,
         volatility=metrics["volatility_pct"] / 100.0,
         max_loss_pct=alpha_p,
-        years=5, commission_rate=commission_rate, accept_prob=None,
-        n_simulations=2000, rebalance_freq_weeks=1,
+        years=5, commission_rate=0.0, n_simulations=n_simulations, rebalance_freq_weeks=1,
+        abandonment_policy="v1_plus",
+        company_monthly_fee_rate=DEFAULT_COMPANY_MONTHLY_FEE_RATE,
+        return_semesters=True,
     )
 
-    # Trim portfolio for display
-    selected_tickers, selected_weights, _, _ = trim_portfolio(
-        valid_tickers, optimized_weights, returns_matrix, ann_returns, target_holdings,
-    )
+    scenario_label = "Sin pandemia" if scenario == "sin_pandemia" else "Con pandemia"
 
     return {
         "methodology_id": methodology_id,
@@ -2355,6 +2411,7 @@ def _run_single_optimization(
         "profile": profile_key,
         "profile_label": profile_cfg["label"],
         "alpha_p": alpha_p,
+        "scenario": scenario_label,
         "portfolio": portfolio_rows(selected_tickers, selected_weights, metadata),
         "metrics": {
             "expected_return_pct": metrics["expected_return_pct"],
@@ -2363,13 +2420,17 @@ def _run_single_optimization(
             "cvar_pct": round(cvar_value * 100, 2),
             "cvar_compliant": bool(cvar_value <= alpha_p) if alpha_p > 0 else True,
         },
-        "scenarios": scenarios,
+        "scenarios": escenarios,
         "simulation": {
             "final_capital_mean": simulation["final_capital_mean"],
             "withdrawal_rate": simulation["withdrawal_rate"],
             "total_commissions_mean": simulation["total_commissions_mean"],
             "score_p4": simulation["score_p4"],
             "p2_acceptance_prob_pct": simulation["p2_acceptance_prob_pct"],
+            "semester_labels": simulation["semester_labels"],
+            "semester_company_mean": simulation["semester_company_mean"],
+            "semester_wealth_mean": simulation["semester_wealth_mean"],
+            "semester_active_rate": simulation["semester_active_rate"],
         },
         "universe": {
             "total_count": total_f5_count,
@@ -2377,6 +2438,7 @@ def _run_single_optimization(
             "optimizer_size": len(valid_tickers),
             "target_holdings": target_holdings,
         },
+        "estimation_info": {k: v for k, v in estimation_info.items() if k != "views_used"},
     }
 
 
@@ -2402,7 +2464,9 @@ def recommend_portfolios(
                 target_holdings=req.target_holdings,
                 sector=req.sector,
                 initial_capital=req.initial_capital,
-                bl_view_type=BL_VIEW_FOR_RECOMMEND if method_id == "black_litterman_markowitz" else None,
+                bl_view_type=BL_VIEW_FOR_RECOMMEND if method_id == "black_litterman_markowitz" else (BL_VIEW_FOR_RECOMMEND_MOMENTUM_GENERAL if method_id == "black_litterman_momentum_general" else None),
+                parameter_values=req.parameter_values,
+                scenario=req.scenario,
             )
             if result:
                 results.append(result)
@@ -2412,8 +2476,20 @@ def recommend_portfolios(
     if not results:
         raise HTTPException(status_code=404, detail="No se pudo generar ningun portafolio para el perfil solicitado.")
 
-    # Ordenar por Score P4 descendente
-    results.sort(key=lambda r: r["simulation"]["score_p4"], reverse=True)
+    # Ordenar por mejora relativa del Score P4 vs Markowitz base
+    markowitz_base_id = "markowitz_media_varianza"
+    markowitz_base = next(
+        (r for r in results if r.get("methodology_id") == markowitz_base_id),
+        results[0],
+    )
+    markowitz_base_score = float(markowitz_base["simulation"]["score_p4"])
+    denom = abs(markowitz_base_score) if abs(markowitz_base_score) > 1e-9 else 1.0
+
+    for r in results:
+        score = float(r["simulation"]["score_p4"])
+        r["p4_score_improvement"] = (score - markowitz_base_score) / denom
+
+    results.sort(key=lambda r: r["p4_score_improvement"], reverse=True)
 
     # Marcar ranking y top 3 recomendados
     for i, r in enumerate(results):
@@ -2425,23 +2501,272 @@ def recommend_portfolios(
         "profile_label": profile_cfg["label"],
         "alpha_p": profile_cfg["alpha_p"],
         "total_evaluated": len(results),
-        "ranked_by": "Score P4",
+        "ranked_by": "Mejora Score P4 vs Markowitz base",
         "score_p4_formula": "Score = E[Riqueza final] + E[Utilidad FinPUC] - C0 * Tasa de retiro",
+        "score_improvement_formula": "Mejora = (Score_candidato - Score_MK_base) / |Score_MK_base|",
         "recommendations": results,
         "supuestos": {
             "aplicados": [
                 {"label": "Rf", "value": "2% anual"},
                 {"label": "Shrinkage", "value": "0.20"},
-                {"label": "k (comision)", "value": "1%"},
+                {"label": "k (comision empresa)", "value": "0,5% mensual"},
                 {"label": "Rebalanceo optimizacion", "value": "Semestral (126d)"},
                 {"label": "Solver", "value": "SLSQP (scipy)"},
             ],
             "simulacion": [
                 {"label": "C0", "value": f"${req.initial_capital:,.0f} USD"},
-                {"label": "s (sensibilidad)", "value": "20"},
+                {"label": "s (umbral logistico V1+)", "value": "1"},
                 {"label": "Simulaciones", "value": "2,000"},
                 {"label": "Horizonte", "value": "5 anos"},
                 {"label": "Escenarios", "value": "+/- 0.5 sigma"},
             ],
         },
     })
+
+
+# ============================================================
+# Business / Client overview — desglose semestral
+# ============================================================
+
+BUSINESS_SCENARIOS = ["con_pandemia", "sin_pandemia"]
+BUSINESS_PROFILES_ORDER = ["muy_conservador", "conservador", "neutro", "arriesgado", "muy_arriesgado"]
+
+# Cache simple en memoria para overviews (se invalida al reiniciar el server)
+_overview_cache = {}
+_OVERVIEW_CACHE_TTL_SEC = 3600  # 1 hora
+
+
+def _overview_cache_key(endpoint: str, req: OverviewRequest) -> str:
+    return f"{endpoint}:{req.initial_capital}:{req.target_holdings}:{req.years}:{req.profile or 'all'}"
+
+
+def _get_cached_or_compute(endpoint: str, req: OverviewRequest, compute_fn) -> Dict:
+    import time
+    key = _overview_cache_key(endpoint, req)
+    now = time.time()
+    cached = _overview_cache.get(key)
+    if cached and (now - cached["ts"]) < _OVERVIEW_CACHE_TTL_SEC:
+        return cached["data"]
+    data = compute_fn()
+    _overview_cache[key] = {"ts": now, "data": data}
+    return data
+
+
+def _eval_overview_combination(
+    db: sqlite3.Connection,
+    profile_key: str,
+    profile_cfg: Dict,
+    method_id: str,
+    scenario: str,
+    initial_capital: float,
+    target_holdings: int,
+    n_simulations: int = 2000,
+) -> Optional[Dict]:
+    """Evalúa una combinación perfil × metodología × escenario y retorna datos semestrales."""
+    try:
+        result = _run_single_optimization(
+            db=db,
+            methodology_id=method_id,
+            profile_key=profile_key,
+            profile_cfg=profile_cfg,
+            target_holdings=target_holdings,
+            sector=None,
+            initial_capital=initial_capital,
+            bl_view_type=BL_VIEW_FOR_RECOMMEND if method_id == "black_litterman_markowitz" else (BL_VIEW_FOR_RECOMMEND_MOMENTUM_GENERAL if method_id == "black_litterman_momentum_general" else None),
+            parameter_values=None,
+            scenario=scenario,
+            n_simulations=n_simulations,
+        )
+        if result is None:
+            return None
+        sim = result["simulation"]
+        return {
+            "profile": profile_key,
+            "profile_label": result["profile_label"],
+            "methodology_id": method_id,
+            "methodology_label": result["methodology_label"],
+            "scenario": result["scenario"],
+            "score_p4": sim["score_p4"],
+            "total_commissions_mean": sim["total_commissions_mean"],
+            "final_capital_mean": sim["final_capital_mean"],
+            "withdrawal_rate": sim["withdrawal_rate"],
+            "semester_labels": sim["semester_labels"],
+            "semester_company_mean": sim["semester_company_mean"],
+            "semester_wealth_mean": sim["semester_wealth_mean"],
+            "semester_active_rate": sim["semester_active_rate"],
+        }
+    except Exception:
+        return None
+
+
+def _aggregate_profile_semesters(details: List[Dict]) -> Dict:
+    """Agrega datos semestrales de una lista de combinaciones para un perfil."""
+    if not details:
+        return {
+            "company_total": 0, "wealth_total": 0, "count": 0,
+            "company_mean": 0, "wealth_mean": 0,
+            "company_by_semester": [], "wealth_by_semester": [],
+            "active_rate_by_semester": [],
+        }
+    n_sems = len(details[0]["semester_company_mean"])
+    company_acc = [0.0] * n_sems
+    wealth_acc = [0.0] * n_sems
+    active_acc = [0.0] * n_sems
+    company_all = []
+    wealth_all = []
+    for d in details:
+        company_all.append(d["total_commissions_mean"])
+        wealth_all.append(d["final_capital_mean"])
+        for s in range(n_sems):
+            company_acc[s] += d["semester_company_mean"][s]
+            wealth_acc[s] += d["semester_wealth_mean"][s]
+            active_acc[s] += d["semester_active_rate"][s]
+    count = len(details)
+    return {
+        "company_total": round(sum(company_all), 2),
+        "wealth_total": round(sum(wealth_all), 2),
+        "company_mean": round(float(np.mean(company_all)), 2),
+        "wealth_mean": round(float(np.mean(wealth_all)), 2),
+        "count": count,
+        "company_by_semester": [round(v / count, 2) for v in company_acc],
+        "wealth_by_semester": [round(v / count, 2) for v in wealth_acc],
+        "active_rate_by_semester": [round(v / count, 2) for v in active_acc],
+    }
+
+
+@router.post("/business-overview")
+def business_overview(
+    req: OverviewRequest,
+    db: sqlite3.Connection = Depends(get_db),
+):
+    """Vista de negocio: ganancia empresa por semestre, perfil y metodología."""
+    def _compute():
+        profiles_to_eval = [req.profile] if req.profile else BUSINESS_PROFILES_ORDER
+        semester_labels = None
+        profiles_data = {}
+        all_details = []
+
+        for profile_key in profiles_to_eval:
+            if profile_key not in RISK_PROFILES:
+                continue
+            profile_cfg = RISK_PROFILES[profile_key]
+            profile_details = []
+
+            for scenario in BUSINESS_SCENARIOS:
+                for method_id in RECOMMEND_METHODOLOGIES:
+                    entry = _eval_overview_combination(
+                        db, profile_key, profile_cfg, method_id,
+                        scenario, req.initial_capital, req.target_holdings,
+                        n_simulations=500,
+                    )
+                    if entry:
+                        if semester_labels is None:
+                            semester_labels = entry["semester_labels"]
+                        profile_details.append(entry)
+                        all_details.append(entry)
+
+            if profile_details:
+                profiles_data[profile_key] = {
+                    "label": profile_cfg["label"],
+                    **_aggregate_profile_semesters(profile_details),
+                }
+
+        n_sems = len(semester_labels) if semester_labels else 0
+        total_company_by_sem = [0.0] * n_sems
+        total_wealth_by_sem = [0.0] * n_sems
+        for pd in profiles_data.values():
+            for s in range(n_sems):
+                total_company_by_sem[s] += pd["company_by_semester"][s]
+                total_wealth_by_sem[s] += pd["wealth_by_semester"][s]
+
+        return {
+            "semester_labels": semester_labels or [],
+            "profiles": profiles_data,
+            "totals": {
+                "company_all_profiles": round(sum(p["company_total"] for p in profiles_data.values()), 2),
+                "wealth_all_profiles": round(sum(p["wealth_total"] for p in profiles_data.values()), 2),
+                "company_by_semester": [round(v, 2) for v in total_company_by_sem],
+                "wealth_by_semester": [round(v, 2) for v in total_wealth_by_sem],
+            },
+            "parameters": {
+                "initial_capital": req.initial_capital,
+                "target_holdings": req.target_holdings,
+                "years": req.years,
+                "profiles_evaluated": list(profiles_data.keys()),
+            },
+        }
+
+    return JSONResponse(content=_get_cached_or_compute("business", req, _compute))
+
+
+@router.post("/client-overview")
+def client_overview(
+    req: OverviewRequest,
+    db: sqlite3.Connection = Depends(get_db),
+):
+    """Vista del cliente: riqueza, retención y Score P4 por semestre, perfil y metodología."""
+    def _compute():
+        profiles_to_eval = [req.profile] if req.profile else BUSINESS_PROFILES_ORDER
+        semester_labels = None
+        profiles_data = {}
+        all_details = []
+
+        for profile_key in profiles_to_eval:
+            if profile_key not in RISK_PROFILES:
+                continue
+            profile_cfg = RISK_PROFILES[profile_key]
+            profile_details = []
+
+            for scenario in BUSINESS_SCENARIOS:
+                for method_id in RECOMMEND_METHODOLOGIES:
+                    entry = _eval_overview_combination(
+                        db, profile_key, profile_cfg, method_id,
+                        scenario, req.initial_capital, req.target_holdings,
+                        n_simulations=500,
+                    )
+                    if entry:
+                        if semester_labels is None:
+                            semester_labels = entry["semester_labels"]
+                        profile_details.append(entry)
+                        all_details.append(entry)
+
+            if profile_details:
+                agg = _aggregate_profile_semesters(profile_details)
+                profiles_data[profile_key] = {
+                    "label": profile_cfg["label"],
+                    **agg,
+                    "score_p4_mean": round(float(np.mean([d["score_p4"] for d in profile_details])), 2),
+                    "withdrawal_rate_mean": round(float(np.mean([d["withdrawal_rate"] for d in profile_details])), 2),
+                }
+
+        return {
+            "semester_labels": semester_labels or [],
+            "profiles": profiles_data,
+            "totals": {
+                "wealth_all_profiles": round(sum(p["wealth_total"] for p in profiles_data.values()), 2) if profiles_data else 0,
+                "score_p4_all_mean": round(float(np.mean([p["score_p4_mean"] for p in profiles_data.values()])), 2) if profiles_data else 0,
+                "wealth_by_semester": [
+                    round(sum(profiles_data[pk]["wealth_by_semester"][s] for pk in profiles_data), 2)
+                    for s in range(len(semester_labels or []))
+                ],
+            },
+            "parameters": {
+                "initial_capital": req.initial_capital,
+                "target_holdings": req.target_holdings,
+                "years": req.years,
+                "profiles_evaluated": list(profiles_data.keys()),
+            },
+        }
+
+    return JSONResponse(content=_get_cached_or_compute("client", req, _compute))
+
+
+@router.get("/rank-views")
+def rank_views(db: sqlite3.Connection = Depends(get_db)):
+    """Rankea las views BL por mediana de mejora P4 vs Markowitz (5 perfiles × 2 escenarios)."""
+    try:
+        result = compute_view_ranking(db)
+        return JSONResponse(content=result)
+    except Exception as e:
+        log.exception("Error en rank-views")
+        raise HTTPException(status_code=500, detail=str(e))

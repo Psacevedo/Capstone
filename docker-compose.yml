@@ -11,7 +11,7 @@ services:
       DB_PATH: /data/finpuc_cache.db
       PYTHONUNBUFFERED: "1"
     volumes:
-      - ./Data/Historical_Stocks:/data/Historical_Stocks:ro
+      - ./Capstone/Data/Historical_Stocks:/data/Historical_Stocks:ro
       - finpuc_cache:/data
       # Bind mounts para desarrollo: reflejan cambios sin reconstruir la imagen
       - ./backend:/app/backend:ro

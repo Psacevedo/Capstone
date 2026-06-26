@@ -73,6 +73,7 @@ BL_SUPUESTOS = [
     _supuesto("Omega (incertidumbre de views)", "P * (tau * Sigma) * P^T / confidence", "Supuestos H4 / Seccion 4", "Black-Litterman"),
     _supuesto("Covarianza posterior", "Sigma_BL = nearest_psd(Sigma + posterior_covariance)", "Supuestos E6 / Metodologia", "Black-Litterman"),
     _supuesto("Confianza view: momentum", "0.50 (todas las variantes de momentum)", "Supuestos I1-I3 / Metodologia", "Black-Litterman"),
+    _supuesto("Confianza view: momentum general", "0.50 (calibracion Entrega 3)", "Supuestos I5 / Metodologia", "Black-Litterman"),
     _supuesto("Confianza view: desempleo", "0.35", "Supuestos I4 / Metodologia", "Black-Litterman"),
     _supuesto("Lookback momentum general", "252 dias habiles (1 ano)", "Supuestos I1 / Metodologia", "Black-Litterman"),
     _supuesto("Lookback momentum top20 6M", "126 dias habiles (6 meses)", "Supuestos I2 / Metodologia", "Black-Litterman"),
@@ -150,6 +151,7 @@ CATALOG = {
             "label": "Portafolio equiponderado",
             "family": "Benchmark de referencia",
             "recommended": False,
+            "hidden": True,
             "description": (
                 "Asigna pesos iguales w_i = 1/N a los N activos de mayor capitalizacion del universo de acciones. "
                 "Es el benchmark primario del informe: permite medir si la optimizacion agrega valor real "
@@ -329,6 +331,7 @@ CATALOG = {
                         {"value": "momentum_top20_6m", "label": "Momentum Top20 6M (10 long / 10 short)"},
                         {"value": "momentum_top20_bottom20_1y", "label": "Momentum Top40 1Y (20 long / 20 short)"},
                         {"value": "momentum", "label": "Momentum 1Y universal (20 long / 20 short)"},
+                        {"value": "momentum_general", "label": "Momentum General (E3 — 1Y, 20/20)"},
                         {"value": "desempleo", "label": "Desempleo (macro asumida)"},
                         {"value": "manual", "label": "Manual (JSON por ticker)"},
                     ],
@@ -408,7 +411,9 @@ CATALOG = {
 
 
 def get_catalog() -> Dict:
-    return deepcopy(CATALOG)
+    catalog = deepcopy(CATALOG)
+    catalog["methodologies"] = [m for m in catalog["methodologies"] if not m.get("hidden")]
+    return catalog
 
 
 def get_methodology(methodology_id: str) -> Dict:

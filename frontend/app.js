@@ -684,28 +684,18 @@ function renderEfficientFrontierChart(result, targetId = "frontier-chart") {
       x,
       y,
       type: "scatter",
-      mode: "lines",
+      mode: "lines+markers",
       name: "Frontera eficiente",
-      line: { color: "#0078bf", width: 2, shape: "spline" },
-      hovertemplate: "Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>",
-    },
-    {
-      x,
-      y,
-      type: "scatter",
-      mode: "markers",
-      name: "Puntos frontera",
-      marker: { size: 5, color: "#0078bf", opacity: 0.6 },
-      showlegend: false,
+      line: { color: "#0078bf", width: 2 },
+      marker: { size: 6 },
       hovertemplate: "Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>",
     },
   ];
 
-  const annotations = [];
   const frontierMarkers = result.frontier_markers || {};
   [
-    { key: "gmv_point", name: "Minima varianza", color: "#2f6f6d", symbol: "diamond" },
-    { key: "max_sharpe_point", name: "Maximo Sharpe", color: "#0f4c81", symbol: "circle" },
+    { key: "gmv_point", name: "Minima varianza global", color: "#2f6f6d", symbol: "diamond" },
+    { key: "max_sharpe_point", name: "Markowitz maximo Sharpe", color: "#0f4c81", symbol: "circle" },
     { key: "max_return_point", name: "Maximo retorno", color: "#b34a3c", symbol: "triangle-up" },
   ].forEach(markerDef => {
     const point = frontierMarkers[markerDef.key] || result[markerDef.key];
@@ -714,13 +704,10 @@ function renderEfficientFrontierChart(result, targetId = "frontier-chart") {
         x: [point.volatility_pct],
         y: [point.expected_return_pct],
         type: "scatter",
-        mode: "markers+text",
+        mode: "markers",
         name: point.label || markerDef.name,
-        text: [markerDef.name],
-        textposition: "top center",
-        textfont: { size: 9, color: markerDef.color },
-        marker: { size: 12, color: markerDef.color, symbol: markerDef.symbol, line: { color: "#ffffff", width: 1.5 } },
-        hovertemplate: `${esc(point.label || markerDef.name)}<br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<br>Sharpe: ${point.sharpe_ratio ?? "—"}<extra></extra>`,
+        marker: { size: 10, color: markerDef.color, symbol: markerDef.symbol, line: { color: "#ffffff", width: 1 } },
+        hovertemplate: `${esc(point.label || markerDef.name)}<br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>`,
       });
     }
   });
@@ -730,23 +717,19 @@ function renderEfficientFrontierChart(result, targetId = "frontier-chart") {
       x: [metrics.volatility_pct],
       y: [metrics.expected_return_pct],
       type: "scatter",
-      mode: "markers+text",
-      name: "Tu portafolio",
-      text: ["TU PORT"],
-      textposition: "middle left",
-      textfont: { size: 10, color: "#c49b25", family: "monospace" },
-      marker: { size: 16, color: "#c49b25", symbol: "star", line: { color: "#0d1117", width: 2.5 } },
-      hovertemplate: "<b>Tu portafolio</b><br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<br>Sharpe: " + (metrics.sharpe_ratio ?? "—") + "<extra></extra>",
+      mode: "markers",
+      name: "Portafolio",
+      marker: { size: 12, color: "#c49b25", line: { color: "#0d1117", width: 2 } },
+      hovertemplate: "Portafolio<br>Vol: %{x:.2f}%<br>Ret: %{y:.2f}%<extra></extra>",
     });
   }
 
   Plotly.newPlot(el, traces, {
     ...PLOTLY_LAYOUT_BASE,
-    margin: { t: 20, r: 20, b: 60, l: 70 },
-    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: { text: "Volatilidad (%)", font: { size: 11 } }, showspikes: true, spikemode: "across" },
-    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: { text: "Retorno esperado (%)", font: { size: 11 } }, showspikes: true, spikemode: "across" },
+    margin: { t: 12, r: 20, b: 60, l: 70 },
+    xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: { text: "Volatilidad (%)", font: { size: 11 } } },
+    yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: { text: "Retorno esperado (%)", font: { size: 11 } } },
     legend: { orientation: "h", y: -0.25 },
-    hovermode: "closest",
   }, PLOTLY_CONFIG);
 }
 
@@ -960,7 +943,7 @@ function renderPfForm() {
           </div>
           <div class="form-group">
             <label class="form-label">Número de acciones</label>
-            <input id="pf-nstocks" class="form-input" type="number" min="3" max="20" value="10">
+            <input id="pf-nstocks" class="form-input" type="number" min="2" max="80" value="15">
           </div>
         </div>
 
@@ -1596,14 +1579,11 @@ PLOTLY_LAYOUT_BASE.yaxis = { gridcolor: "#d8d2c8", linecolor: "#d8d2c8", zerolin
 PF.activeNav = "recommendation";
 PF.currentModule = "acciones";
 PF.selectedProfile = "neutro";
-PF.selectedMethodology = "";
 PF.lastInputs = {
   capital: 1000,
   targetHoldings: 10,
   candidatePoolSize: "",
   sector: "",
-  methodology: "",
-  blViewType: "desempleo",
 };
 
 const PF_PROFILES = {
@@ -1614,7 +1594,6 @@ const PF_PROFILES = {
     desc: "No admite perdidas sobre el capital.",
     universe: "30-50 acciones, Utilities y Consumer Defensive, sesgo a dividendos.",
     method: "Minima varianza global",
-    methodId: "minima_varianza_global",
     cvar: "99%",
   },
   conservador: {
@@ -1624,7 +1603,6 @@ const PF_PROFILES = {
     desc: "Tolera perdidas minimas y privilegia estabilidad.",
     universe: "50-80 acciones con sesgo a dividendos y menor volatilidad.",
     method: "Minima varianza global",
-    methodId: "minima_varianza_global",
     cvar: "95%",
   },
   neutro: {
@@ -1634,7 +1612,6 @@ const PF_PROFILES = {
     desc: "Equilibra retorno esperado y riesgo.",
     universe: "80-120 acciones sobre el universo de acciones.",
     method: "Media-varianza de Markowitz",
-    methodId: "markowitz_media_varianza",
     cvar: "90%",
   },
   arriesgado: {
@@ -1644,7 +1621,6 @@ const PF_PROFILES = {
     desc: "Acepta mas volatilidad para capturar crecimiento.",
     universe: "100-150 acciones con mas exposicion a sectores de crecimiento.",
     method: "Media-varianza de Markowitz",
-    methodId: "markowitz_media_varianza",
     cvar: "85%",
   },
   muy_arriesgado: {
@@ -1654,7 +1630,6 @@ const PF_PROFILES = {
     desc: "Opera sobre el universo de acciones completo.",
     universe: "universo de acciones completo, con holdings finales recortados al objetivo.",
     method: "Maximo retorno esperado",
-    methodId: "maximo_retorno",
     cvar: "80%",
   },
 };
@@ -1764,41 +1739,78 @@ function pfSelectProfile(key) {
   renderMethodologySummary(key);
 }
 
-function onMethodologyChange() {
-  const sel = document.getElementById("pf-methodology");
-  const blGroup = document.getElementById("pf-bl-view-group");
-  if (!sel) return;
-  PF.lastInputs.methodology = sel.value;
-  if (blGroup) blGroup.style.display = sel.value === "black_litterman_markowitz" ? "" : "none";
-  const blViewEl = document.getElementById("pf-bl-view");
-  if (blViewEl) PF.lastInputs.blViewType = blViewEl.value;
-  renderMethodologySummary(PF.selectedProfile);
-}
-
 function renderMethodologySummary(profileKey) {
   const profile = PF_PROFILES[profileKey];
   const box = document.getElementById("pf-methodology-summary");
   if (!profile || !box) return;
 
-  const selectedMeth = PF.lastInputs.methodology || "";
-  const effectiveMethod = selectedMeth || profile.method;
-  const isBL = selectedMeth === "black_litterman_markowitz";
-  const blViewLabel = isBL ? ` · View: ${PF.lastInputs.blViewType || "momentum"}` : "";
-
   box.innerHTML = `
     <div class="methodology-chip-row">
       <span class="methodology-chip">Motor activo: Modelo base FinPUC</span>
-      <span class="methodology-chip">Constructor: ${effectiveMethod}${blViewLabel}</span>
+      <span class="methodology-chip">Constructor: ${profile.method}</span>
       <span class="methodology-chip">CVaR beta = ${profile.cvar}</span>
       <span class="methodology-chip">alpha_p = ${profile.alpha}</span>
     </div>
     <div class="methodology-copy">
       El backend resuelve automaticamente la estrategia segun el perfil, aplica filtros de calidad,
       calcula CVaR historico, genera escenarios y reporta validacion out-of-sample.
-      ${isBL ? "Black-Litterman activo: combina la prior de equilibrio del mercado con views subjetivas del analista via actualizacion bayesiana." : "Black-Litterman queda declarado como fase futura del informe."}
+      Black-Litterman queda declarado como fase futura del informe.
+      </div>
     </div>
-    <div class="methodology-copy methodology-copy-muted">Subuniverso recomendado: ${profile.universe}</div>
   `;
+}
+
+function renderE3RankViews() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">Resultados Entrega 3</div>
+        <h2 class="hero-title">Ranking de views por mediana de mejoras P4</h2>
+        <p class="hero-copy">Cargando ranking desde el servidor...</p>
+        <div id="e3-rank-views-container"></div>
+      </div>
+    </div>
+  `;
+  apiFetch("/api/portfolio/rank-views", { method: "GET" }).then(data => {
+    const container = document.getElementById("e3-rank-views-container");
+    if (!container) return;
+    const d = data.detail || [];
+    const res = data.resumen || {};
+    const rows = d.map(r => `
+      <tr>
+        <td>${esc(r.scenario)}</td>
+        <td>${esc(r.perfil)}</td>
+        <td>$${r.mk_score.toFixed(0)}</td>
+        <td>$${r.bl_score.toFixed(0)}</td>
+        <td style="color:${r.mejora_pct >= 0 ? '#4a7c59' : '#b85c3a'};font-weight:700">${r.mejora_pct >= 0 ? '+' : ''}${r.mejora_pct.toFixed(1)}%</td>
+        <td>${r.mk_retiro.toFixed(1)}%</td>
+        <td>${r.bl_retiro.toFixed(1)}%</td>
+        <td>${r.mk_sharpe.toFixed(2)}</td>
+        <td>${r.bl_sharpe.toFixed(2)}</td>
+      </tr>
+    `).join("");
+    container.innerHTML = `
+      <div class="pf-card">
+        <div class="pf-section-title">Resumen</div>
+        <div class="data-list" style="grid-template-columns:1fr 1fr 1fr">
+          <div><span>View evaluada</span><strong>${esc(data.view_label)}</strong></div>
+          <div><span>Mejora mediana P4</span><strong style="color:#4a7c59">${res.mejora_mediana}</strong></div>
+          <div><span>Mejora promedio P4</span><strong>${res.mejora_promedio}</strong></div>
+          <div><span>Combinaciones</span><strong>${res.combinaciones_evaluadas} (5 perfiles × 2 escenarios)</strong></div>
+        </div>
+      </div>
+      <div class="pf-card">
+        <div class="pf-section-title">Detalle por combinacion</div>
+        <table class="pf-table">
+          <thead><tr><th>Escenario</th><th>Perfil</th><th>Score MK</th><th>Score BL</th><th>Mejora</th><th>Retiro MK</th><th>Retiro BL</th><th>Sharpe MK</th><th>Sharpe BL</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }).catch(err => {
+    const container = document.getElementById("e3-rank-views-container");
+    if (container) container.innerHTML = `<div class="callout callout-danger">Error: ${esc(err.message)}</div>`;
+  });
 }
 
 function renderPfForm() {
@@ -1855,7 +1867,7 @@ function renderPfForm() {
           <div class="form-group">
             <label class="form-label">Holdings finales</label>
             <select id="pf-target-holdings" class="form-select">
-              ${[5, 8, 10, 12, 15, 20].map(v => `<option value="${v}" ${PF.lastInputs.targetHoldings === v ? "selected" : ""}>${v} acciones</option>`).join("")}
+              ${[5, 8, 10, 12, 15, 20, 25, 30].map(v => `<option value="${v}" ${PF.lastInputs.targetHoldings === v ? "selected" : ""}>${v} acciones</option>`).join("")}
             </select>
           </div>
           <div class="form-group">
@@ -1876,28 +1888,6 @@ function renderPfForm() {
             <select id="pf-sector" class="form-select">
               <option value="">Todos los sectores</option>
               ${sectorOptions}
-            </select>
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:14px">
-          <div class="form-group">
-            <label class="form-label">Metodologia de estimacion</label>
-            <select id="pf-methodology" class="form-select" onchange="onMethodologyChange()">
-              <option value="">Automatica por perfil</option>
-              <option value="equiponderado">Equiponderado</option>
-              <option value="markowitz_media_varianza">Markowitz media-varianza</option>
-              <option value="minima_varianza_global">Minima varianza global</option>
-              <option value="maximo_retorno">Maximo retorno</option>
-              <option value="black_litterman_markowitz">Black-Litterman</option>
-            </select>
-          </div>
-          <div class="form-group" id="pf-bl-view-group" style="display:none">
-            <label class="form-label">View de Black-Litterman</label>
-            <select id="pf-bl-view" class="form-select">
-              <option value="desempleo" ${(PF.lastInputs.blViewType === "desempleo") ? "selected" : ""}>Desempleo (macro calibrada)</option>
-              <option value="momentum">Momentum 1Y (20 long / 20 short)</option>
-              <option value="momentum_top20_6m">Momentum Top20 6M (10 long / 10 short)</option>
-              <option value="momentum_top20_bottom20_1y">Momentum Top40 1Y (20 long / 20 short)</option>
             </select>
           </div>
         </div>
@@ -1934,12 +1924,6 @@ function renderPfForm() {
 
   const sectorEl = document.getElementById("pf-sector");
   if (sectorEl) sectorEl.value = PF.lastInputs.sector || "";
-  const methEl = document.getElementById("pf-methodology");
-  if (methEl) methEl.value = PF.lastInputs.methodology || "";
-  if (PF.lastInputs.methodology === "black_litterman_markowitz") {
-    const blGroup = document.getElementById("pf-bl-view-group");
-    if (blGroup) blGroup.style.display = "";
-  }
   renderMethodologySummary(PF.selectedProfile);
 }
 
@@ -1948,8 +1932,6 @@ async function submitPortfolioForm() {
   const targetHoldings = parseInt(document.getElementById("pf-target-holdings")?.value, 10) || 10;
   const candidatePoolValue = document.getElementById("pf-candidate-pool")?.value || "";
   const sector = document.getElementById("pf-sector")?.value || "";
-  const methodology = document.getElementById("pf-methodology")?.value || "";
-  const blViewType = document.getElementById("pf-bl-view")?.value || "desempleo";
   const btn = document.getElementById("pf-submit-btn");
   const loading = document.getElementById("pf-loading");
 
@@ -1958,26 +1940,16 @@ async function submitPortfolioForm() {
     targetHoldings,
     candidatePoolSize: candidatePoolValue,
     sector,
-    methodology,
-    blViewType,
   };
-
-  const profile = PF_PROFILES[PF.selectedProfile];
-  const effectiveMethodology = methodology || (profile ? profile.methodId : "markowitz_media_varianza");
 
   const payload = {
     initial_capital: capital,
     profile: PF.selectedProfile,
     strategy: "auto",
     target_holdings: targetHoldings,
-    methodology_id: effectiveMethodology,
   };
   if (candidatePoolValue) payload.candidate_pool_size = parseInt(candidatePoolValue, 10);
   if (sector) payload.sector = sector;
-
-  if (effectiveMethodology === "black_litterman_markowitz") {
-    payload.parameter_values = { bl_view_type: blViewType };
-  }
 
   if (btn) btn.disabled = true;
   if (loading) loading.style.display = "inline";
@@ -2138,95 +2110,8 @@ function renderPfResult(result, capital) {
         </tbody>
       </table>
     </div>
-
-    <div class="detail-grid">
-      <div class="pf-card" style="min-height:380px">
-        <div class="pf-section-title">Distribucion del portafolio</div>
-        <div id="pf-donut-chart" style="width:100%;height:330px"></div>
-      </div>
-      <div class="pf-card" style="min-height:380px">
-        <div class="pf-section-title">Contribucion al retorno esperado</div>
-        <div id="pf-waterfall-chart" style="width:100%;height:330px"></div>
-      </div>
-    </div>
   `;
-
-  setTimeout(() => {
-    renderDonutChart(result.portfolio);
-    renderWaterfallChart(result.portfolio, result.metrics?.expected_return_pct || 0);
-  }, 200);
   queueMathTypeset();
-}
-
-function renderDonutChart(portfolio) {
-  const el = document.getElementById("pf-donut-chart");
-  if (!el || !portfolio || !portfolio.length) return;
-
-  const labels = portfolio.slice(0, 12).map(p => p.ticker);
-  const values = portfolio.slice(0, 12).map(p => parseFloat((p.weight * 100).toFixed(1)));
-  const othersWeight = portfolio.slice(12).reduce((sum, p) => sum + p.weight * 100, 0);
-  if (othersWeight > 0) {
-    labels.push("Otros");
-    values.push(parseFloat(othersWeight.toFixed(1)));
-  }
-
-  const trace = {
-    labels, values,
-    type: "pie", hole: 0.5,
-    textinfo: "label+percent",
-    textposition: "outside",
-    marker: {
-      colors: [
-        "#c49b25", "#2e4b6e", "#8b6b3d", "#4a7c59", "#b85c3a",
-        "#3a6b8b", "#7c5a3a", "#5a8b6b", "#a04a3a", "#2a5b7e",
-        "#8a7a3a", "#4a6c5a", "#8a8a8a",
-      ],
-    },
-  };
-
-  Plotly.newPlot("pf-donut-chart", [trace], {
-    ...PLOTLY_LAYOUT_BASE,
-    margin: { t: 10, r: 10, b: 10, l: 10 },
-    showlegend: true,
-    legend: { orientation: "v", x: 1.05, y: 0.5, font: { size: 10 } },
-  }, PLOTLY_CONFIG);
-}
-
-function renderWaterfallChart(portfolio, totalReturnPct) {
-  const el = document.getElementById("pf-waterfall-chart");
-  if (!el || !portfolio || !portfolio.length) return;
-
-  const topItems = portfolio.slice(0, 10);
-  const contributions = topItems.map(p => parseFloat(((p.weight || 0) * (p.cagr_pct || 0)).toFixed(2)));
-  const othersContrib = portfolio.slice(10).reduce((sum, p) => sum + (p.weight || 0) * (p.cagr_pct || 0), 0);
-  if (othersContrib !== 0 && Math.abs(othersContrib) > 0.01) {
-    topItems.push({ ticker: "Otros", short_name: "Otras posiciones" });
-    contributions.push(parseFloat(othersContrib.toFixed(2)));
-  }
-
-  const xLabels = topItems.map(p => p.ticker);
-  const measures = contributions.map((_, i) => i === contributions.length - 1 ? "total" : "relative");
-  const texts = contributions.map(c => (c >= 0 ? "+" : "") + c.toFixed(2) + "%");
-  const totalLabel = `${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct}%`;
-
-  const trace = {
-    x: [...xLabels, "Retorno total"],
-    y: [...contributions, parseFloat(totalReturnPct.toFixed(2))],
-    text: [...texts, totalLabel],
-    textposition: "outside",
-    type: "waterfall",
-    connector: { line: { color: "#d8d2c8" } },
-    increasing: { marker: { color: "#4a7c59" } },
-    decreasing: { marker: { color: "#b85c3a" } },
-    totals: { marker: { color: "#c49b25" } },
-  };
-
-  Plotly.newPlot("pf-waterfall-chart", [trace], {
-    ...PLOTLY_LAYOUT_BASE,
-    margin: { t: 10, r: 20, b: 80, l: 60 },
-    xaxis: { tickangle: -45, tickfont: { size: 9 } },
-    yaxis: { title: "Contribucion (%)", tickformat: ".1f" },
-  }, PLOTLY_CONFIG);
 }
 
 async function fetchBenchmarkComparison(targetId = "benchmark-comparison") {
@@ -3115,7 +3000,6 @@ const PF_NAV_ITEMS = [
   { id: "methodologies", label: "Metodologias" },
   { id: "results", label: "Resultados" },
   { id: "references", label: "Datos y referencias" },
-  { id: "flow", label: "Flujo del cliente" },
 ];
 
 Object.assign(PF, {
@@ -3437,19 +3321,16 @@ async function switchModule(mod) {
   const tabUniverse = document.getElementById("tab-acciones");
   const tabFinpuc = document.getElementById("tab-portafolios");
   const tabBusiness = document.getElementById("tab-business");
-  const tabEntrega3 = document.getElementById("tab-entrega3");
   const sectorLabel = document.getElementById("sector-label");
   const sectorList = document.getElementById("sector-list");
   const portNav = document.getElementById("portfolio-nav");
   const bizNav = document.getElementById("business-nav");
-  const e3Nav = document.getElementById("entrega3-nav");
 
-  [tabUniverse, tabFinpuc, tabBusiness, tabEntrega3].forEach(t => t && t.classList.remove("active"));
+  [tabUniverse, tabFinpuc, tabBusiness].forEach(t => t && t.classList.remove("active"));
   sectorLabel.style.display = "none";
   sectorList.style.display = "none";
   portNav.style.display = "none";
   if (bizNav) bizNav.style.display = "none";
-  if (e3Nav) e3Nav.style.display = "none";
 
   if (mod === "portafolios") {
     tabFinpuc.classList.add("active");
@@ -3472,14 +3353,6 @@ async function switchModule(mod) {
     if (bizNav) bizNav.style.display = "block";
     setBizNavActive("revenue");
     renderBizRevenue();
-    return;
-  }
-
-  if (mod === "entrega3") {
-    tabEntrega3.classList.add("active");
-    if (e3Nav) e3Nav.style.display = "block";
-    setE3NavActive("calibracion");
-    renderE3Calibracion();
     return;
   }
 
@@ -3549,25 +3422,41 @@ function renderRecommend() {
           </div>
           <div class="field-card">
             <label>Holdings objetivo</label>
-            <input type="number" id="rec-holdings" value="10" min="3" max="20" step="1">
-            <div class="field-help">Numero de acciones en el portafolio final (3-20).</div>
+            <input type="number" id="rec-holdings" value="15" min="2" max="80" step="1">
+            <div class="field-help">Numero de acciones en el portafolio final (2-80).</div>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">Escenario de datos</label>
+          <div style="display:flex;gap:8px">
+            <label class="profile-option selected" id="rec-scenario-con" onclick="selectRecommendScenario('con_pandemia')" style="flex:1;padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:6px;text-align:center">
+              <input type="radio" name="rec-scenario" value="con_pandemia" checked hidden>
+              <strong style="font-size:13px">Con pandemia</strong>
+              <span style="font-size:11px;color:var(--fg-muted);display:block">Datos completos hasta hoy</span>
+            </label>
+            <label class="profile-option" id="rec-scenario-sin" onclick="selectRecommendScenario('sin_pandemia')" style="flex:1;padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:6px;text-align:center">
+              <input type="radio" name="rec-scenario" value="sin_pandemia" hidden>
+              <strong style="font-size:13px">Sin pandemia</strong>
+              <span style="font-size:11px;color:var(--fg-muted);display:block">Solo datos pre-2020</span>
+            </label>
           </div>
         </div>
       </div>
 
       <div class="pf-card">
-        <div class="pf-section-title">Supuestos aplicados</div>
-        <p style="color:var(--fg-muted);margin-bottom:8px">Estos valores son fijos de la Entrega 2 y no requieren configuracion:</p>
+        <div class="pf-section-title">Supuestos aplicados (Entrega 3, V1+)</div>
+        <p style="color:var(--fg-muted);margin-bottom:8px">Valores actuales del sistema:</p>
         <div class="methodology-chip-row">
           <span class="methodology-chip">Rf = 2%</span>
           <span class="methodology-chip">Shrinkage = 0.20</span>
-          <span class="methodology-chip">k = 1%</span>
-          <span class="methodology-chip">s = 20</span>
+          <span class="methodology-chip">k = 0,5% mensual</span>
+          <span class="methodology-chip">s = 1 (V1+)</span>
           <span class="methodology-chip">C0 = $1,000</span>
-          <span class="methodology-chip">5,000 sims</span>
+          <span class="methodology-chip">2,000 sims</span>
           <span class="methodology-chip">5 anos</span>
           <span class="methodology-chip">+/- 0.5 sigma</span>
         </div>
+        <div id="rec-views-indicator" style="margin-top:8px"></div>
       </div>
 
       <div class="pf-card">
@@ -3591,6 +3480,13 @@ function selectRecommendProfile(profileId) {
   if (target) target.classList.add("selected");
 }
 
+function selectRecommendScenario(scenario) {
+  document.querySelectorAll("#rec-scenario-con, #rec-scenario-sin").forEach(el => el.classList.remove("selected"));
+  const target = document.getElementById("rec-scenario-" + (scenario === "sin_pandemia" ? "sin" : "con"));
+  if (target) target.classList.add("selected");
+  PF.formState.scenario = scenario;
+}
+
 async function submitRecommendation() {
   const btn = document.getElementById("rec-submit-btn");
   const status = document.getElementById("rec-status");
@@ -3601,20 +3497,39 @@ async function submitRecommendation() {
 
   const profile = PF.formState.profile || "neutro";
   const capital = parseFloat(document.getElementById("rec-capital")?.value) || 1000;
-  const holdings = parseInt(document.getElementById("rec-holdings")?.value) || 10;
+  const holdings = parseInt(document.getElementById("rec-holdings")?.value) || 15;
+
+  const payload = {
+    profile: profile,
+    initial_capital: capital,
+    target_holdings: holdings,
+    scenario: PF.formState.scenario || "con_pandemia",
+  };
+
+  // Inyectar views manuales si existen
+  const views = PF.blViews || [];
+  if (views.length > 0) {
+    payload.parameter_values = { views_json: views };
+  }
 
   try {
     const result = await apiFetch("/api/portfolio/recommend", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        profile: profile,
-        initial_capital: capital,
-        target_holdings: holdings,
-      }),
+      body: JSON.stringify(payload),
     });
 
     PF.lastRecommend = result;
+    // Mostrar indicador de views activas
+    const viewsIndicator = document.getElementById("rec-views-indicator");
+    if (viewsIndicator) {
+      const views = PF.blViews || [];
+      if (views.length > 0) {
+        viewsIndicator.innerHTML = `<span class="methodology-chip" style="background:rgba(156,39,176,.12);color:#9C27B0;border:1px solid rgba(156,39,176,.3)">Views manuales: ${views.length} ticker${views.length > 1 ? 's' : ''}</span>`;
+      } else {
+        viewsIndicator.innerHTML = '<span class="methodology-chip" style="background:rgba(15,76,129,.12);color:var(--azul-claro);border:1px solid rgba(15,76,129,.3)">BL: Momentum Top20 6M (tau=0.20 calibrado)</span>';
+      }
+    }
     if (status) status.textContent = `${result.total_evaluated} metodologias evaluadas. Top ${result.recommendations.length} mostradas.`;
     renderRecommendationCards(result);
   } catch (error) {
@@ -3641,6 +3556,12 @@ function renderRecommendationCards(result) {
         Mayor Score P4 = mejor balance entre riqueza del cliente, utilidad para FinPUC y retencion.
         Se evaluaron <strong>${result.total_evaluated}</strong> metodologias para
         <strong>${esc(result.profile_label)}</strong> (tolera hasta ${result.alpha_p * 100}% de perdida).
+      </p>
+      <p style="font-size:0.82em;color:var(--fg-muted);margin-top:6px;padding:8px 12px;background:#fff8e1;border-left:3px solid #c49b25;border-radius:4px">
+        <strong>Nota:</strong> Markowitz lidera porque usa retornos historicos (CAGR) del periodo de calibracion,
+        que reflejan el mercado reciente. BL Desempleo es una view <strong>defensiva</strong> que sacrifica retorno
+        por estabilidad en escenarios de estres. Para ver el desempeño cruzando escenarios y perfiles, revisa la
+        seccion <strong>"Ranking views mediana (E3)"</strong> en la vista FinPUC Business.
       </p>
     </div>
     ${recs.map(r => {
@@ -3704,7 +3625,38 @@ function renderRecommendationCards(result) {
         </div>
 
         <details>
-          <summary style="cursor:pointer;font-weight:600;font-size:0.85em;color:var(--fg-muted)">Ver composicion (${(r.portfolio||[]).length} posiciones)</summary>
+          <summary style="cursor:pointer;font-weight:600;font-size:0.85em;color:var(--fg-muted)">Ver evolucion semestral</summary>
+          <div style="margin-top:8px;overflow-x:auto">
+            <table class="pf-table" style="font-size:0.82em">
+              <thead><tr><th>Semestre</th><th style="text-align:right">Ganancia empresa</th><th style="text-align:right">Riqueza cliente</th><th style="text-align:right">Activos</th></tr></thead>
+              <tbody>
+                ${(s.semester_labels || []).map((label, i) => `
+                  <tr>
+                    <td>${label}</td>
+                    <td style="text-align:right">${fmtUSD(s.semester_company_mean[i])}</td>
+                    <td style="text-align:right">${fmtUSD(s.semester_wealth_mean[i])}</td>
+                    <td style="text-align:right">${s.semester_active_rate[i]}%</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary style="cursor:pointer;font-weight:600;font-size:0.85em;color:var(--fg-muted)">Ver info del modelo y composicion</summary>
+          ${r.estimation_info ? `
+          <div class="pf-card" style="margin-top:8px;padding:12px">
+            <div style="font-size:0.82em;color:var(--fg-muted);margin-bottom:6px;font-weight:600">Modelo de estimacion: ${esc(r.estimation_info.estimation_model || "—")}</div>
+            <div class="data-list" style="grid-template-columns:1fr 1fr;font-size:0.82em">
+              ${r.estimation_info.view_type ? `<div><span>View type</span><strong>${esc(r.estimation_info.view_type)}</strong></div>` : ''}
+              ${r.estimation_info.tau != null ? `<div><span>Tau</span><strong>${r.estimation_info.tau}</strong></div>` : ''}
+              ${r.estimation_info.risk_free_rate_pct != null ? `<div><span>Rf</span><strong>${r.estimation_info.risk_free_rate_pct}%</strong></div>` : ''}
+              ${r.estimation_info.lambda_risk_aversion != null ? `<div><span>Lambda riesgo</span><strong>${r.estimation_info.lambda_risk_aversion}</strong></div>` : ''}
+              ${r.estimation_info.historical_source ? `<div style="grid-column:1/-1"><span>Fuente</span><strong>${esc(r.estimation_info.historical_source)}</strong></div>` : ''}
+              ${r.estimation_info.market_weighting ? `<div style="grid-column:1/-1"><span>Peso mercado</span><strong>${esc(r.estimation_info.market_weighting)}</strong></div>` : ''}
+            </div>
+          </div>` : ''}
           <table class="pf-table" style="margin-top:8px">
             <thead><tr><th>Ticker</th><th>Empresa</th><th>Sector</th><th style="text-align:right">Peso</th><th style="text-align:right">CAGR</th><th style="text-align:right">Vol</th></tr></thead>
             <tbody>
@@ -4648,7 +4600,6 @@ async function pfNavGo(section) {
   else if (section === "methodologies") renderMethodologies();
   else if (section === "results") renderResultsView();
   else if (section === "references") renderReferencesView();
-  else if (section === "flow") renderClientFlow();
   else if (section === "methods") renderMethodologies();
   else renderRecommend();
 }
@@ -5055,138 +5006,621 @@ function removeBlView(index) {
 }
 
 // ============================================================
-// Flujo tipico del cliente
+// Modulo FinPUC Business
 // ============================================================
 
-function renderClientFlow() {
+const BIZ_NAV_ITEMS = [
+  { id: "revenue", label: "Modelo de ingresos" },
+  { id: "commissions", label: "Comisiones" },
+  { id: "client", label: "Comportamiento cliente" },
+  { id: "score", label: "Score P4 y multiobjetivo" },
+  { id: "business_overview", label: "Resumen de negocio" },
+  { id: "client_overview", label: "Resumen del cliente" },
+  { id: "e3_calibracion", label: "Calibracion BL (E3)" },
+  { id: "e3_validacion", label: "Validacion (E3)" },
+  { id: "e3_views", label: "Comparacion Views (E3)" },
+  { id: "e3_score", label: "Score P4 rankings (E3)" },
+  { id: "e3_rankviews", label: "Ranking views mediana (E3)" },
+];
+
+let bizActiveNav = "revenue";
+
+function setBizNavActive(section) {
+  bizActiveNav = section;
+  document.querySelectorAll("#business-nav .portfolio-nav-item").forEach(el => el.classList.remove("active"));
+  const target = document.getElementById("bnav-" + section);
+  if (target) target.classList.add("active");
+}
+
+function bizNavGo(section) {
+  setBizNavActive(section);
+  if (section === "revenue") renderBizRevenue();
+  else if (section === "commissions") renderBizCommissions();
+  else if (section === "client") renderBizClient();
+  else if (section === "score") renderBizScore();
+  else if (section === "business_overview") renderBizOverview();
+  else if (section === "client_overview") renderClientOverview();
+  else if (section === "e3_calibracion") renderE3Calibracion();
+  else if (section === "e3_validacion") renderE3Validacion();
+  else if (section === "e3_views") renderE3Views();
+  else if (section === "e3_score") renderE3Score();
+  else if (section === "e3_rankviews") renderE3RankViews();
+}
+
+function renderBizRevenue() {
   document.getElementById("content").innerHTML = `
     <div class="pf-section">
       <div class="hero-card">
-        <div class="hero-eyebrow">Sistema FinPUC</div>
-        <h2 class="hero-title">Flujo tipico del cliente</h2>
-        <p class="hero-copy">Recorrido completo de un cliente desde el onboarding hasta el cierre del horizonte de inversion de 5 anos, mostrando cada etapa del proceso FinPUC.</p>
+        <div class="hero-eyebrow">FinPUC Business (V1+, Entrega 3)</div>
+        <h2 class="hero-title">Como gana dinero FinPUC — V1+</h2>
+        <p class="hero-copy">FinPUC genera ingresos mediante una comision mensual fija del 0,5% sobre el saldo administrado activo. No hay comisiones por transaccion ni por turnover. El modelo esta disenado para alinear los intereses del cliente (maximo retorno ajustado por riesgo) con los de la empresa (maxima utilidad por comisiones).</p>
       </div>
 
       <div class="pf-card">
-        <div class="pf-section-title">Diagrama del proceso</div>
-        <div class="timeline">
-          <div class="timeline-step">
-            <strong>1. Onboarding y perfil de riesgo</strong>
-            <p>El cliente define su capital inicial C<sub>0</sub> (desde $1,000 USD) y su tolerancia a la perdida alpha<sub>p</sub>. El sistema clasifica al cliente en uno de 5 perfiles: Muy conservador (0%), Conservador (5%), Neutro (15%), Arriesgado (30%) o Muy arriesgado (40%).</p>
-            <span class="field-ref">Referencia: Seccion 2.2.2 / Tabla 2.1</span>
+        <div class="pf-section-title">Fuentes de ingreso (V1+)</div>
+        <div class="academic-grid">
+          <div class="academic-card">
+            <h4>Comision mensual sobre saldo activo</h4>
+            <p>FinPUC cobra <strong>0,5% mensual</strong> sobre el saldo administrado de cada cliente activo. No se descuenta del capital del cliente, es utilidad separada de la empresa. A mayor riqueza del cliente, mayor ingreso recurrente.</p>
           </div>
-          <div class="timeline-step">
-            <strong>2. Seleccion de universo y metodologia</strong>
-            <p>Segun el perfil, FinPUC selecciona un subuniverso de acciones (40-636 candidatas), aplica filtros de calidad (F5), y elige la metodologia de optimizacion: Minima varianza, Markowitz media-varianza, Maximo retorno, Black-Litterman o Equiponderado.</p>
-            <span class="field-ref">Referencia: Seccion 2.3 / Supuestos C1-C5, E1-E3</span>
+          <div class="academic-card">
+            <h4>Sin comision por turnover</h4>
+            <p>En V1+ no hay comision adicional por aceptar rebalanceos ni recomendaciones. La unica fuente de ingreso es la comision mensual sobre saldo administrado activo.</p>
           </div>
-          <div class="timeline-step">
-            <strong>3. Optimizacion del portafolio</strong>
-            <p>El motor de optimizacion (SLSQP via scipy) resuelve el problema: max w'*mu - 0.5*gamma*w'*Sigma*w sujeto a restricciones de peso maximo, volatilidad maxima y presupuesto completo. Para Black-Litterman, mu se ajusta con la view calibrada de la Entrega 3: <strong>Desempleo macro</strong> (tau=0.20, conf=0.50, beta_macro=1.5, q_scale=1.5).</p>
-            <span class="field-ref">Referencia: Seccion 2.4 / Ecuacion 3.1</span>
-          </div>
-          <div class="timeline-step">
-            <strong>4. Recomendacion al cliente (P2)</strong>
-            <p>FinPUC emite una recomendacion con el portafolio optimizado. El cliente decide si acepta o rechaza segun la funcion logistica P<sub>2</sub> = 1 / (1 + exp(-s * (retorno_ofrecido - tolerancia))). Sensibilidad s = 20.</p>
-            <span class="field-ref">Referencia: Seccion 4 / Ecuacion 4.6</span>
-          </div>
-          <div class="timeline-step">
-            <strong>5. Cobro de comision</strong>
-            <p>Si el cliente acepta, FinPUC cobra una comision k=1% anual (prorrateada semanalmente) sobre el capital gestionado, mas un 5% de turnover sobre el capital aceptado en cada rebalanceo.</p>
-            <span class="field-ref">Referencia: Seccion 2.4 / Supuestos F2, K7</span>
-          </div>
-          <div class="timeline-step">
-            <strong>6. Evolucion del capital</strong>
-            <p>El capital evoluciona semanalmente: V<sub>t</sub> = V<sub>t-1</sub> * (1 + r<sub>t</sub>) - comision. Los retornos r<sub>t</sub> siguen una distribucion normal con media y volatilidad del portafolio optimizado, truncadas a [-95%, +150%] semanal.</p>
-            <span class="field-ref">Referencia: Seccion 4 / P4 Monte Carlo</span>
-          </div>
-          <div class="timeline-step">
-            <strong>7. Evaluacion de retiro (P1)</strong>
-            <p>Cada semana se evalua si el cliente se retira: P<sub>1</sub> = 0.10 / (1 + exp(-20 * (perdida - alpha<sub>p</sub>))) con <strong>cap semanal del 10%</strong> (calibracion V3, Entrega 3). La perdida se mide respecto al capital inicial C<sub>0</sub>. Si el cliente se retira, FinPUC deja de percibir comisiones.</p>
-            <span class="field-ref">Referencia: Seccion 4 / Ecuacion 4.6</span>
-          </div>
-          <div class="timeline-step">
-            <strong>8. Rebalanceo periodico</strong>
-            <p>Cada 26 semanas (rebalanceo semestral), FinPUC re-optimiza el portafolio con datos actualizados y emite una nueva recomendacion. El ciclo recomendar → aceptar → cobrar → evolucionar se repite.</p>
-            <span class="field-ref">Referencia: Supuestos J1 / Seccion 2.2</span>
-          </div>
-          <div class="timeline-step">
-            <strong>9. Cierre (semana 260, ano 5)</strong>
-            <p>Al final del horizonte de 5 anos, se calcula el Score P4 = E[Riqueza] + E[Utilidad] - C<sub>0</sub> * TasaRetiro. Este score combina el exito del cliente, la rentabilidad de FinPUC y la retencion.</p>
-            <span class="field-ref">Referencia: Seccion 4 / Score P4</span>
+          <div class="academic-card">
+            <h4>Retencion del cliente</h4>
+            <p>Un cliente que se retira (activa P<sub>1</sub>) o quiebra (ruina) deja de generar comisiones. Por eso el Score P4 penaliza la tasa de retiro: mantener al cliente es rentable para FinPUC.</p>
           </div>
         </div>
       </div>
 
-      <div class="detail-grid">
-        <div class="pf-card">
-          <div class="pf-section-title">Metricas clave por etapa</div>
-          <div class="data-list">
-            <div><span>Perfiles de riesgo</span><strong>5 niveles (0% a 40%)</strong></div>
-            <div><span>Universo de acciones</span><strong>~601 acciones (filtro F5)</strong></div>
-            <div><span>Metodologias activas</span><strong>Markowitz, MinVar, MaxRet, BL (Desempleo calibrado), Equiponderado</strong></div>
-            <div><span>BL: tau calibrado</span><strong>0.20 (Entrega 3)</strong></div>
-            <div><span>BL: confianza</span><strong>0.50 (Desempleo macro)</strong></div>
-            <div><span>BL: beta macro</span><strong>1.5, q_scale = 1.5</strong></div>
-            <div><span>Sensibilidad P1/P2</span><strong>s = 20, cap P1 semanal = 10% (V3)</strong></div>
-            <div><span>Comision anual</span><strong>k = 1% (prorrateo semanal)</strong></div>
-            <div><span>Turnover aceptacion</span><strong>5% de la riqueza actual</strong></div>
-            <div><span>Rebalanceo</span><strong>Semanal (simulacion), Semestral (optimizacion)</strong></div>
-            <div><span>Horizonte</span><strong>5 anos (260 semanas)</strong></div>
-            <div><span>Simulaciones</span><strong>5,000 trayectorias Monte Carlo</strong></div>
-            <div><span>Score P4</span><strong>Riqueza + Utilidad - C0 * TasaRetiro</strong></div>
-          </div>
+      <div class="pf-card">
+        <div class="pf-section-title">Formula de ingreso (V1+)</div>
+        <p style="margin-bottom:12px">La utilidad esperada de FinPUC se calcula como:</p>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;font-size:1.1em;margin-bottom:12px">
+          <strong>Utilidad<sub>semanal</sub> = Wealth<sub>activo</sub> × (0,005 × 12 / 52)</strong>
         </div>
-        <div class="pf-card">
-          <div class="pf-section-title">Funciones de comportamiento</div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
-            <p style="margin:0 0 8px"><strong>P<sub>1</sub> — Probabilidad de retiro</strong></p>
-            <p style="font-size:0.95em;margin:0;color:var(--fg-muted)">
-              P<sub>1</sub>(perdida) = 0.10 / (1 + e<sup>-20 * (perdida - alpha<sub>p</sub>)</sup>)
-            </p>
-            <p style="font-size:0.8em;color:var(--fg-muted);margin:4px 0 0">Cap semanal 10% (V3 calibrado). Medida contra C<sub>0</sub>, no contra maximo historico</p>
+        <p style="color:var(--fg-muted);font-size:0.9em">
+          Donde 0,5% mensual se convierte a tasa semanal y se acumula durante las 260 semanas. La comision NO se descuenta del capital del cliente; es utilidad de la empresa calculada ex-post.
+        </p>
+        <span class="field-ref">Basado en Entrega 3 — V1+ / Propuesta de Cambios</span>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Ciclo de ingresos V1+</div>
+        <div class="timeline">
+          <div class="timeline-step">
+            <strong>Semana 0: Evaluacion inicial</strong>
+            <p>Se evalua P<sub>2</sub> = sigmoid(retorno - tolerancia). Si el cliente acepta, se vuelve activo y comienza a generar comision mensual.</p>
           </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
-            <p style="margin:0 0 8px"><strong>P<sub>2</sub> — Probabilidad de aceptacion</strong></p>
-            <p style="font-size:0.95em;margin:0;color:var(--fg-muted)">
-              P<sub>2</sub>(retorno) = 1 / (1 + e<sup>-20 * (retorno - alpha<sub>p</sub>)</sup>)
-            </p>
-            <p style="font-size:0.8em;color:var(--fg-muted);margin:4px 0 0">A mayor retorno ofrecido, mayor probabilidad de aceptar</p>
+          <div class="timeline-step">
+            <strong>Cada semana: Comision sobre activos</strong>
+            <p>FinPUC acumula comision = wealth<sub>activo</sub> × (0,5% × 12 / 52). No hay decision de aceptacion semanal.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Cada semana: Evaluacion de retiro y ruina</strong>
+            <p>Si la perdida supera la tolerancia del perfil, el cliente puede retirarse (P<sub>1</sub>). Si wealth &le; $0, el retiro es forzoso (ruina).</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Semana 260: Cierre</strong>
+            <p>Tras 5 anos, se calcula la utilidad total acumulada por comisiones. Esta metrica alimenta el Score P4.</p>
           </div>
         </div>
       </div>
     </div>
   `;
-  queueMathTypeset();
+}
+
+function renderBizCommissions() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">FinPUC Business (V1+, Entrega 3)</div>
+        <h2 class="hero-title">Estructura de comisiones — V1+</h2>
+        <p class="hero-copy">La comision es el unico mecanismo de ingresos de FinPUC. En V1+ se simplifica a una tasa mensual fija sobre saldo administrado activo, sin comisiones por transaccion ni turnover.</p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Parametros de comision (V1+)</div>
+        <div class="data-list" style="grid-template-columns:1fr 1fr">
+          <div><span>Tasa de comision</span><strong>0,5% mensual</strong></div>
+          <div><span>Base de calculo</span><strong>Saldo administrado activo</strong></div>
+          <div><span>Frecuencia de cobro</span><strong>Semanal (prorrateo: 0,5% × 12 / 52)</strong></div>
+          <div><span>Comision por turnover</span><strong>No existe</strong></div>
+          <div><span>Comision por recomendacion</span><strong>No existe</strong></div>
+          <div><span>Impacto en capital del cliente</span><strong>No descuenta (es utilidad separada)</strong></div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Ejemplo numerico</div>
+        <table class="pf-table">
+          <thead><tr><th>Mes</th><th>Riqueza cliente activo</th><th>Comision FinPUC (0,5% mensual)</th></tr></thead>
+          <tbody>
+            <tr><td>Mes 1</td><td>$1,000</td><td><strong>$5.00</strong></td></tr>
+            <tr><td>Mes 12</td><td>$2,000</td><td><strong>$10.00</strong></td></tr>
+            <tr><td>Mes 36</td><td>$5,000</td><td><strong>$25.00</strong></td></tr>
+            <tr><td>Mes 60</td><td>$10,000</td><td><strong>$50.00</strong></td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:8px;color:var(--fg-muted);font-size:0.85em">
+          La utilidad crece con la riqueza del cliente. Como la comision no descuenta del capital, el crecimiento compuesto del cliente no se ve afectado.
+        </p>
+        <span class="field-ref">Basado en Entrega 3 — V1+ / Propuesta de Cambios</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderBizClient() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">FinPUC Business (V1+, Entrega 3)</div>
+        <h2 class="hero-title">Comportamiento del cliente — V1+</h2>
+        <p class="hero-copy">El modelo V1+ simplifica las funciones conductuales respecto a la Entrega 2: elimina la sensibilidad s=20, usa sigmoide sin escalar, y la aceptacion se evalua una sola vez al inicio del portafolio. Se agrega ruina forzosa cuando el wealth llega a cero.</p>
+      </div>
+
+      <div class="academic-grid">
+        <div class="academic-card">
+          <h4>P<sub>1</sub> — Probabilidad de retiro (V1+)</h4>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0;text-align:center;font-size:1.05em">
+            P<sub>1</sub>(x<sub>1</sub>) = 1 / [1 + exp(−(x<sub>1</sub> − x̂<sub>1</sub>))]
+          </div>
+          <p style="font-size:0.9em;color:var(--fg-muted)">
+            x<sub>1</sub> = perdida actual / C<sub>0</sub> (medida contra capital inicial)<br>
+            x̂<sub>1</sub> = tolerancia del perfil (0%, 5%, 10%, 15%, 20%)<br>
+            s = 1 (sensibilidad V1+, sin escalar)<br>
+            <strong>Ruina:</strong> Si wealth &le; $0 → withdraw = 1.0 (abandono forzoso)<br>
+            <strong>Solo se activa si x<sub>1</sub> > x̂<sub>1</sub></strong>
+          </p>
+        </div>
+        <div class="academic-card">
+          <h4>P<sub>2</sub> — Aceptacion inicial (V1+)</h4>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0;text-align:center;font-size:1.05em">
+            P<sub>2</sub> = 1 / [1 + exp(−(r<sub>anual</sub> − x̂<sub>2</sub>))]
+          </div>
+          <p style="font-size:0.9em;color:var(--fg-muted)">
+            r<sub>anual</sub> = retorno anual del portafolio ofrecido<br>
+            x̂<sub>2</sub> = tolerancia del perfil<br>
+            s = 1 (sensibilidad V1+, sin escalar)<br>
+            <strong>Evaluada una sola vez al inicio.</strong> No hay re-aceptacion semanal.<br>
+            <strong>Retorno ofrecido > tolerancia → mas probable que acepte</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Impacto en el negocio (V1+)</div>
+        <div class="timeline">
+          <div class="timeline-step">
+            <strong>Cliente acepta el portafolio inicial</strong>
+            <p>Si P<sub>2</sub> supera el umbral aleatorio, el cliente se vuelve activo. FinPUC comienza a cobrar <strong>comision mensual 0,5% sobre el saldo administrado activo</strong>. No hay comision por turnover ni por recomendacion.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Cliente rechaza el portafolio inicial</strong>
+            <p>Nunca se vuelve activo. No genera comisiones. El capital no se invierte.</p>
+          </div>
+          <div class="timeline-step">
+            <strong>Cliente se retira (P<sub>1</sub> o ruina)</strong>
+            <p>Si la perdida supera la tolerancia, el cliente puede retirarse via P<sub>1</sub>. Si wealth &le; $0, el retiro es forzoso (ruina). FinPUC pierde al cliente permanentemente. El Score P4 penaliza la tasa de retiro con −C<sub>0</sub> × tasa.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Perfiles y su impacto en P<sub>1</sub>/P<sub>2</sub> (V1+)</div>
+        <table class="pf-table">
+          <thead><tr><th>Perfil</th><th>Tolerancia (x̂)</th><th>P<sub>1</sub> se activa</th><th>P<sub>2</sub> umbral</th><th>Efecto en negocio</th></tr></thead>
+          <tbody>
+            <tr><td>Muy conservador</td><td>0%</td><td>Con cualquier perdida</td><td>0%</td><td>Alta tasa de retiro → malo para FinPUC</td></tr>
+            <tr><td>Conservador</td><td>5%</td><td>Perdida > 5%</td><td>5%</td><td>Retiro moderado</td></tr>
+            <tr><td>Neutro</td><td>10%</td><td>Perdida > 10%</td><td>10%</td><td>Balanceado</td></tr>
+            <tr><td>Arriesgado</td><td>15%</td><td>Perdida > 15%</td><td>15%</td><td>Baja tasa de retiro</td></tr>
+            <tr><td>Muy arriesgado</td><td>20%</td><td>Perdida > 20%</td><td>20%</td><td>Minima tasa de retiro → mejor para FinPUC</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderBizScore() {
+  document.getElementById("content").innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">FinPUC Business</div>
+        <h2 class="hero-title">Score P4 y el problema multiobjetivo</h2>
+        <p class="hero-copy">El sistema recomendador de FinPUC enfrenta un problema con dos objetivos en conflicto: maximizar el retorno del cliente y maximizar la utilidad de la empresa. El Score P4 y la formulacion multiobjetivo del Informe 1 resuelven este trade-off.</p>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Formulacion multiobjetivo (Informe 1)</div>
+        <p style="margin-bottom:12px">El problema original se formulo como una optimizacion multiobjetivo escalarizada:</p>
+        <div style="background:var(--bg-card);border:2px solid var(--amber);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
+          <div style="font-size:1.3em;font-weight:700;margin-bottom:8px">max λ · f<sub>1</sub>(w) + (1−λ) · f<sub>2</sub>(w)</div>
+          <div style="font-size:0.95em;color:var(--fg-muted)">Ecuacion 4.8 — Informe 1</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">
+          <div>
+            <strong>f<sub>1</sub>(w) = w<sup>T</sup>μ<sub>BL</sub></strong><br>
+            <span style="color:var(--fg-muted);font-size:0.85em">Retorno esperado del portafolio (cliente)</span>
+          </div>
+          <div>
+            <strong>f<sub>2</sub>(w) ∝ k · P<sub>2</sub> · (1−P<sub>1</sub>)</strong><br>
+            <span style="color:var(--fg-muted);font-size:0.85em">Utilidad esperada de FinPUC (empresa)</span>
+          </div>
+        </div>
+        <p style="color:var(--fg-muted);font-size:0.85em">
+          λ es un parametro de diseno que balancea ambos objetivos. λ=1 → solo le importa el cliente. λ=0 → solo le importa la empresa.
+          Este parametro es una decision estrategica de FinPUC, no un dato empirico.
+        </p>
+        <span class="field-ref">Basado en Informe 1 — Seccion 4 / Ecuaciones 4.8 y 4.9</span>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Score P4 — Implementacion practica (Entrega 2)</div>
+        <p style="margin-bottom:12px">En la Entrega 2, el problema multiobjetivo se resolvio de forma practica con un scoring post-optimizacion:</p>
+        <div style="background:var(--bg-card);border:2px solid var(--green);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
+          <div style="font-size:1.3em;font-weight:700;margin-bottom:8px">Score<sub>P4</sub> = E[Riqueza] + E[Utilidad] − C<sub>0</sub> · TasaRetiro</div>
+          <div style="font-size:0.95em;color:var(--fg-muted)">Ecuacion — Resultados / KPIs Entrega 2</div>
+        </div>
+        <table class="pf-table">
+          <thead><tr><th>Componente</th><th>Que mide</th><th>A quien beneficia</th></tr></thead>
+          <tbody>
+            <tr><td><strong>E[Riqueza terminal]</strong></td><td>Capital final esperado del cliente tras 5 anos</td><td>Cliente</td></tr>
+            <tr><td><strong>E[Utilidad empresa]</strong></td><td>Comisiones acumuladas por FinPUC</td><td>FinPUC</td></tr>
+            <tr><td><strong>− C<sub>0</sub> × TasaRetiro</strong></td><td>Penalizacion por clientes que abandonan</td><td>Ambos (perder cliente es malo para los dos)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="academic-grid">
+        <div class="academic-card">
+          <h4>De Informe 1 a Entrega 2</h4>
+          <p style="font-size:0.9em;color:var(--fg-muted)">
+            El Informe 1 propuso <strong>optimizar directamente</strong> la funcion escalarizada λ·f<sub>1</sub>+(1−λ)·f<sub>2</sub>.
+            La Entrega 2 <strong>separo</strong> el problema: primero optimiza el retorno (Markowitz/BL), luego simula el comportamiento del cliente (Monte Carlo), y finalmente <strong>ordena</strong> con Score P4. Esta separacion es mas simple de implementar y permite comparar metodologias sin elegir λ.
+          </p>
+        </div>
+        <div class="academic-card">
+          <h4>Resultado empirico</h4>
+          <p style="font-size:0.9em;color:var(--fg-muted)">
+            Con el Scoring P4, la mejor combinacion es <strong>Black-Litterman Momentum Top20 6M + Muy arriesgado + Con pandemia</strong>:
+            Score P4 = <strong>9,417</strong> (riqueza $8,974 + utilidad $474 − $1,000×0.031). Esto demuestra que retorno del cliente y utilidad de la empresa pueden crecer juntos cuando el portafolio es bueno.
+          </p>
+        </div>
+
+        <div class="academic-card">
+          <h4>Resultado empirico (Entrega 3)</h4>
+          <p style="font-size:0.9em;color:var(--fg-muted)">
+            Validacion 3-horizonte con BL Desempleo calibrado (tau=0.20, conf=0.50):
+            <strong>Markowitz base + Neutro sin pandemia lidera</strong> con Score P4 = <strong>2,982</strong>
+            (riqueza $2,797 + utilidad $194 − $1,000×0.009). 
+            BL gana en Sharpe (+51.7% muy arriesgado) pero el Score P4 actual favorece la retencion.
+          </p>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Interpretacion del lambda (λ)</div>
+        <div style="background:var(--bg);padding:14px;border-radius:8px;font-size:0.9em;line-height:1.6">
+          <p><strong>λ = 1.0</strong> → FinPUC solo optimiza el retorno del cliente. La empresa no cobra comisiones. Es un servicio gratuito.</p>
+          <p><strong>λ = 0.5</strong> → FinPUC pesa igual ambos objetivos. Es el punto medio del trade-off.</p>
+          <p><strong>λ = 0.0</strong> → FinPUC solo optimiza su utilidad. Podria recomendar portafolios con alta rotacion aunque perjudiquen al cliente.</p>
+          <p style="margin-top:8px;color:var(--fg-muted)">En la practica, el Score P4 actua como un λ implicito que da igual peso a la riqueza y a la utilidad, pero <strong>penaliza fuertemente el retiro</strong> del cliente (−C<sub>0</sub> × tasa). Esto asegura que FinPUC no recomiende portafolios que hagan huir a los clientes.</p>
+        </div>
+        <span class="field-ref">Basado en Informe 1 — Seccion 4.8 / Discusion metodologica</span>
+      </div>
+    </div>
+  `;
 }
 
 // ============================================================
-// Modulo Resultados Entrega 3
+// Business Overview — desglose semestral
 // ============================================================
 
-const E3_NAV_ITEMS = [
-  { id: "calibracion", label: "Calibracion BL" },
-  { id: "validacion", label: "Validacion" },
-  { id: "views", label: "Comparacion Views" },
-  { id: "score", label: "Score P4" },
-];
+async function renderBizOverview() {
+  const el = document.getElementById("content");
+  el.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">FinPUC Business</div>
+        <h2 class="hero-title">Resumen de negocio — desglose semestral</h2>
+        <p class="hero-copy">Evaluando 40 combinaciones (5 perfiles × 4 metodologías × 2 escenarios) con simulación Monte Carlo... puede tardar hasta 2 minutos.</p>
+      </div>
+      <div style="text-align:center;padding:60px 20px">
+        <div style="display:inline-block;width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px"></div>
+        <p style="color:var(--fg-muted);font-size:0.9em">Calculando rentabilidades semestrales...</p>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    </div>`;
 
-let e3ActiveNav = "calibracion";
-
-function setE3NavActive(section) {
-  e3ActiveNav = section;
-  document.querySelectorAll("#entrega3-nav .portfolio-nav-item").forEach(el => el.classList.remove("active"));
-  const target = document.getElementById("e3nav-" + section);
-  if (target) target.classList.add("active");
+  try {
+    const data = await apiFetch("/api/portfolio/business-overview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initial_capital: 1000, target_holdings: 15 }),
+    });
+    renderBizOverviewData(data);
+  } catch (e) {
+    el.innerHTML = `<div class="pf-section"><div class="hero-card"><h2>Error al cargar datos</h2><p>${e.message}</p></div></div>`;
+  }
 }
 
-function e3NavGo(section) {
-  setE3NavActive(section);
-  if (section === "calibracion") renderE3Calibracion();
-  else if (section === "validacion") renderE3Validacion();
-  else if (section === "views") renderE3Views();
-  else if (section === "score") renderE3Score();
+function renderBizOverviewData(data) {
+  const el = document.getElementById("content");
+  const { semester_labels, profiles, totals } = data;
+  if (!semester_labels || !semester_labels.length || !Object.keys(profiles).length) {
+    el.innerHTML = `<div class="pf-section"><div class="hero-card"><h2>Sin datos</h2><p>No se pudieron generar datos para ningún perfil.</p></div></div>`;
+    return;
+  }
+
+  const totalCompany = totals.company_all_profiles;
+  const totalWealth = totals.wealth_all_profiles;
+
+  // Barajar perfiles por ganancia total
+  const sortedProfiles = Object.entries(profiles).sort((a, b) => b[1].company_total - a[1].company_total);
+
+  // Cards resumen
+  let cardsHtml = `<div class="detail-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">`;
+  for (const [pk, pd] of sortedProfiles) {
+    const pct = totalCompany > 0 ? ((pd.company_total / totalCompany) * 100).toFixed(1) : "0.0";
+      cardsHtml += `<div class="pf-card" style="text-align:center"><div class="pf-section-title">${pd.label}</div><div style="font-size:1.6em;font-weight:700;color:var(--amber)">${fmtUSD(pd.company_total)}</div><div style="font-size:0.85em;color:var(--fg-muted)">${pct}% del total · ${pd.count} combos</div></div>`;
+  }
+  cardsHtml +=
+    `<div class="pf-card" style="text-align:center;border-color:var(--amber)"><div class="pf-section-title">Total empresa</div><div style="font-size:2em;font-weight:700;color:var(--amber)">${fmtUSD(totalCompany)}</div><div style="font-size:0.85em;color:var(--fg-muted)">${Object.keys(profiles).length} perfiles</div></div>`;
+  cardsHtml += `</div>`;
+
+  // Chart 1: Company earnings per semester per profile
+  const chart1Id = "biz-chart-company";
+  // Chart 2: Wealth per semester per profile (client view in business context)
+  const chart2Id = "biz-chart-wealth";
+  // Table
+  const tableId = "biz-table-semester";
+
+  el.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">FinPUC Business</div>
+        <h2 class="hero-title">Resumen de negocio — desglose semestral</h2>
+        <p class="hero-copy">Ganancia de la empresa y riqueza del cliente por semestre, promediado entre 4 metodologías × 2 escenarios por perfil. Capital inicial: $1,000.</p>
+      </div>
+      ${cardsHtml}
+
+      <div class="detail-grid">
+        <div class="pf-card">
+          <div class="pf-section-title">Ganancia empresa por semestre</div>
+          <div id="${chart1Id}" style="width:100%;height:300px"></div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-section-title">Riqueza del cliente por semestre</div>
+          <div id="${chart2Id}" style="width:100%;height:300px"></div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Ganancia empresa — detalle por perfil y semestre</div>
+        <div style="overflow-x:auto">
+          <table class="pf-table" id="${tableId}">
+            <thead><tr><th>Perfil</th>${semester_labels.map(s => `<th>${s}</th>`).join("")}<th>Total</th><th>%</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Tabla
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  for (const [pk, pd] of sortedProfiles) {
+    const pct = totalCompany > 0 ? ((pd.company_total / totalCompany) * 100).toFixed(1) : "0.0";
+    let row = `<tr><td><strong>${pd.label}</strong></td>`;
+    for (const v of pd.company_by_semester) {
+      row += `<td>${fmtUSD(v)}</td>`;
+    }
+    row += `<td><strong>${fmtUSD(pd.company_total)}</strong></td><td>${pct}%</td></tr>`;
+    tbody.innerHTML += row;
+  }
+  // Fila total
+  let totalRow = `<tr style="border-top:2px solid var(--amber);font-weight:700"><td>Total</td>`;
+  for (const v of totals.company_by_semester) {
+    totalRow += `<td>${fmtUSD(v)}</td>`;
+  }
+  totalRow += `<td>${fmtUSD(totalCompany)}</td><td>100%</td></tr>`;
+  tbody.innerHTML += totalRow;
+
+  // Charts Plotly
+  const profileKeys = Object.keys(profiles);
+  const colors = ["#c49b25", "#2e4b6e", "#4a7c59", "#b85c3a", "#6b4c8a"];
+
+  // Company chart
+  const companyTraces = profileKeys.map((pk, i) => ({
+    x: semester_labels,
+    y: profiles[pk].company_by_semester,
+    type: "scatter",
+    mode: "lines+markers",
+    name: profiles[pk].label,
+    marker: { color: colors[i % colors.length] },
+    line: { color: colors[i % colors.length] },
+  }));
+  // Add total trace
+  companyTraces.push({
+    x: semester_labels,
+    y: totals.company_by_semester,
+    type: "scatter",
+    mode: "lines+markers",
+    name: "Total",
+    marker: { color: "#1c2733", size: 6 },
+    line: { color: "#1c2733", width: 3, dash: "dash" },
+  });
+  Plotly.newPlot(chart1Id, companyTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 10, r: 10, b: 50, l: 60 },
+    yaxis: { title: "Ganancia ($)", tickprefix: "$" },
+    legend: { orientation: "h", y: -0.3 },
+    hovermode: "x unified",
+  }, PLOTLY_CONFIG);
+
+  // Wealth chart
+  const wealthTraces = profileKeys.map((pk, i) => ({
+    x: semester_labels,
+    y: profiles[pk].wealth_by_semester,
+    type: "scatter",
+    mode: "lines+markers",
+    name: profiles[pk].label,
+    marker: { color: colors[i % colors.length] },
+    line: { color: colors[i % colors.length] },
+  }));
+  wealthTraces.push({
+    x: semester_labels,
+    y: totals.wealth_by_semester,
+    type: "scatter",
+    mode: "lines+markers",
+    name: "Total",
+    marker: { color: "#1c2733", size: 6 },
+    line: { color: "#1c2733", width: 3, dash: "dash" },
+  });
+  Plotly.newPlot(chart2Id, wealthTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 10, r: 10, b: 50, l: 60 },
+    yaxis: { title: "Riqueza ($)", tickprefix: "$" },
+    legend: { orientation: "h", y: -0.3 },
+    hovermode: "x unified",
+  }, PLOTLY_CONFIG);
 }
+
+// ============================================================
+// Client Overview — desglose semestral
+// ============================================================
+
+async function renderClientOverview() {
+  const el = document.getElementById("content");
+  el.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">FinPUC Business</div>
+        <h2 class="hero-title">Resumen del cliente — desglose semestral</h2>
+        <p class="hero-copy">Evaluando 40 combinaciones con simulación Monte Carlo... puede tardar hasta 2 minutos.</p>
+      </div>
+      <div style="text-align:center;padding:60px 20px">
+        <div style="display:inline-block;width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px"></div>
+        <p style="color:var(--fg-muted);font-size:0.9em">Calculando rentabilidades semestrales...</p>
+      </div>
+    </div>`;
+
+  try {
+    const data = await apiFetch("/api/portfolio/client-overview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initial_capital: 1000, target_holdings: 15 }),
+    });
+    renderClientOverviewData(data);
+  } catch (e) {
+    el.innerHTML = `<div class="pf-section"><div class="hero-card"><h2>Error al cargar datos</h2><p>${e.message}</p></div></div>`;
+  }
+}
+
+function renderClientOverviewData(data) {
+  const el = document.getElementById("content");
+  const { semester_labels, profiles, totals } = data;
+  if (!semester_labels || !semester_labels.length || !Object.keys(profiles).length) {
+    el.innerHTML = `<div class="pf-section"><div class="hero-card"><h2>Sin datos</h2><p>No se pudieron generar datos para ningún perfil.</p></div></div>`;
+    return;
+  }
+
+  const sortedProfiles = Object.entries(profiles).sort((a, b) => b[1].wealth_total - a[1].wealth_total);
+  const colors = ["#c49b25", "#2e4b6e", "#4a7c59", "#b85c3a", "#6b4c8a"];
+
+  // Cards resumen
+  let cardsHtml = `<div class="detail-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">`;
+  for (const [pk, pd] of sortedProfiles) {
+      cardsHtml += `<div class="pf-card" style="text-align:center"><div class="pf-section-title">${pd.label}</div><div style="font-size:1.6em;font-weight:700;color:var(--green)">${fmtUSD(pd.wealth_mean)}</div><div style="font-size:0.85em;color:var(--fg-muted)">Score P4: ${pd.score_p4_mean} · Retiro: ${pd.withdrawal_rate_mean}%</div></div>`;
+  }
+  cardsHtml += `</div>`;
+
+  const chart1Id = "client-chart-wealth";
+  const chart2Id = "client-chart-active";
+  const tableId = "client-table";
+
+  el.innerHTML = `
+    <div class="pf-section">
+      <div class="hero-card">
+        <div class="hero-eyebrow">FinPUC Business</div>
+        <h2 class="hero-title">Resumen del cliente — desglose semestral</h2>
+        <p class="hero-copy">Riqueza del cliente, retención y Score P4 por semestre y perfil. Capital inicial: $1,000.</p>
+      </div>
+      ${cardsHtml}
+
+      <div class="detail-grid">
+        <div class="pf-card">
+          <div class="pf-section-title">Riqueza acumulada del cliente</div>
+          <div id="${chart1Id}" style="width:100%;height:300px"></div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-section-title">Clientes activos por semestre (%)</div>
+          <div id="${chart2Id}" style="width:100%;height:300px"></div>
+        </div>
+      </div>
+
+      <div class="pf-card">
+        <div class="pf-section-title">Comparativa por perfil</div>
+        <div style="overflow-x:auto">
+          <table class="pf-table" id="${tableId}">
+            <thead><tr><th>Perfil</th><th>Riqueza final media</th><th>Score P4 medio</th><th>Retiro medio</th><th>Combinaciones</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Table
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  for (const [pk, pd] of sortedProfiles) {
+    tbody.innerHTML += `<tr><td><strong>${pd.label}</strong></td><td>${fmtUSD(pd.wealth_mean)}</td><td>${pd.score_p4_mean}</td><td>${pd.withdrawal_rate_mean}%</td><td>${pd.count}</td></tr>`;
+  }
+
+  // Wealth chart
+  const wealthTraces = sortedProfiles.map(([pk, pd], i) => ({
+    x: semester_labels,
+    y: pd.wealth_by_semester,
+    type: "scatter",
+    mode: "lines+markers",
+    name: pd.label,
+    marker: { color: colors[i % colors.length] },
+    line: { color: colors[i % colors.length] },
+  }));
+  Plotly.newPlot(chart1Id, wealthTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 10, r: 10, b: 50, l: 60 },
+    yaxis: { title: "Riqueza ($)", tickprefix: "$" },
+    legend: { orientation: "h", y: -0.3 },
+    hovermode: "x unified",
+  }, PLOTLY_CONFIG);
+
+  // Active rate chart
+  const activeTraces = sortedProfiles.map(([pk, pd], i) => ({
+    x: semester_labels,
+    y: pd.active_rate_by_semester,
+    type: "scatter",
+    mode: "lines+markers",
+    name: pd.label,
+    marker: { color: colors[i % colors.length] },
+    line: { color: colors[i % colors.length] },
+  }));
+  Plotly.newPlot(chart2Id, activeTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    margin: { t: 10, r: 10, b: 50, l: 60 },
+    yaxis: { title: "Activos (%)", range: [0, 105], ticksuffix: "%" },
+    legend: { orientation: "h", y: -0.3 },
+    hovermode: "x unified",
+  }, PLOTLY_CONFIG);
+}
+
+// ============================================================
+// Resultados Entrega 3 — dentro de la vista de negocio
+// ============================================================
 
 function renderE3Calibracion() {
   document.getElementById("content").innerHTML = `
@@ -5452,315 +5886,6 @@ function renderE3Score() {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-  `;
-}
-
-const BIZ_NAV_ITEMS = [
-  { id: "revenue", label: "Modelo de ingresos" },
-  { id: "commissions", label: "Comisiones" },
-  { id: "client", label: "Comportamiento cliente" },
-  { id: "score", label: "Score P4 y multiobjetivo" },
-];
-
-let bizActiveNav = "revenue";
-
-function setBizNavActive(section) {
-  bizActiveNav = section;
-  document.querySelectorAll("#business-nav .portfolio-nav-item").forEach(el => el.classList.remove("active"));
-  const target = document.getElementById("bnav-" + section);
-  if (target) target.classList.add("active");
-}
-
-function bizNavGo(section) {
-  setBizNavActive(section);
-  if (section === "revenue") renderBizRevenue();
-  else if (section === "commissions") renderBizCommissions();
-  else if (section === "client") renderBizClient();
-  else if (section === "score") renderBizScore();
-}
-
-function renderBizRevenue() {
-  document.getElementById("content").innerHTML = `
-    <div class="pf-section">
-      <div class="hero-card">
-        <div class="hero-eyebrow">FinPUC Business</div>
-        <h2 class="hero-title">Como gana dinero FinPUC</h2>
-        <p class="hero-copy">FinPUC es una plataforma de asesoria financiera que genera ingresos mediante comisiones por transaccion. El modelo de negocio esta disenado para alinear los intereses del cliente (maximo retorno ajustado por riesgo) con los de la empresa (maxima utilidad por comisiones).</p>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Fuentes de ingreso</div>
-        <div class="academic-grid">
-          <div class="academic-card">
-            <h4>Comision inicial</h4>
-            <p>Al aceptar la primera recomendacion, el cliente paga <strong>k = 1%</strong> sobre el capital inicial C<sub>0</sub> = $1,000 USD. Esto genera un ingreso inmediato de <strong>$10 USD</strong> por cliente.</p>
-          </div>
-          <div class="academic-card">
-            <h4>Comisiones por rebalanceo</h4>
-            <p>Cada vez que el cliente acepta una nueva recomendacion semanal, FinPUC cobra <strong>k = 1%</strong> sobre el <strong>5% de la riqueza actual</strong> (fraccion de rotacion asumida). A mayor riqueza y mayor aceptacion, mayor ingreso recurrente.</p>
-          </div>
-          <div class="academic-card">
-            <h4>Retencion del cliente</h4>
-            <p>Un cliente que se retira (activa P<sub>1</sub>) deja de generar comisiones. Por eso el Score P4 penaliza la tasa de retiro: mantener al cliente es rentable para FinPUC.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Formula de ingreso esperado</div>
-        <p style="margin-bottom:12px">La utilidad esperada de FinPUC para un portafolio w se modela como:</p>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;font-size:1.1em;margin-bottom:12px">
-          <strong>f<sub>2</sub>(w) ∝ k · P<sub>2</sub>(x<sub>2</sub>) · (1 − P<sub>1</sub>(x<sub>1</sub>))</strong>
-        </div>
-        <p style="color:var(--fg-muted);font-size:0.9em">
-          Donde k = 1% es la comision, P<sub>2</sub> es la probabilidad de que el cliente acepte la recomendacion,
-          y (1 − P<sub>1</sub>) es la probabilidad de que NO se retire. La empresa gana cuando el cliente acepta y se queda.
-        </p>
-        <span class="field-ref">Basado en Informe 1 — Ecuacion 4.9 / Seccion 4.5</span>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Ciclo de ingresos</div>
-        <div class="timeline">
-          <div class="timeline-step">
-            <strong>Semana 0: Onboarding</strong>
-            <p>El cliente acepta la recomendacion inicial. Paga k=1% sobre C<sub>0</sub>=$1,000 → <strong>$10 USD</strong> para FinPUC.</p>
-          </div>
-          <div class="timeline-step">
-            <strong>Cada semana: Recomendacion</strong>
-            <p>FinPUC ofrece una nueva recomendacion. Si el cliente acepta (P<sub>2</sub>), paga k=1% sobre el 5% de su riqueza actual. Ej: con $2,000 de riqueza → <strong>$1 USD</strong> por aceptacion.</p>
-          </div>
-          <div class="timeline-step">
-            <strong>Cada semana: Evaluacion de retiro</strong>
-            <p>Si la perdida supera la tolerancia del perfil, el cliente puede retirarse (P<sub>1</sub>). Si se va, FinPUC deja de recibir comisiones de ese cliente.</p>
-          </div>
-          <div class="timeline-step">
-            <strong>Semana 260: Cierre</strong>
-            <p>Tras 5 anos, se calcula la utilidad total acumulada por comisiones. Esta metrica alimenta el Score P4.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderBizCommissions() {
-  document.getElementById("content").innerHTML = `
-    <div class="pf-section">
-      <div class="hero-card">
-        <div class="hero-eyebrow">FinPUC Business</div>
-        <h2 class="hero-title">Estructura de comisiones</h2>
-        <p class="hero-copy">La comision es el unico mecanismo de ingresos de FinPUC. Esta calibrada para ser transparente, predecible y alineada con el valor entregado al cliente.</p>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Parametros de comision</div>
-        <div class="data-list" style="grid-template-columns:1fr 1fr">
-          <div><span>Tasa de comision (k)</span><strong>1% anual</strong></div>
-          <div><span>Base: comision inicial</span><strong>Sobre C<sub>0</sub> = $1,000 USD</strong></div>
-          <div><span>Base: comision recurrente</span><strong>Sobre 5% de la riqueza actual</strong></div>
-          <div><span>Frecuencia de cobro</span><strong>Semanal (al aceptar recomendacion)</strong></div>
-          <div><span>Rotacion asumida (turnover)</span><strong>5% del capital</strong></div>
-          <div><span>Sin comisiones ocultas</span><strong>No hay spreads, impuestos ni slippage en el modelo</strong></div>
-        </div>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Ejemplo numerico</div>
-        <table class="pf-table">
-          <thead><tr><th>Evento</th><th>Riqueza cliente</th><th>Base de comision</th><th>Comision FinPUC</th></tr></thead>
-          <tbody>
-            <tr><td>Aceptacion inicial (semana 0)</td><td>$1,000</td><td>$1,000 (100% de C<sub>0</sub>)</td><td><strong>$10.00</strong></td></tr>
-            <tr><td>Aceptacion recurrente</td><td>$2,000</td><td>$100 (5% de $2,000)</td><td><strong>$1.00</strong></td></tr>
-            <tr><td>Aceptacion recurrente</td><td>$5,000</td><td>$250 (5% de $5,000)</td><td><strong>$2.50</strong></td></tr>
-            <tr><td>Aceptacion recurrente</td><td>$10,000</td><td>$500 (5% de $10,000)</td><td><strong>$5.00</strong></td></tr>
-            <tr><td colspan="3" style="text-align:right;font-weight:600">Utilidad maxima observada (Entrega 2)</td><td><strong>$474 USD</strong></td></tr>
-          </tbody>
-        </table>
-        <p style="margin-top:8px;color:var(--fg-muted);font-size:0.85em">
-          La utilidad crece con la riqueza del cliente. Un cliente que gana mas dinero genera mas comisiones para FinPUC.
-          Por eso el Score P4 premia tanto la riqueza terminal como la utilidad: ambos objetivos estan alineados.
-        </p>
-        <span class="field-ref">Basado en Supuestos F2-F4 / Seccion 2.4 / P4</span>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Supuestos del modelo de comisiones</div>
-        <div class="methodology-chip-row">
-          <span class="methodology-chip">k = 1%</span>
-          <span class="methodology-chip">Turnover = 5%</span>
-          <span class="methodology-chip">Sin impuestos</span>
-          <span class="methodology-chip">Sin spreads</span>
-          <span class="methodology-chip">Sin slippage</span>
-          <span class="methodology-chip">Cobro semanal</span>
-        </div>
-        <p style="font-size:0.85em;color:var(--fg-muted);margin-top:12px">
-          Estos supuestos simplifican el modelo real de comisiones bursatiles. En una implementacion real, habria que considerar
-          costos de transaccion, impuestos, spreads bid-ask y restricciones de liquidez que afectarian la rentabilidad neta.
-        </p>
-        <div style="margin-top:12px;padding:12px;background:#fff8e1;border-left:3px solid #c49b25;border-radius:6px;font-size:0.82em">
-          <strong>Pendiente Entrega 3:</strong> La optimizacion del k% y la frecuencia de cobro requiere ejecutar
-          <code>01_simulacion_k/simulacion_comisiones_k.ipynb</code> (sensibilidad k% sobre 8 valores: 0.25% a 5.0%)
-          y <code>02_simulacion_lambda/simulacion_lambda_multiobjetivo.ipynb</code> (balance λ cliente vs empresa).
-          Los valores actuales (k=1%, semanal, turnover=5%) corresponden a la linea base de la Entrega 2.
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderBizClient() {
-  document.getElementById("content").innerHTML = `
-    <div class="pf-section">
-      <div class="hero-card">
-        <div class="hero-eyebrow">FinPUC Business</div>
-        <h2 class="hero-title">Comportamiento del cliente</h2>
-        <p class="hero-copy">El modelo de FinPUC incorpora el comportamiento del cliente mediante dos funciones logisticas que determinan si acepta recomendaciones (P<sub>2</sub>) o abandona la plataforma (P<sub>1</sub>).</p>
-      </div>
-
-      <div class="academic-grid">
-        <div class="academic-card">
-          <h4>P<sub>1</sub> — Probabilidad de retiro</h4>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0;text-align:center;font-size:1.05em">
-            P<sub>1</sub>(x<sub>1</sub>) = 0.10 / [1 + exp(−20 · (x<sub>1</sub> − x̂<sub>1</sub>))]
-          </div>
-          <p style="font-size:0.9em;color:var(--fg-muted)">
-            x<sub>1</sub> = perdida actual / C<sub>0</sub> (medida contra capital inicial)<br>
-            x̂<sub>1</sub> = tolerancia del perfil (0%, 5%, 15%, 30%, 40%)<br>
-            s = 20 (sensibilidad logistica)<br>
-            <strong>Cap semanal: 10% maximo</strong> (calibrado en Entrega 3, Version 3)<br>
-            <strong>Solo se activa si x<sub>1</sub> > x̂<sub>1</sub></strong>
-          </p>
-        </div>
-        <div class="academic-card">
-          <h4>P<sub>2</sub> — Probabilidad de aceptacion</h4>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0;text-align:center;font-size:1.05em">
-            P<sub>2</sub>(x<sub>2</sub>) = 1 / [1 + exp(−20 · (x<sub>2</sub> − x̂<sub>2</sub>))]
-          </div>
-          <p style="font-size:0.9em;color:var(--fg-muted)">
-            x<sub>2</sub> = retorno anual ofrecido en la recomendacion<br>
-            x̂<sub>2</sub> = umbral de tolerancia del perfil<br>
-            s = 20 (sensibilidad logistica)<br>
-            <strong>Retorno ofrecido > tolerancia → mas probable que acepte</strong>
-          </p>
-        </div>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Impacto en el negocio</div>
-        <div class="timeline">
-          <div class="timeline-step">
-            <strong>Cliente acepta (P<sub>2</sub> alta)</strong>
-            <p>FinPUC cobra comision k=1% sobre el 5% de la riqueza. El cliente permanece activo. Ambos ganan.</p>
-          </div>
-          <div class="timeline-step">
-            <strong>Cliente rechaza (P<sub>2</sub> baja)</strong>
-            <p>No hay comision esta semana. El portafolio sigue invertido pero sin rotacion. Oportunidad perdida para FinPUC.</p>
-          </div>
-          <div class="timeline-step">
-            <strong>Cliente se retira (P<sub>1</sub> se activa)</strong>
-            <p>FinPUC pierde al cliente permanentemente. Cero comisiones futuras. Por eso el Score P4 penaliza la tasa de retiro con −C<sub>0</sub> × tasa.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Perfiles y su impacto en P<sub>1</sub>/P<sub>2</sub></div>
-        <table class="pf-table">
-          <thead><tr><th>Perfil</th><th>Tolerancia (x̂)</th><th>P<sub>1</sub> se activa</th><th>P<sub>2</sub> umbral</th><th>Efecto en negocio</th></tr></thead>
-          <tbody>
-            <tr><td>Muy conservador</td><td>0%</td><td>Con cualquier perdida</td><td>0%</td><td>Alta tasa de retiro → malo para FinPUC</td></tr>
-            <tr><td>Conservador</td><td>5%</td><td>Perdida > 5%</td><td>5%</td><td>Retiro moderado</td></tr>
-            <tr><td>Neutro</td><td>15%</td><td>Perdida > 15%</td><td>15%</td><td>Balanceado</td></tr>
-            <tr><td>Arriesgado</td><td>30%</td><td>Perdida > 30%</td><td>30%</td><td>Baja tasa de retiro</td></tr>
-            <tr><td>Muy arriesgado</td><td>40%</td><td>Perdida > 40%</td><td>40%</td><td>Minima tasa de retiro → mejor para FinPUC</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-
-function renderBizScore() {
-  document.getElementById("content").innerHTML = `
-    <div class="pf-section">
-      <div class="hero-card">
-        <div class="hero-eyebrow">FinPUC Business</div>
-        <h2 class="hero-title">Score P4 y el problema multiobjetivo</h2>
-        <p class="hero-copy">El sistema recomendador de FinPUC enfrenta un problema con dos objetivos en conflicto: maximizar el retorno del cliente y maximizar la utilidad de la empresa. El Score P4 y la formulacion multiobjetivo del Informe 1 resuelven este trade-off.</p>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Formulacion multiobjetivo (Informe 1)</div>
-        <p style="margin-bottom:12px">El problema original se formulo como una optimizacion multiobjetivo escalarizada:</p>
-        <div style="background:var(--bg-card);border:2px solid var(--amber);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
-          <div style="font-size:1.3em;font-weight:700;margin-bottom:8px">max λ · f<sub>1</sub>(w) + (1−λ) · f<sub>2</sub>(w)</div>
-          <div style="font-size:0.95em;color:var(--fg-muted)">Ecuacion 4.8 — Informe 1</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">
-          <div>
-            <strong>f<sub>1</sub>(w) = w<sup>T</sup>μ<sub>BL</sub></strong><br>
-            <span style="color:var(--fg-muted);font-size:0.85em">Retorno esperado del portafolio (cliente)</span>
-          </div>
-          <div>
-            <strong>f<sub>2</sub>(w) ∝ k · P<sub>2</sub> · (1−P<sub>1</sub>)</strong><br>
-            <span style="color:var(--fg-muted);font-size:0.85em">Utilidad esperada de FinPUC (empresa)</span>
-          </div>
-        </div>
-        <p style="color:var(--fg-muted);font-size:0.85em">
-          λ es un parametro de diseno que balancea ambos objetivos. λ=1 → solo le importa el cliente. λ=0 → solo le importa la empresa.
-          Este parametro es una decision estrategica de FinPUC, no un dato empirico.
-        </p>
-        <span class="field-ref">Basado en Informe 1 — Seccion 4 / Ecuaciones 4.8 y 4.9</span>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Score P4 — Implementacion practica (Entrega 2)</div>
-        <p style="margin-bottom:12px">En la Entrega 2, el problema multiobjetivo se resolvio de forma practica con un scoring post-optimizacion:</p>
-        <div style="background:var(--bg-card);border:2px solid var(--green);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
-          <div style="font-size:1.3em;font-weight:700;margin-bottom:8px">Score<sub>P4</sub> = E[Riqueza] + E[Utilidad] − C<sub>0</sub> · TasaRetiro</div>
-          <div style="font-size:0.95em;color:var(--fg-muted)">Ecuacion — Resultados / KPIs Entrega 2</div>
-        </div>
-        <table class="pf-table">
-          <thead><tr><th>Componente</th><th>Que mide</th><th>A quien beneficia</th></tr></thead>
-          <tbody>
-            <tr><td><strong>E[Riqueza terminal]</strong></td><td>Capital final esperado del cliente tras 5 anos</td><td>Cliente</td></tr>
-            <tr><td><strong>E[Utilidad empresa]</strong></td><td>Comisiones acumuladas por FinPUC</td><td>FinPUC</td></tr>
-            <tr><td><strong>− C<sub>0</sub> × TasaRetiro</strong></td><td>Penalizacion por clientes que abandonan</td><td>Ambos (perder cliente es malo para los dos)</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="academic-grid">
-        <div class="academic-card">
-          <h4>Resultado empirico (Entrega 2)</h4>
-          <p style="font-size:0.9em;color:var(--fg-muted)">
-            Con el Scoring P4, la mejor combinacion fue <strong>BL Momentum Top20 6M + Muy arriesgado + Con pandemia</strong>:
-            Score P4 = <strong>9,417</strong> (riqueza $8,974 + utilidad $474 − $1,000×0.031).
-          </p>
-        </div>
-        <div class="academic-card">
-          <h4>Resultado empirico (Entrega 3)</h4>
-          <p style="font-size:0.9em;color:var(--fg-muted)">
-            Validacion 3-horizonte con BL Desempleo calibrado (tau=0.20, conf=0.50):
-            <strong>Markowitz base + Neutro sin pandemia lidera</strong> con Score P4 = <strong>2,982</strong>
-            (riqueza $2,797 + utilidad $194 − $1,000×0.009).
-            BL gana en Sharpe (+51.7% muy arriesgado) pero el Score P4 actual favorece la retencion.
-          </p>
-        </div>
-      </div>
-
-      <div class="pf-card">
-        <div class="pf-section-title">Interpretacion del lambda (λ)</div>
-        <div style="background:var(--bg);padding:14px;border-radius:8px;font-size:0.9em;line-height:1.6">
-          <p><strong>λ = 1.0</strong> → FinPUC solo optimiza el retorno del cliente. La empresa no cobra comisiones. Es un servicio gratuito.</p>
-          <p><strong>λ = 0.5</strong> → FinPUC pesa igual ambos objetivos. Es el punto medio del trade-off.</p>
-          <p><strong>λ = 0.0</strong> → FinPUC solo optimiza su utilidad. Podria recomendar portafolios con alta rotacion aunque perjudiquen al cliente.</p>
-          <p style="margin-top:8px;color:var(--fg-muted)">En la practica, el Score P4 actua como un λ implicito que da igual peso a la riqueza y a la utilidad, pero <strong>penaliza fuertemente el retiro</strong> del cliente (−C<sub>0</sub> × tasa). Esto asegura que FinPUC no recomiende portafolios que hagan huir a los clientes.</p>
-        </div>
-        <span class="field-ref">Basado en Informe 1 — Seccion 4.8 / Discusion metodologica</span>
       </div>
     </div>
   `;
