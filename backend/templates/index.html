@@ -1650,6 +1650,9 @@
     <div class="module-tab" id="tab-business" onclick="switchModule('business')">
       FinPUC Business
     </div>
+    <div class="module-tab" id="tab-entrega3" onclick="switchModule('entrega3')">
+      Resultados Entrega 3
+    </div>
   </div>
 
   <div id="sector-label">Universo de acciones</div>
@@ -1670,6 +1673,9 @@
     <div class="portfolio-nav-item" id="pnav-references" onclick="pfNavGo('references')">
       Datos y referencias
     </div>
+    <div class="portfolio-nav-item" id="pnav-flow" onclick="pfNavGo('flow')">
+      Flujo del cliente
+    </div>
   </div>
 
   <!-- Business nav (oculto al inicio) -->
@@ -1686,6 +1692,23 @@
     </div>
     <div class="portfolio-nav-item" id="bnav-score" onclick="bizNavGo('score')">
       Score P4 y multiobjetivo
+    </div>
+  </div>
+
+  <!-- Entrega 3 nav (oculto al inicio) -->
+  <div id="entrega3-nav">
+    <div class="portfolio-nav-label">Resultados Entrega 3</div>
+    <div class="portfolio-nav-item active" id="e3nav-calibracion" onclick="e3NavGo('calibracion')">
+      Calibracion BL
+    </div>
+    <div class="portfolio-nav-item" id="e3nav-validacion" onclick="e3NavGo('validacion')">
+      Validacion
+    </div>
+    <div class="portfolio-nav-item" id="e3nav-views" onclick="e3NavGo('views')">
+      Comparacion Views
+    </div>
+    <div class="portfolio-nav-item" id="e3nav-score" onclick="e3NavGo('score')">
+      Score P4
     </div>
   </div>
 </nav>

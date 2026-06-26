@@ -38,10 +38,11 @@ VIEW_CONFIGS = {
             "View macro: asume tasa de desempleo 4% bajo el neutro 5%, "
             "favorece sectores ciclicos sobre defensivos."
         ),
-        "confidence": 0.35,
+        "confidence": 0.50,
         "unemployment_rate": 0.04,
         "unemployment_neutral": 0.05,
-        "macro_beta": 1.0,
+        "macro_beta": 1.5,
+        "q_scale": 1.5,
     },
     "momentum_top20_6m": {
         "label": "Momentum Top20 6M (10 long / 10 short)",
@@ -110,7 +111,8 @@ def build_desempleo_view(
     """Construye view de desempleo: long cyclical / short defensive."""
     confidence = config["confidence"]
     signal = config["unemployment_neutral"] - config["unemployment_rate"]
-    q_value = abs(signal) * config["macro_beta"] / TRADING_DAYS_PER_YEAR
+    q_scale = config.get("q_scale", 1.0)
+    q_value = abs(signal) * config["macro_beta"] * q_scale / TRADING_DAYS_PER_YEAR
 
     cyclical_idx = []
     defensive_idx = []
