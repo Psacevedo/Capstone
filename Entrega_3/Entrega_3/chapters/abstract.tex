@@ -1,0 +1,34 @@
+This report documents the development, calibration, and business optimization of
+an investment recommendation system for FinPUC, a fictitious financial advisory
+platform that generates personalized portfolios for clients in the US stock
+market. The system serves five risk profiles and pursues a dual objective:
+maximizing client expected returns and maximizing firm revenue from transaction
+fees.
+
+The investment universe comprises 601 stocks filtered from 1,406 tickers.
+Three methodological layers were implemented over two iterations. First,
+Markowitz mean-variance optimization and four Black-Litterman view variants
+were evaluated as baselines. Then, a sequential calibration framework over
+three temporal horizons (calibration, validation, and clean test) was designed
+to tune the Black-Litterman hyperparameters ($\tau$, $\Omega$, $P$, $Q$)
+without contaminating the evaluation period. A business-parameter layer was
+added to optimize the commission rate $K\% \in \{0.25\%, \dots, 5\%\}$ and the
+multi-objective balance $\lambda \in [0,1]$ between client return and firm
+utility, using 5,000 Monte Carlo trajectories over 260 weeks. Four view
+families and three abandonment probability models (v1, v1$+$, v2) were compared
+under identical validation protocols.
+
+The sequential calibration converges to an unemployment-macro view with $\tau =
+0.2$ and $\Omega$ confidence of 0.5, yielding a 3\% Sharpe improvement in
+aggressive profiles with pandemic data. Among the views, general momentum
+delivers the largest economic gain ($+85.7\%$ P4 score vs.\ Markowitz base,
+$+5.2\%$ Sharpe) albeit with elevated turnover (34.6\%), while the
+unemployment-macro view provides superior operational stability (7.3\%
+turnover, HHI 0.157). The optimal commission rate and balance parameter are
+identified via sensitivity and Pareto-frontier analysis, and the v1$+$
+abandonment model with homogeneous ruin constraints is selected as the
+recommended configuration for the final recommender.
+
+\textbf{Keywords:} portfolio optimization, Markowitz, Black-Litterman
+calibration, Monte Carlo simulation, recommender system, multi-objective
+optimization, commission sensitivity, rolling validation, CVXPY.

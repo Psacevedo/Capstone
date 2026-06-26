@@ -1,0 +1,81 @@
+\section{Benchmark equiponderado}
+
+El caso base se define como un benchmark equiponderado compuesto por los 20 activos con mayor capitalizaci\'on burs\'atil dentro del universo de 601 acciones. Cada activo seleccionado recibe un peso de $1/20 = 5\%$, mientras que los 581 activos restantes quedan con peso cero.
+
+La elecci\'on de este benchmark se justifica porque entrega una referencia simple, reproducible y exigente. Al no utilizar $\mu$ ni $\Sigma$, no depende de estimaciones de retorno esperado ni de covarianza, por lo que evita el error de estimaci\'on propio de los modelos optimizados. En consecuencia, una metodolog\'ia que no logra superarlo en retorno ajustado por riesgo tiene un valor agregado limitado.
+
+Adem\'as, el benchmark distribuye el capital entre las empresas m\'as grandes del universo, entregando una diversificaci\'on b\'asica y estable sin requerir supuestos adicionales. Como su composici\'on no cambia con la ventana de entrenamiento, mantiene las mismas m\'etricas en los escenarios con y sin pandemia. Esto lo convierte en un punto de comparaci\'on adecuado para aislar el efecto de la estimaci\'on de par\'ametros en Markowitz y Black-Litterman.
+
+
+\section{M\'etricas del caso base}
+
+La Tabla~\ref{tab:benchmark_kpis} presenta los KPIs del benchmark
+equiponderado. Al ser independiente de la ventana de entrenamiento, las
+m\'etricas son id\'enticas en ambos escenarios (con y sin pandemia).
+
+\begin{table}[h]
+\centering
+\caption{KPIs del benchmark equiponderado top-20 (horizonte h7\_f2, 601
+activos, rebalanceo semestral).}
+\label{tab:benchmark_kpis}
+\scriptsize
+\begin{tabular}{lr}
+\hline
+\textbf{Indicador} & \textbf{Valor} \\
+\hline
+Retorno total rebalanceado & 101.4\% \\
+Retorno anualizado & 41.9\% \\
+Volatilidad anualizada & 19.5\% \\
+M\'aximo drawdown & $-$21.9\% \\
+CVaR diario 95\% & 2.8\% \\
+Ratio de Sharpe rebalanceado & 2.05 \\
+\hline
+\end{tabular}
+\end{table}
+
+El benchmark captura un retorno bruto alto (101.4\% en 2 a\~nos), pero a
+costa de una volatilidad y un drawdown significativamente mayores que los
+portafolios optimizados. Su Sharpe de 2.05 establece el umbral m\'inimo de
+desempe\~no: las t\'ecnicas que no superen este valor no aportan beneficio
+neto respecto a una regla de asignaci\'on trivial. En la pr\'actica, el
+Markowitz con datos de pandemia (Sharpe 2.02) apenas iguala al benchmark,
+mientras que las mejores variantes de Black-Litterman lo superan (hasta
+Sharpe 2.38 con momentum por capitalizaci\'on a 6 meses).
+
+\section{Validaci\'on como l\'inea base}
+
+El benchmark tambi\'en se eval\'ua en la simulaci\'on Monte Carlo (Capa 3).
+En el escenario neutro, el benchmark equiponderado genera una riqueza terminal
+media de USD~4\,234 con una tasa de retiro de 22.9\% y una utilidad empresa
+media de USD~234. Estos valores sirven como referencia para evaluar si las
+t\'ecnicas optimizadas mejoran simult\'aneamente la experiencia del cliente
+(mayor riqueza, menor retiro) y el negocio de FinPUC (mayor utilidad por
+comisiones).
+
+\section{Caso base para la Entrega 3}
+
+Para la evaluaci\'on de los nuevos par\'ametros de negocio, se define un caso
+base adicional: Markowitz sin calibrar, con $K = 1\%$ y Score P4 sin
+ponderaci\'on expl\'icita ($\lambda$ impl\'icito de 0.5 en el Score P4
+original). Este caso base es el punto de comparaci\'on contra el cual se mide
+la mejora obtenida al calibrar $K$ y $\lambda$. Las m\'etricas de referencia
+para este caso base, medidas en el horizonte de test limpio, se presentan en
+la Tabla~\ref{tab:p4_limpio_base}.
+
+\begin{table}[h]
+\centering
+\caption{Score P4 del caso base (Markowitz sin calibrar, $K=1\%$) en test
+limpio.}
+\label{tab:p4_limpio_base}
+\scriptsize
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Escenario & Perfil & Riqueza & Retiro & Utilidad & Score P4 \\
+\midrule
+Sin pandemia & Neutro & USD 2\,797 & 0.9\% & USD 194 & 2\,982 \\
+Sin pandemia & Conservador & USD 2\,508 & 15.8\% & USD 196 & 2\,546 \\
+Con pandemia & Conservador & USD 2\,369 & 13.0\% & USD 188 & 2\,427 \\
+Con pandemia & Neutro & USD 2\,623 & 0.7\% & USD 176 & 2\,792 \\
+\bottomrule
+\end{tabular}
+\end{table}

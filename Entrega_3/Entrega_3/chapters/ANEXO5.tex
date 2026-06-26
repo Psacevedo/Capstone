@@ -1,0 +1,21 @@
+\section{Detalle de la simulaci\'on de sensibilidad de $K\%$}
+
+El notebook \texttt{simulacion\_comisiones\_k.ipynb} ejecuta la simulaci\'on
+Monte Carlo para 8 valores de comisi\'on $K \in \{0.25\%, 0.5\%, 0.75\%,
+1\%, 1.5\%, 2\%, 3\%, 5\%\}$. Para cada $K$, se simulan 5\,000 trayectorias
+de 260 semanas para 5 perfiles de riesgo y 4 metodolog\'ias
+(Equiponderado, Markowitz, M\'inima Varianza, BL Momentum General).
+
+Los par\'ametros de retorno y volatilidad semanal se obtienen de los KPIs
+generados en la Entrega 2, almacenados en los archivos CSV de
+\texttt{01\_markowitz\_vs\_benchmark/outputs/} y
+\texttt{02\_black\_litterman/outputs/}.
+
+La comisi\'on se aplica en dos momentos: una comisi\'on inicial de $K\%$ sobre
+$C_0 = 1\,000$ USD y comisiones peri\'odicas de $K\%$ sobre el 5\% de la
+riqueza actual en cada recomendaci\'on aceptada.
+
+Las m\'etricas de salida para cada combinaci\'on $(K, \text{metodolog\'ia},
+\text{perfil})$ incluyen: riqueza terminal media, tasa de retiro media,
+utilidad empresa media, Score P4, y las m\'etricas se exportan a
+\texttt{k\_sensitivity\_summary.csv}.

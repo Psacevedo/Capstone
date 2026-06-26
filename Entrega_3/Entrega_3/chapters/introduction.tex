@@ -1,0 +1,38 @@
+La gesti\'on eficiente del capital constituye uno de los problemas
+fundamentales de las finanzas modernas. El problema de optimizaci\'on de
+portafolios, formalizado por Markowitz (1952), establece los fundamentos
+matem\'aticos de la diversificaci\'on y define la frontera eficiente como el
+conjunto de portafolios \'optimos en el espacio riesgo-retorno. En la
+pr\'actica, el universo de activos puede comprender cientos de instrumentos,
+los clientes presentan perfiles de riesgo heterog\'eneos y las condiciones del
+mercado evolucionan continuamente. En este contexto, la consolidaci\'on de
+plataformas de asesor\'ia financiera automatizada ha generado una demanda
+creciente de sistemas capaces de producir recomendaciones personalizadas,
+fundamentadas y actualizadas de forma peri\'odica \cite{dacunto2019}.
+
+El presente informe documenta la tercera fase del proyecto FinPUC, una
+plataforma ficticia de recomendaci\'on de inversiones desarrollada en el marco
+del curso Taller de Investigaci\'on Operativa (ICS2122) de la Pontificia
+Universidad Cat\'olica de Chile. La fase anterior estableci\'o las tres capas
+metodol\'ogicas (Markowitz, Black-Litterman con cuatro variantes de
+\textit{views} y simulaci\'on Monte Carlo), valid\'o su desempe\~no fuera de
+muestra, y dej\'o identificadas dos preguntas de negocio abiertas: (1) la
+comisi\'on $K = 1\%$ se fij\'o como supuesto sin evidencia de optimalidad, y
+(2) el trade-off entre retorno del cliente y utilidad de la empresa se
+resolvi\'o impl\'icitamente en el Score P4 sin un par\'ametro expl\'icito de
+balance. La presente fase aborda ambas preguntas mediante calibraci\'on
+secuencial del modelo Black-Litterman, optimizaci\'on del porcentaje de
+comisi\'on $K\%$, determinaci\'on del par\'ametro multiobjetivo $\lambda$, y
+comparaci\'on sistem\'atica de \textit{views} y modelos de abandono bajo un
+protocolo de validaci\'on de tres horizontes.
+
+El sistema opera en dos escalas temporales complementarias. A nivel de
+optimizaci\'on, los pesos del portafolio se recalculan cada semestre (126
+d\'ias h\'abiles bursatil) mediante rebalanceo con estimaci\'on actualizada de
+par\'ametros. A nivel de simulaci\'on del cliente, el modelo Monte Carlo
+eval\'ua semanalmente durante 260 semanas si el cliente acepta la
+recomendaci\'on vigente o retira sus fondos, generando m\'etricas de riqueza
+terminal, probabilidad de ganancia y utilidad de la empresa. La decisi\'on
+central consiste en determinar la fracci\'on del capital a asignar a cada
+acci\'on de un universo de 601 activos, maximizando simult\'aneamente el
+retorno esperado del inversionista y la utilidad de FinPUC.

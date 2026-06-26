@@ -1,0 +1,23 @@
+\section{Detalle de la optimizaci\'on multiobjetivo de $\lambda$}
+
+El notebook \texttt{simulacion\_lambda\_multiobjetivo.ipynb} eval\'ua
+11 valores de $\lambda \in \{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
+0.9, 1.0\}$. Para cada $\lambda$, se utiliza el $K$ \'optimo determinado en
+el an\'alisis de sensibilidad y la metodolog\'ia de mejor Score P4.
+
+Las funciones objetivo $f_1(w)$ (retorno esperado del cliente) y $f_2(w)$
+(utilidad esperada de FinPUC) se normalizan mediante min-max scaling al rango
+$[0,1]$ usando los valores m\'inimos y m\'aximos observados en todas las
+simulaciones. El score compuesto es:
+\begin{equation}
+S_\lambda = \lambda \cdot \tilde{f}_1 + (1-\lambda) \cdot \tilde{f}_2.
+\end{equation}
+
+Para cada $\lambda$, se ejecutan 5\,000 trayectorias Monte Carlo de 260
+semanas y se registran riqueza terminal, utilidad empresa, tasa de retiro y
+Score P4. Los resultados se exportan a \texttt{lambda\_optimal\_summary.csv}.
+
+La frontera de Pareto se construye graficando los pares
+$(\tilde{f}_1, \tilde{f}_2)$ para cada $\lambda$. Los puntos sobre la frontera
+representan soluciones no dominadas donde no es posible mejorar un objetivo
+sin empeorar el otro.

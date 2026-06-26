@@ -1,0 +1,38 @@
+El informe documenta el desarrollo, calibraci\'on y optimizaci\'on de negocio de
+un sistema recomendador de inversiones para FinPUC, una plataforma ficticia de
+asesor\'ia financiera que genera portafolios personalizados para clientes del
+mercado accionario estadounidense. El sistema atiende cinco perfiles de riesgo,
+desde muy conservador hasta muy arriesgado, y opera bajo un doble objetivo:
+maximizar el retorno esperado del cliente y maximizar la utilidad de la empresa
+por comisiones de transacci\'on.
+
+El universo de trabajo comprende 601 acciones, obtenidas tras filtrar 1\,406
+tickers. En una primera iteraci\'on se implementaron tres capas
+metodol\'ogicas: optimizaci\'on media-varianza de Markowitz, modelo
+Black-Litterman con cuatro variantes de \textit{views} y simulaci\'on Monte
+Carlo con 5\,000 trayectorias durante 260 semanas. La segunda iteraci\'on,
+documentada en este informe, incorpora cuatro bloques nuevos: (1) calibraci\'on
+secuencial de Black-Litterman sobre tres horizontes temporales estrictamente
+separados (calibraci\'on, validaci\'on y test limpio P4), (2) optimizaci\'on
+del porcentaje de comisi\'on $K\%$ mediante sensibilidad sobre 8 valores
+posibles, (3) optimizaci\'on multiobjetivo del par\'ametro de balance
+$\lambda \in [0,1]$ entre retorno del cliente y utilidad de la empresa, y (4)
+comparaci\'on de cuatro familias de \textit{views} y tres modelos de
+probabilidad de abandono bajo protocolos de validaci\'on id\'enticos.
+
+La calibraci\'on secuencial converge a una \textit{view} de desempleo macro con
+$\tau = 0.2$ y confianza $\Omega$ de 0.5, entregando una mejora de Sharpe de
+3\% en perfiles agresivos con datos de pandemia. Entre las \textit{views},
+momentum general entrega la mayor ganancia econ\'omica (+85.7\% en score P4
+frente a Markowitz base, +5.2\% Sharpe) aunque con mayor rotaci\'on (34.6\%),
+mientras que desempleo macro ofrece la mejor estabilidad operacional (7.3\% de
+turnover, HHI sectorial de 0.157). La tasa de comisi\'on \'optima y el
+par\'ametro de balance se determinan mediante an\'alisis de sensibilidad y
+frontera de Pareto, y el modelo de abandono v1$+$ con restricci\'on de ruina
+homog\'enea se selecciona como la configuraci\'on recomendada para el
+recomendador final.
+
+\textbf{Palabras clave:} optimizaci\'on de portafolios, Markowitz,
+Black-Litterman, calibraci\'on bayesiana, simulaci\'on Monte Carlo, sistema
+recomendador, optimizaci\'on multiobjetivo, sensibilidad de comisiones,
+validaci\'on rodante, CVXPY.

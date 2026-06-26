@@ -1,0 +1,1189 @@
+Este anexo consolida la documentaci\'on metodol\'ogica y de c\'odigo de los tres
+notebooks principales de la entrega: Markowitz vs Benchmark, Black-Litterman y
+Simulaci\'on Monte Carlo. La reorganizaci\'on mantiene la informaci\'on sustantiva
+de los anexos metodol\'ogicos originales, pero la presenta en un solo anexo y con
+la misma estructura para cada t\'ecnica: resumen, fundamentos metodol\'ogicos,
+supuestos del experimento, estructura del notebook, KPIs utilizados, resultados
+del experimento pandemia, rebalanceo, splits aleatorios, evaluaci\'on robusta e
+implicancias y conclusiones.
+
+% ============================================================
+\section*{Markowitz vs Benchmark}
+% ============================================================
+
+\subsection*{Resumen}
+
+Este apartado resume el funcionamiento, los fundamentos y los principales
+resultados del notebook
+\texttt{markowitz\_vs\_benchmark\_rebalanceo\_pandemia.ipynb}. El objetivo del
+experimento fue comparar portafolios construidos mediante optimizaci\'on
+media-varianza de Markowitz contra benchmarks simples y variantes te\'oricas,
+evaluando no solo el retorno obtenido, sino tambi\'en la robustez del modelo ante
+cambios en tres decisiones metodol\'ogicas: horizonte de calibraci\'on y
+evaluaci\'on futura, inclusi\'on o exclusi\'on del periodo de pandemia 2020--2022
+en los datos de entrenamiento, y uso de rebalanceo semestral. Adem\'as, se
+incorpora como referencia un benchmark top-20 equiponderado por capitalizaci\'on
+burs\'atil.
+
+El caso principal utiliza 601 activos, 7 a\~nos hist\'oricos de calibraci\'on,
+2 a\~nos futuros fuera de muestra, tasa libre de riesgo anual de 2\%, capital
+inicial de 1\,000, cota m\'axima de peso de 20\% para la frontera eficiente y
+rebalanceo cada 126 d\'ias h\'abiles, equivalente aproximadamente a medio a\~no
+burs\'atil. La evaluaci\'on es fuera de muestra: los pesos se estiman con datos
+hist\'oricos y luego se aplican al periodo futuro. Esto permite distinguir entre
+desempe\~no te\'orico dentro de la muestra y desempe\~no real en datos no usados
+para optimizar.
+
+\subsection*{Fundamentos metodol\'ogicos}
+
+El modelo de Markowitz representa cada portafolio mediante un vector de pesos
+$w$, un vector de retornos esperados $\mu$ y una matriz de covarianzas
+$\Sigma$. En el notebook, $\mu$ se estima como promedio diario hist\'orico y
+$\Sigma$ como covarianza diaria de retornos. Para cada perfil de riesgo se
+resuelve el problema:
+
+\begin{equation}
+\max_w \; \mu^\top w - \frac{1}{2}\gamma w^\top \Sigma w,
+\end{equation}
+
+sujeto a restricciones de presupuesto, no negatividad, peso m\'aximo y, cuando
+corresponde, una cota de volatilidad:
+
+\begin{equation}
+\sum_i w_i = 1, \qquad 0 \leq w_i \leq w_{\max}, \qquad
+w^\top \Sigma w \leq \sigma^2_{\max}.
+\end{equation}
+
+La restricci\'on $w_i \geq 0$ impide ventas cortas, la suma igual a uno invierte
+todo el capital y el l\'imite por activo evita concentraci\'on extrema. El
+par\'ametro $\gamma$ controla la aversi\'on al riesgo: valores altos penalizan
+m\'as la varianza y producen carteras conservadoras, mientras que valores bajos
+permiten mayor exposici\'on a retorno esperado.
+
+La frontera eficiente se obtiene resolviendo, para distintos retornos objetivo,
+el portafolio de m\'inima varianza que alcanza al menos dicho retorno:
+
+\begin{equation}
+\min_w \; w^\top \Sigma w.
+\end{equation}
+
+El portafolio denominado \textit{Ideal de mercado} se selecciona como el punto
+de la frontera eficiente con mayor ratio de Sharpe,
+
+\begin{equation}
+Sharpe = \frac{R_p - R_f}{\sigma_p}.
+\end{equation}
+
+Esta es una aproximaci\'on discreta al portafolio de tangencia, porque el c\'odigo
+no maximiza directamente el cociente de Sharpe, sino que elige el mejor punto
+entre 30 puntos calculados sobre la frontera.
+
+El benchmark base selecciona los 20 primeros activos del universo ordenado por
+\texttt{marketCap} y asigna pesos iguales. Esta regla no estima $\mu$ ni
+$\Sigma$, por lo que es menos sensible al error de par\'ametros. Adem\'as, se
+define \texttt{b\_teorico}, que toma la volatilidad hist\'orica del benchmark y
+construye un portafolio Markowitz que maximiza retorno esperado sujeto a esa
+misma volatilidad. Su objetivo es responder qu\'e portafolio te\'orico podr\'ia
+obtenerse si se acepta el mismo nivel de riesgo que el benchmark.
+
+Para estabilizar la matriz de covarianzas, el notebook aplica \textit{shrinkage}
+de 20\%, mezclando 80\% de la covarianza completa con 20\% de su diagonal:
+
+\begin{equation}
+\Sigma_{\text{shrink}} = (1-\lambda)\Sigma + \lambda \, \text{diag}(\Sigma).
+\end{equation}
+
+Luego se utiliza \texttt{nearest\_psd} para forzar que la matriz sea
+semidefinida positiva, requisito t\'ecnico para resolver problemas cuadr\'aticos
+convexos con CVXPY. El rebalanceo divide el periodo futuro en segmentos de
+126 d\'ias h\'abiles; al inicio de cada segmento se reestima el portafolio usando
+la historia inicial y los retornos futuros ya observados hasta ese momento.
+As\'i, el modelo incorpora informaci\'on nueva sin usar datos futuros no
+disponibles al momento de la decisi\'on.
+
+\subsection*{Supuestos del experimento}
+
+El experimento supone que los precios de cierre y dividendos de los CSV
+representan adecuadamente la informaci\'on disponible para cada activo. Los
+retornos diarios se calculan como retornos totales, incorporando dividendos, por
+lo que se considera que estos forman parte del rendimiento econ\'omico del
+inversionista. Al construir la matriz de retornos se utiliza
+\texttt{join="inner"}, conservando solo fechas comunes a todos los activos
+seleccionados; esto facilita la estimaci\'on matricial, aunque asume que eliminar
+fechas no comunes no introduce sesgos relevantes.
+
+Desde el punto de vista de mercado, las carteras son \textit{long-only},
+invierten el 100\% del capital disponible, no usan apalancamiento y permiten
+divisibilidad perfecta de activos. El modelo omite costos de transacci\'on,
+impuestos, \textit{spreads} bid-ask, restricciones de liquidez, impacto de
+mercado y \textit{slippage}. Por ello, los resultados deben interpretarse como
+una aproximaci\'on te\'orica del desempe\~no y no como una simulaci\'on completa de
+ejecuci\'on real. La tasa libre de riesgo se mantiene constante en 2\% anual.
+
+En t\'erminos estad\'isticos, se asume que los retornos hist\'oricos contienen
+informaci\'on \'util sobre retornos y riesgos futuros, aunque los propios
+resultados muestran que esta estabilidad es imperfecta. La anualizaci\'on usa
+252 d\'ias h\'abiles; el retorno se anualiza por capitalizaci\'on compuesta y la
+volatilidad mediante ra\'iz del tiempo. Si una cota de volatilidad vuelve
+infactible un perfil, el c\'odigo relaja esa cota manteniendo las restricciones
+restantes. Finalmente, en el experimento pandemia el periodo futuro fuera de
+muestra se mantiene fijo entre escenarios, por lo que las diferencias observadas
+se atribuyen a la informaci\'on usada para calibrar y no a cambios en el mercado
+futuro evaluado.
+
+\subsection*{Estructura del notebook}
+
+El notebook se organiza en bloques secuenciales. Primero define la
+documentaci\'on inicial, requisitos, estructura de carpetas y uso de archivos
+cacheados mediante \texttt{FORCE\_RECOMPUTE}. Luego importa librer\'ias, fija
+rutas, define \texttt{TRADING\_DAYS\_PER\_YEAR = 252},
+\texttt{REBALANCE\_DAYS = 126}, delimita el periodo pand\'emico y crea los
+escenarios \texttt{sin\_pandemia} y \texttt{con\_pandemia}. Posteriormente carga
+el script base \texttt{markowitz\_cvxpy\_benchmark\_teorico.py} como m\'odulo
+local, reutilizando funciones de lectura, selecci\'on de universo, estimaci\'on
+de par\'ametros, optimizaci\'on, frontera eficiente, benchmark y evaluaci\'on.
+
+El experimento principal fija \texttt{DEFAULT\_BENCHMARK\_SIZE = 20},\\
+\texttt{DEFAULT\_MARKET\_UNIVERSE\_SIZE = 601},
+\texttt{DEFAULT\_FRONTIER\_POINTS = 30},
+\texttt{DEFAULT\_FRONTIER\_MAX\_WEIGHT = 0.20},
+\texttt{DEFAULT\_RISK\_FREE\_RATE = 0.02},
+\texttt{DEFAULT\_INITIAL\_CAPITAL = 1000.0},
+\texttt{DEFAULT\_SHRINKAGE = 0.20},\\
+\texttt{HISTORICAL\_YEARS = 7} y \texttt{FUTURE\_YEARS = 2}. La configuraci\'on
+\texttt{h7\_f2} se usa como caso central porque la validaci\'on robusta posterior
+la identifica como el horizonte con mejor desempe\~no agregado.
+
+Las funciones auxiliares del notebook permiten cargar datasets por escenario,
+calcular retornos totales, generar ventanas de rebalanceo, definir la vista de
+entrenamiento disponible en cada segmento, resolver portafolios por instante y
+evaluar el periodo futuro completo. La clase \texttt{ScenarioDataset} agrupa la
+informaci\'on de cada escenario, mientras que
+\texttt{evaluate\_rebalanced\_window} coordina el experimento: crea el split
+hist\'orico/futuro, divide el futuro en segmentos, reestima pesos en cada
+rebalanceo, calcula retornos realizados y guarda m\'etricas globales, por
+segmento y por punto de frontera.
+
+La validaci\'on inicial verifica rutas, carga de datos y funcionamiento de
+ventanas. En una prueba reducida se obtienen 2\,717 observaciones para el
+escenario sin pandemia y 3\,473 para el escenario con pandemia, diferencia
+esperable porque la segunda base conserva 2020--2022. En el caso principal se
+cargan o generan cuatro CSV:\\
+\texttt{rebalance\_summary\_h7\_f2\_601activos.csv},\\
+\texttt{rebalance\_segments\_h7\_f2\_601activos.csv},\\
+\texttt{segment\_summary\_h7\_f2\_601activos.csv} y\\
+\texttt{frontier\_segments\_h7\_f2\_601activos.csv}.
+
+\begin{table}[H]
+\centering
+\caption{Dimensi\'on de resultados cacheados del experimento principal.}
+\label{tab:anexo4_cache}
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Escenario & Portafolios & Filas segmento & Puntos frontera \\
+\midrule
+Sin pandemia & 9 & 36 & 119 \\
+Con pandemia & 9 & 36 & 119 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los 9 portafolios corresponden a cinco perfiles de riesgo, Benchmark,
+\texttt{b\_teorico}, M\'inima varianza e Ideal de mercado. Las 36 filas por
+escenario equivalen a 9 portafolios evaluados en 4 segmentos semestrales. Al
+exportar resultados, el notebook genera 18 filas de resumen global, 72 filas de
+segmentos rebalanceados, 72 filas de resumen por segmento y 238 puntos de
+frontera.
+
+\subsection*{KPIs utilizados}
+
+El desempe\~no se eval\'ua mediante indicadores rebalanceados fuera de muestra.
+El retorno total rebalanceado mide la ganancia acumulada durante todo el periodo
+futuro:
+
+\begin{equation}
+R_{\text{total}} = \prod_t (1+r_t)-1.
+\end{equation}
+
+El retorno anualizado para los dos a\~nos futuros se calcula como:
+
+\begin{equation}
+R_{\text{anual}} = (1+R_{\text{total}})^{1/2}-1.
+\end{equation}
+
+La volatilidad diaria corresponde a la desviaci\'on est\'andar de los retornos
+concatenados de todos los segmentos y se anualiza mediante:
+
+\begin{equation}
+\sigma_{\text{anual}} = \sigma_{\text{diaria}}\sqrt{252}.
+\end{equation}
+
+El Sharpe rebalanceado mide retorno excedente por unidad de riesgo:
+
+\begin{equation}
+Sharpe = \frac{R_{\text{anual}} - 0.02}{\sigma_{\text{anual}}}.
+\end{equation}
+
+Tambi\'en se calculan m\'aximo \textit{drawdown}, CVaR diario al 95\%, n\'umero
+de activos con peso positivo, mayor peso individual, cinco principales
+posiciones, riqueza final futura desde capital inicial 1\,000, Sharpe te\'orico
+y Sharpe real futuro. Esta \'ultima comparaci\'on es central para diagnosticar
+\textit{overfitting}, ya que contrasta la eficiencia esperada durante el
+entrenamiento con la eficiencia realizada fuera de muestra.
+
+\subsection*{Resultados del experimento pandemia}
+
+La comparaci\'on entre escenarios calcula retorno total, retorno anual,
+volatilidad anual, Sharpe y diferencias
+\texttt{con\_pandemia - sin\_pandemia}. El resultado central se resume en la
+Tabla~\ref{tab:anexo4_comparacion_pandemia}.
+
+\begin{table}[H]
+\centering
+\caption{Comparaci\'on de portafolios con y sin pandemia en entrenamiento.}
+\label{tab:anexo4_comparacion_pandemia}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Portafolio & Ret. sin pand. & Sharpe sin pand. & Ret. con pand. & Sharpe con pand. & Delta ret. & Delta Sharpe \\
+\midrule
+Muy conservador & 58,0\% & 2,208 & 54,5\% & 2,023 & $-$3,4\% & $-$0,184 \\
+Conservador & 67,8\% & 2,425 & 55,5\% & 1,972 & $-$12,3\% & $-$0,453 \\
+Neutro & 82,9\% & 2,413 & 60,5\% & 1,756 & $-$22,5\% & $-$0,657 \\
+Arriesgado & 91,6\% & 1,733 & 58,4\% & 1,167 & $-$33,2\% & $-$0,566 \\
+Muy arriesgado & 102,7\% & 1,412 & 44,0\% & 0,549 & $-$58,7\% & $-$0,863 \\
+Benchmark & 101,4\% & 2,052 & 101,4\% & 2,052 & $-$0,0\% & $-$0,000 \\
+\texttt{b\_teorico} & 104,5\% & 1,515 & 56,7\% & 0,966 & $-$47,8\% & $-$0,548 \\
+M\'inima varianza & 56,6\% & 2,110 & 54,6\% & 2,016 & $-$2,0\% & $-$0,094 \\
+Ideal de mercado & 76,5\% & 2,507 & 59,5\% & 1,399 & $-$16,9\% & $-$1,108 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+Sin pandemia, el mejor portafolio es Ideal de mercado, con Sharpe 2,507 y
+retorno total de 76,5\%. Con pandemia, el mejor resultado corresponde al
+Benchmark, con Sharpe 2,052 y retorno de 101,4\%. Incluir el periodo
+2020--2022 deteriora casi todos los portafolios optimizados, especialmente
+aquellos m\'as agresivos o dependientes de estimaciones de retorno esperado. El
+Benchmark permanece invariante porque su regla no utiliza $\mu$ ni $\Sigma$,
+sino una selecci\'on top-20 equiponderada.
+
+\begin{table}[H]
+\centering
+\caption{Mayores ca\'idas de Sharpe al incluir pandemia en entrenamiento.}
+\label{tab:anexo4_delta_sharpe}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Portafolio & Delta Sharpe \\
+\midrule
+Ideal de mercado & $-$1,108 \\
+Muy arriesgado & $-$0,863 \\
+Neutro & $-$0,657 \\
+Arriesgado & $-$0,566 \\
+\texttt{b\_teorico} & $-$0,548 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La interpretaci\'on es que los datos de pandemia alteran las estimaciones de
+retornos y covarianzas. El efecto es m\'as fuerte en carteras agresivas o de
+tangencia, que dependen de diferencias peque\~nas en $\mu$. En cambio, M\'inima
+varianza es la cartera Markowitz m\'as estable, con una ca\'ida de Sharpe de solo
+2,110 a 2,016, porque depende principalmente de covarianzas y no de
+predicciones de retorno individual.
+
+\subsection*{Rebalanceo}
+
+El rebalanceo semestral mejora el Sharpe en Conservador, Ideal de mercado,
+M\'inima varianza y Neutro, pero deteriora Muy arriesgado, Arriesgado,
+\texttt{b\_teorico} y Benchmark frente a una versi\'on base sin rebalanceo. Por
+lo tanto, el rebalanceo funciona como un mecanismo de actualizaci\'on y control,
+pero no garantiza mejor desempe\~no. Puede reducir deriva de pesos e incorporar
+informaci\'on reciente, aunque tambi\'en puede vender activos ganadores demasiado
+pronto o amplificar ruido en estimaciones nuevas.
+
+\subsection*{Splits aleatorios}
+
+El experimento de splits aleatorios no recalcula Markowitz, sino que lee
+salidas preexistentes de
+\texttt{outputs\_markowitz\_cvxpy\_splits\_aleatorios}. El dise\~no considera
+una ventana base de 9 a\~nos, 28 combinaciones train/test con suma menor o igual
+a 9, 70 ventanas aleatorias con semilla 42, 560 evaluaciones de portafolio,
+601 activos y 1\,392 puntos de frontera.
+
+\begin{table}[H]
+\centering
+\caption{Resumen del experimento de splits aleatorios.}
+\label{tab:anexo4_splits_resumen}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Indicador & Resultado \\
+\midrule
+Combinaciones train/test & 28 \\
+Ventanas aleatorias & 70 \\
+Evaluaciones de portafolios & 560 \\
+Activos & 601 \\
+Puntos de frontera & 1\,392 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El mejor split promedio global es \texttt{h5\_f2}, con Sharpe futuro promedio de
+2,34. Para el Benchmark, el mejor horizonte particular es \texttt{h6\_f2}, con
+Sharpe futuro medio de 2,615. Esta sensibilidad muestra que las conclusiones no
+deben depender de un \'unico split.
+
+\begin{table}[H]
+\centering
+\caption{Promedio y variabilidad del Sharpe en splits aleatorios.}
+\label{tab:anexo4_splits_sharpe}
+\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Portafolio & Sharpe medio & Desv. est. Sharpe \\
+\midrule
+Benchmark & 2,057 & 0,381 \\
+M\'inima varianza & 1,940 & 0,250 \\
+Muy conservador & 1,885 & 0,288 \\
+Conservador & 1,799 & 0,334 \\
+Ideal de mercado & 1,799 & 0,421 \\
+Neutro & 1,781 & 0,413 \\
+Arriesgado & 1,644 & 0,449 \\
+Muy arriesgado & 1,625 & 0,458 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+En promedio, el Benchmark supera a los portafolios Markowitz. M\'inima varianza
+aparece como la versi\'on Markowitz m\'as robusta, ya que combina buen Sharpe con
+baja variabilidad.
+
+\subsection*{Evaluaci\'on robusta}
+
+La validaci\'on robusta con ventanas m\'oviles eval\'ua 6 horizontes y 18 ventanas
+fuera de muestra; sus resultados respaldan \texttt{h7\_f2} como caso principal.
+
+\begin{table}[H]
+\centering
+\caption{Sharpe futuro medio en validaci\'on robusta por ventanas m\'oviles.}
+\label{tab:anexo4_validacion_robusta}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Horizonte & Sharpe futuro medio \\
+\midrule
+\texttt{h7\_f2} & 2,32 \\
+\texttt{h6\_f3} & 2,07 \\
+\texttt{h5\_f4} & 1,88 \\
+\texttt{h4\_f5} & 1,66 \\
+\texttt{h3\_f6} & 1,60 \\
+\texttt{h2\_f7} & 1,35 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El resultado indica que 7 a\~nos de historia y 2 a\~nos de futuro equilibran
+estabilidad de par\'ametros y relevancia temporal. Adem\'as, en los splits
+aleatorios el Ideal de mercado presenta Sharpe te\'orico medio de 5,01 y Sharpe
+real futuro de 1,80, una brecha que evidencia \textit{overfitting} o error de
+estimaci\'on: la cartera parece excepcional en entrenamiento, pero no replica esa
+eficiencia fuera de muestra.
+
+\subsection*{Implicancias y conclusiones}
+
+La primera implicancia es que Markowitz es altamente sensible a la estimaci\'on
+de retornos esperados. La matriz de covarianzas importa, pero $\mu$ suele ser
+m\'as ruidoso; por eso los perfiles agresivos, que explotan diferencias
+peque\~nas entre activos, son los que m\'as se deterioran al incluir pandemia. En
+segundo lugar, el Benchmark top-20 equiponderado es una l\'inea base exigente:
+diversifica en empresas grandes sin depender de par\'ametros estimados, por lo
+que obliga a justificar cualquier superioridad de Markowitz con evidencia fuera
+de muestra. En tercer lugar, M\'inima varianza cumple un rol defensivo relevante,
+porque no maximiza retorno esperado y depende menos de predicciones individuales.
+
+El rebalanceo semestral debe interpretarse como un \textit{trade-off}.
+Actualizar pesos permite incorporar informaci\'on reciente, pero puede amplificar
+ruido si las nuevas estimaciones son inestables. Asimismo, la inclusi\'on de
+pandemia no significa que el mercado futuro evaluado sea peor, porque el periodo
+fuera de muestra se mantiene fijo en ambos escenarios. Lo que cambia es el
+conjunto de datos usado para entrenar, por lo que el resultado mide c\'omo los
+datos de estr\'es modifican la percepci\'on estimada de riesgo-retorno.
+
+En s\'intesis, el notebook implementa una comparaci\'on metodol\'ogicamente
+completa entre Markowitz y benchmark, incorporando escenarios de pandemia,
+rebalanceo y validaci\'on por m\'ultiples splits. La principal conclusi\'on es que
+no basta con reportar el portafolio de mayor Sharpe en un \'unico periodo: se
+debe contrastar con benchmarks simples, evaluar robustez temporal y separar
+desempe\~no te\'orico de desempe\~no realizado. El caso \texttt{h7\_f2} queda
+justificado por la validaci\'on robusta, mientras que \texttt{h5\_f2} y
+\texttt{h6\_f2} deben reportarse como sensibilidad favorable. Para la entrega,
+conviene presentar Benchmark y M\'inima varianza como l\'ineas base obligatorias,
+usar \texttt{h7\_f2} como escenario principal y evitar afirmar superioridad de
+Markowitz sin evidencia fuera de muestra.
+
+\clearpage
+
+% ============================================================
+\section*{Black-Litterman}
+% ============================================================
+
+\subsection*{Resumen}
+
+Este apartado resume la implementaci\'on del notebook
+\texttt{black\_litterman.ipynb}, que extiende el experimento de optimizaci\'on de
+portafolios desarrollado previamente con Markowitz. Su objetivo no es reemplazar
+la l\'ogica anterior, sino construir una versi\'on Black-Litterman comparable,
+usando la misma base de datos, ventanas de entrenamiento y prueba, perfiles de
+riesgo e indicadores de evaluaci\'on. De esta forma, las diferencias observadas
+se atribuyen principalmente al cambio en la estimaci\'on de retornos esperados:
+desde promedios hist\'oricos puros hacia retornos posteriores que combinan
+equilibrio de mercado y \textit{views} del inversionista.
+
+El universo central corresponde a 601 activos del mercado F5, seleccionados
+desde metadata y series hist\'oricas de retornos totales. Se comparan dos
+escenarios: una base sin el periodo pand\'emico y otra que incorpora las
+observaciones de 2020--2022. El experimento principal utiliza 7 a\~nos de
+calibraci\'on y 2 a\~nos de evaluaci\'on fuera de muestra, configuraci\'on denotada
+\texttt{h7\_f2}. Durante el periodo futuro, el portafolio se recalibra
+semestralmente cada 126 d\'ias burs\'atiles; en cada rebalanceo se estima la matriz
+de covarianzas, se construye el prior Black-Litterman, se aplica una
+\textit{view} y se optimizan portafolios con CVXPY.
+
+\begin{table}[H]
+\centering
+\caption{Escenarios evaluados en Black-Litterman.}
+\label{tab:anexo4_bl_escenarios}
+\small
+\begin{tabular}{@{}p{0.20\textwidth}p{0.33\textwidth}p{0.37\textwidth}@{}}
+\toprule
+Escenario & Descripci\'on & Prop\'osito \\
+\midrule
+\texttt{sin\_pandemia} & Base filtrada sin 2020--2022. & Evaluar desempe\~no en una muestra menos dominada por shocks extremos. \\
+\texttt{con\_pandemia} & Base que incorpora 2020--2022. & Medir sensibilidad ante un historial con estr\'es, recuperaci\'on y alta volatilidad. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Fundamentos metodol\'ogicos}
+
+El modelo Black-Litterman responde a una debilidad central de Markowitz: los
+retornos esperados son dif\'iciles de estimar y peque\~nos cambios en ellos pueden
+generar variaciones importantes en los pesos \'optimos. Para reducir esa
+sensibilidad, Black-Litterman combina dos fuentes de informaci\'on: un prior de
+equilibrio de mercado, que representa retornos impl\'icitos en una cartera de
+mercado, y \textit{views} del inversionista, que expresan opiniones absolutas o
+relativas sobre activos, grupos o factores.
+
+La implementaci\'on calcula el prior como:
+
+\begin{equation}
+\pi = \delta \Sigma w_{\text{market}},
+\end{equation}
+
+donde $\Sigma$ es la matriz de covarianzas diaria estimada, $w_{\text{market}}$
+son pesos por capitalizaci\'on burs\'atil y $\delta$ es la aversi\'on al riesgo
+impl\'icita:
+
+\begin{equation}
+\delta =
+\frac{R_{\text{mercado}} - R_f}{\sigma^2_{\text{mercado}}}.
+\end{equation}
+
+Las \textit{views} se representan mediante:
+
+\begin{equation}
+P\mu = Q + \varepsilon, \qquad \varepsilon \sim \mathcal{N}(0,\Omega),
+\end{equation}
+
+donde $P$ define la combinaci\'on de activos observada, $Q$ el retorno esperado
+de esa combinaci\'on y $\Omega$ la incertidumbre asociada. La actualizaci\'on
+posterior utilizada es:
+
+\begin{equation}
+\mu_{\text{BL}} =
+\pi + \tau\Sigma P^\top
+(P\tau\Sigma P^\top + \Omega)^{-1}
+(Q - P\pi).
+\end{equation}
+
+El t\'ermino $Q - P\pi$ representa la sorpresa de la \textit{view} respecto del
+prior. Si la opini\'on ya est\'a incorporada en el equilibrio, el ajuste es
+peque\~no; si contradice al prior y tiene baja incertidumbre, el posterior se
+desplaza con mayor fuerza hacia la \textit{view}.
+
+\noindent\textbf{Construcci\'on y peso de las \textit{views}.}
+La \textit{view} de momentum se basa en persistencia de retornos. El c\'odigo
+calcula el rendimiento acumulado de cada activo durante los \'ultimos 252 d\'ias,
+selecciona los 20 con mayor momentum y los 20 con peor momentum, y construye una
+opini\'on relativa:
+
+\begin{equation}
+R(\text{top 20 momentum}) - R(\text{bottom 20 momentum}) = Q.
+\end{equation}
+
+La matriz $P$ asigna peso positivo igualitario a los ganadores y negativo
+igualitario a los rezagados. Esta formulaci\'on es adecuada para Black-Litterman
+porque no exige estimar el retorno absoluto de cada activo, sino solo expresar
+que un grupo deber\'ia superar a otro.
+
+La \textit{view} de desempleo se basa en sensibilidad c\'iclica sectorial. Si el
+desempleo asumido est\'a por debajo de su nivel neutral, la econom\'ia se
+interpreta como m\'as fuerte, por lo que sectores c\'iclicos deber\'ian superar a
+sectores defensivos. Con los par\'ametros actuales:
+
+\begin{equation}
+\text{signal} = 0,05 - 0,04 = 0,01,
+\qquad
+Q = \frac{0,01}{252} = 0,00003968.
+\end{equation}
+
+En consecuencia, $P$ queda long sectores c\'iclicos y short sectores defensivos.
+Esta \textit{view} es conceptualmente razonable, pero debe leerse como un
+an\'alisis de escenario, ya que el desempleo usado es fijo y no una observaci\'on
+actualizada en cada rebalanceo.
+
+El peso de una \textit{view} no se define como porcentaje de portafolio, sino
+mediante su precisi\'on estad\'istica relativa frente al prior. En el c\'odigo:
+
+\begin{equation}
+\Omega = \frac{P\tau\Sigma P^\top}{\text{confidence}}.
+\end{equation}
+
+Si la confianza aumenta, $\Omega$ disminuye y el posterior se mueve con mayor
+fuerza hacia $Q$. En esta implementaci\'on, momentum tiene confianza 0,50 y
+desempleo 0,35; por tanto, a igualdad de varianza de la \textit{view}, momentum
+recibe mayor peso estad\'istico. Sin embargo, el impacto final tambi\'en depende
+de $Q$, de $P$, de $\tau$, de $\Sigma$ y de la distancia entre $Q$ y $P\pi$.
+
+\subsection*{Supuestos del experimento}
+
+El experimento utiliza retornos totales diarios, 252 d\'ias burs\'atiles por
+a\~no, covarianza con \textit{shrinkage} de 20\%, correcci\'on
+\texttt{nearest\_psd}, prior de equilibrio basado en capitalizaci\'on, tasa libre
+de riesgo fija de 2\% anual y $\tau = 0,05$. Las carteras finales son
+\textit{long-only}, invierten todo el capital, aplican cotas de concentraci\'on y
+se rebalancean semestralmente. Las \textit{views} pueden ser long-short, pero
+los portafolios finales no permiten ventas cortas. El benchmark top-20
+equiponderado no depende de Black-Litterman ni de las \textit{views}.
+
+\begin{table}[H]
+\centering
+\caption{Supuestos principales del experimento Black-Litterman.}
+\label{tab:anexo4_bl_supuestos}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}p{0.28\textwidth}p{0.28\textwidth}p{0.34\textwidth}@{}}
+\toprule
+Supuesto & Implementaci\'on & Implicancia \\
+\midrule
+Retornos diarios & Series de retornos totales diarios & Se asume frecuencia diaria y 252 d\'ias burs\'atiles. \\
+Covarianza estable & \texttt{estimate\_parameters} con 20\% \textit{shrinkage} & Mejora estabilidad, pero no modela cambios de r\'egimen. \\
+Matriz PSD & \texttt{nearest\_psd} & Evita problemas num\'ericos en optimizaci\'on cuadr\'atica. \\
+Prior de equilibrio & $\pi = \delta\Sigma w_{\text{market}}$ & Supone que capitalizaci\'on contiene informaci\'on agregada. \\
+Tasa libre fija & 2\% anual & Simplifica Sharpe y prior. \\
+\texttt{tau} & 0,05 & Incertidumbre del prior no calibrada emp\'iricamente. \\
+\textit{Long-only} & $w \geq 0$ & Las carteras finales no hacen ventas cortas. \\
+Rebalanceo & 126 d\'ias & Actualiza modelo, pero no incorpora costos de transacci\'on. \\
+Momentum persistente & Ganadores recientes superan perdedores & Puede ser sensible a reversals. \\
+Desempleo fijo & 4\% vs 5\% neutral & Escenario macro, no serie observada din\'amica. \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\subsection*{Estructura del notebook}
+
+El notebook importa funciones del m\'odulo
+\texttt{markowitz\_cvxpy\_benchmark\_teorico.py}, reutilizando la carga de
+datos, estimaci\'on de par\'ametros, perfiles de riesgo, restricciones, KPIs y
+optimizadores de Markowitz. Esta decisi\'on permite que la comparaci\'on entre
+Markowitz y Black-Litterman sea metodol\'ogicamente consistente.
+
+\begin{table}[H]
+\centering
+\caption{Par\'ametros globales del experimento Black-Litterman.}
+\label{tab:anexo4_bl_parametros_globales}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}p{0.34\textwidth}p{0.18\textwidth}p{0.38\textwidth}@{}}
+\toprule
+Par\'ametro & Valor & Funci\'on \\
+\midrule
+\texttt{MARKET\_SIZE} & 601 & N\'umero de activos del universo de mercado. \\
+\texttt{BENCHMARK\_SIZE} & 20 & N\'umero de activos del benchmark equiponderado. \\
+\texttt{HISTORICAL\_YEARS} & 7 & A\~nos de entrenamiento del experimento central. \\
+\texttt{FUTURE\_YEARS} & 2 & A\~nos de evaluaci\'on fuera de muestra. \\
+\texttt{REBALANCE\_DAYS} & 126 & Frecuencia semestral de rebalanceo. \\
+\texttt{DEFAULT\_MAX\_WEIGHT} & 20\% & Cota m\'axima general para portafolios especiales. \\
+\texttt{DEFAULT\_RISK\_FREE\_RATE} & 2\% anual & Tasa usada en Sharpe y prior. \\
+\texttt{DEFAULT\_SHRINKAGE} & 20\% & Regularizaci\'on de la matriz de covarianzas. \\
+\texttt{DEFAULT\_TAU} & 0,05 & Incertidumbre del prior Black-Litterman. \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Par\'ametros de las \textit{views}.}
+\label{tab:anexo4_bl_parametros_views}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}p{0.18\textwidth}p{0.34\textwidth}p{0.16\textwidth}p{0.22\textwidth}@{}}
+\toprule
+\textit{View} & Par\'ametro & Valor & Interpretaci\'on \\
+\midrule
+Momentum & \texttt{MOMENTUM\_LOOKBACK} & 252 d\'ias & Ventana reciente para medir momentum. \\
+Momentum & \texttt{MOMENTUM\_TOP\_BOTTOM} & 20 & Activos long y short de la \textit{view} relativa. \\
+Momentum & \texttt{MOMENTUM\_CONFIDENCE} & 0,50 & Confianza asignada a la \textit{view}. \\
+Desempleo & \texttt{UNEMPLOYMENT\_RATE\_ASSUMED} & 4\% & Desempleo asumido. \\
+Desempleo & \texttt{UNEMPLOYMENT\_NEUTRAL} & 5\% & Nivel neutral de desempleo. \\
+Desempleo & \texttt{MACRO\_UNEMPLOYMENT\_BETA} & 1,0 & Sensibilidad del diferencial macro. \\
+Desempleo & \texttt{UNEMPLOYMENT\_CONFIDENCE} & 0,35 & Confianza asignada a la \textit{view} macro. \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+La clase \texttt{ScenarioDataset} agrupa la llave del escenario, etiqueta
+legible, matriz de retornos, metadata y tickers cargados. La funci\'on
+\texttt{load\_scenario\_dataset} lee la metadata, selecciona activos de mercado
+y concatena retornos con intersecci\'on temporal mediante \texttt{join="inner"},
+garantizando una matriz rectangular para optimizaci\'on. La funci\'on
+\texttt{market\_cap\_weights} construye pesos de mercado con capitalizaci\'on
+burs\'atil y cae a un portafolio equiponderado si las capitalizaciones son
+inv\'alidas.
+
+El pipeline central estima par\'ametros con \textit{shrinkage}, calcula el prior
+de mercado, construye la \textit{view}, aplica Black-Litterman y resuelve
+portafolios para cinco perfiles de riesgo, \texttt{b\_teorico}, M\'inima
+varianza, Benchmark e Ideal de mercado. Cuando se ejecutan validaciones m\'as
+costosas, se usa una versi\'on reducida que resuelve solo Neutro, M\'inima
+varianza y Benchmark. El \textit{smoke test} confirma que $\mu_{\text{BL}}$ y
+$\Sigma_{\text{BL}}$ no contienen valores inv\'alidos, que los pesos suman 1 y
+que no aparecen posiciones negativas relevantes.
+
+\begin{table}[H]
+\centering
+\caption{Dimensi\'on de salidas del experimento Black-Litterman.}
+\label{tab:anexo4_bl_salidas}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Objeto & Filas \\
+\midrule
+Resultados centrales rebalanceados & 36 \\
+Segmentos centrales & 144 \\
+\textit{Views} registradas & 16 \\
+Ventanas aleatorias procesadas & 70 \\
+Ventanas robustas procesadas & 18 \\
+Filas de validaci\'on aleatoria & 420 \\
+Filas de validaci\'on robusta & 108 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{KPIs utilizados}
+
+Los KPIs utilizados son retorno total rebalanceado, retorno anual rebalanceado,
+volatilidad diaria y anual, Sharpe rebalanceado, m\'aximo \textit{drawdown},
+CVaR diario al 95\%, n\'umero de segmentos, activos con peso positivo y
+principales posiciones. El indicador principal para ordenar resultados es el
+Sharpe rebalanceado, porque resume retorno y riesgo fuera de muestra tras
+concatenar todos los rebalanceos.
+
+\subsection*{Resultados del experimento pandemia}
+
+Los mejores portafolios Black-Litterman del experimento central se muestran en
+la Tabla~\ref{tab:anexo4_bl_mejores}. El mejor resultado global corresponde a
+la \textit{view} de desempleo sin pandemia en el portafolio Neutro, con Sharpe
+2,44. Momentum tambi\'en funciona bien sin pandemia, aunque pierde fuerza
+relativa cuando se incluye el periodo pand\'emico.
+
+\begin{table}[H]
+\centering
+\caption{Mejores portafolios Black-Litterman del experimento central.}
+\label{tab:anexo4_bl_mejores}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}lllrrrr@{}}
+\toprule
+Escenario & \textit{View} & Portafolio l\'ider & Ret. total & Vol. anual & Max drawdown & Sharpe \\
+\midrule
+Sin pandemia & Desempleo & Neutro & 63,1\% & 10,5\% & $-$10,4\% & 2,44 \\
+Sin pandemia & Momentum & Muy conservador & 64,0\% & 10,9\% & $-$10,1\% & 2,38 \\
+Con pandemia & Desempleo & Arriesgado & 71,9\% & 12,4\% & $-$13,3\% & 2,36 \\
+Con pandemia & Momentum & Conservador & 56,4\% & 11,2\% & $-$10,3\% & 2,06 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Comparaci\'on final entre equiponderado, Markowitz y Black-Litterman.}
+\label{tab:anexo4_bl_comparacion_final}
+\scriptsize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}llllrrrrr@{}}
+\toprule
+Escenario & Modelo & \textit{View} & Portafolio & Ret. total & Vol. anual & Drawdown & CVaR 95\% & Sharpe \\
+\midrule
+Con pandemia & Equiponderado & No aplica & Benchmark & 101,4\% & 19,5\% & $-$21,9\% & 2,79\% & 2,05 \\
+Con pandemia & Markowitz & Hist\'orico & Muy conservador & 54,5\% & 11,0\% & $-$10,2\% & 1,50\% & 2,02 \\
+Con pandemia & Black-Litterman & Desempleo & Arriesgado & 71,9\% & 12,4\% & $-$13,3\% & 1,71\% & 2,36 \\
+Con pandemia & Black-Litterman & Momentum & Conservador & 56,4\% & 11,2\% & $-$10,3\% & 1,47\% & 2,06 \\
+Sin pandemia & Equiponderado & No aplica & Benchmark & 101,4\% & 19,5\% & $-$21,9\% & 2,79\% & 2,05 \\
+Sin pandemia & Markowitz & Hist\'orico & Ideal de mercado & 76,5\% & 12,3\% & $-$12,6\% & 1,67\% & 2,51 \\
+Sin pandemia & Black-Litterman & Desempleo & Neutro & 63,1\% & 10,5\% & $-$10,4\% & 1,41\% & 2,44 \\
+Sin pandemia & Black-Litterman & Momentum & Muy conservador & 64,0\% & 10,9\% & $-$10,1\% & 1,45\% & 2,38 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+La lectura principal es que Black-Litterman mejora claramente a Markowitz en el
+escenario con pandemia, especialmente con la \textit{view} de desempleo. En el
+escenario sin pandemia, Markowitz alcanza el mayor Sharpe final con el
+portafolio Ideal de mercado, aunque Black-Litterman obtiene resultados cercanos
+con menor volatilidad y \textit{drawdowns} controlados.
+
+\begin{table}[H]
+\centering
+\caption{Mayor mejora de Black-Litterman frente a Markowitz.}
+\label{tab:anexo4_bl_delta_markowitz}
+\small
+\begin{tabular}{@{}lllrrr@{}}
+\toprule
+Escenario & \textit{View} & Portafolio & Sharpe BL & Sharpe Markowitz & Delta Sharpe \\
+\midrule
+Con pandemia & Desempleo & Arriesgado & 2,36 & 1,17 & +1,19 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tambi\'en destacan las mejoras de desempleo/Muy arriesgado con delta Sharpe
++0,87, desempleo/\texttt{b\_teorico} con +0,64 y momentum/Muy arriesgado con
++0,59. Esto sugiere que Black-Litterman aporta mayor valor cuando el historial
+contiene episodios extremos, ya que el prior de equilibrio y las \textit{views}
+reducen la dependencia de medias hist\'oricas inestables.
+
+Al comparar el mismo portafolio y \textit{view} entre bases con y sin pandemia,
+varios deltas de Sharpe son negativos. Momentum/Muy conservador cae $-0,37$,
+desempleo/Neutro cae $-0,31$, desempleo/Muy conservador cae $-0,30$ y
+desempleo/Conservador cae $-0,29$. Esto indica que incluir pandemia tiende a
+deteriorar la estabilidad relativa de varias configuraciones, pero tambi\'en
+muestra que el escenario con pandemia es una prueba m\'as exigente donde ciertas
+\textit{views}, especialmente desempleo, siguen mejorando a Markowitz.
+
+\subsection*{Rebalanceo}
+
+El rebalanceo Black-Litterman mantiene la frecuencia semestral de 126 d\'ias
+burs\'atiles. En cada fecha se reestiman covarianzas, prior de equilibrio,
+\textit{views}, retornos posteriores y pesos finales. Esta decisi\'on permite que
+la se\~nal incorpore informaci\'on disponible en cada segmento, pero mantiene la
+comparabilidad con Markowitz porque usa la misma ventana futura, las mismas
+restricciones y los mismos KPIs. Como en Markowitz, el rebalanceo no incorpora
+costos de transacci\'on, por lo que sus resultados deben interpretarse como
+desempe\~no te\'orico fuera de muestra.
+
+\subsection*{Splits aleatorios}
+
+En los 70 splits aleatorios, los mejores resultados para el portafolio Neutro
+favorecen horizontes con 6 a\~nos de entrenamiento y 2 de prueba. Esto es
+consistente con la necesidad de contar con suficiente historia para estabilizar
+covarianzas y prior, sin usar una ventana tan larga que diluya cambios
+estructurales.
+
+\begin{table}[H]
+\centering
+\caption{Validaci\'on con 70 splits aleatorios para el portafolio Neutro.}
+\label{tab:anexo4_bl_splits}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textit{View} & Horizonte & Sharpe prom. & Ret. total prom. & Vol. anual prom. & Ventanas \\
+\midrule
+Desempleo & \texttt{h6\_f2} & 2,48 & 61,5\% & 10,4\% & 3 \\
+Momentum & \texttt{h6\_f2} & 2,31 & 68,6\% & 13,1\% & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Evaluaci\'on robusta}
+
+\begin{table}[H]
+\centering
+\caption{Validaci\'on robusta con 18 ventanas para el portafolio Neutro.}
+\label{tab:anexo4_bl_validacion_robusta}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textit{View} & Mejor horizonte & Sharpe prom. & Ret. total prom. & Vol. anual prom. & Drawdown prom. \\
+\midrule
+Desempleo & \texttt{h7\_f2} & 2,35 & 59,2\% & 10,6\% & $-$9,7\% \\
+Momentum & \texttt{h7\_f2} & 2,23 & 68,5\% & 13,6\% & $-$12,8\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+En validaci\'on robusta, desempleo domina en Sharpe para el portafolio Neutro
+porque logra menor volatilidad y menor \textit{drawdown}. Momentum obtiene
+mayor retorno total promedio, pero a costa de mayor riesgo.
+
+\subsection*{Implicancias y conclusiones}
+
+Los resultados muestran que Black-Litterman cumple su objetivo principal:
+suavizar la dependencia de medias hist\'oricas puras. Esto se observa con mayor
+claridad en el escenario con pandemia, donde Markowitz queda m\'as castigado y
+Black-Litterman mejora el Sharpe en varios portafolios. El tipo de \textit{view}
+es determinante. Desempleo genera portafolios m\'as defensivos y mejor Sharpe en
+configuraciones centrales; aunque conceptualmente es una \textit{view}
+c\'iclica, su menor $Q$ y menor confianza producen ajustes m\'as moderados.
+Momentum, en cambio, entrega una se\~nal m\'as intensa y puede capturar retornos
+altos, pero tambi\'en expone a reversals y mayor volatilidad.
+
+El benchmark equiponderado top-20 obtiene retornos totales elevados, aunque con
+volatilidad y \textit{drawdown} superiores. Su Sharpe es competitivo, pero no
+domina siempre, lo que muestra que un benchmark simple puede ser dif\'icil de
+superar en retorno bruto mientras los modelos optimizados pueden mejorar la
+relaci\'on retorno-riesgo. Las diferencias entre \texttt{sin\_pandemia} y
+\texttt{con\_pandemia} deben entenderse como una prueba de robustez: incluir
+shocks hist\'oricos cambia la frontera eficiente y las estimaciones de riesgo, no
+necesariamente el mercado futuro evaluado.
+
+Para mejorar la implementaci\'on, la \textit{view} de desempleo deber\'ia pasar de
+supuesto fijo a se\~nal observable o pronosticada, usando por ejemplo la tasa
+efectiva disponible al momento del rebalanceo, sorpresas respecto de
+expectativas o variaciones mensuales o trimestrales. La \textit{view} de
+momentum podr\'ia refinarse con momentum ajustado por volatilidad, exclusi\'on del
+mes m\'as reciente para reducir reversals o combinaci\'on de ventanas de 6 y
+12 meses. Tambi\'en ser\'ia valioso incorporar \textit{views} de valor, calidad,
+tama\~no, tasas de inter\'es, inflaci\'on o revisiones de utilidades.
+
+Otra mejora importante es calibrar $\Omega$ con evidencia emp\'irica en lugar de
+fijar manualmente la confianza. Esta calibraci\'on podr\'ia usar error hist\'orico
+de predicci\'on, frecuencia de acierto del signo, correlaci\'on entre se\~nal y
+retorno futuro, varianza residual de regresiones, metodolog\'ia de
+desplazamiento deseado en pesos o validaci\'on cruzada temporal. Adem\'as,
+conviene analizar sensibilidad a $\tau$, \textit{shrinkage}, frecuencia de
+rebalanceo, \texttt{max\_weight} y tasa libre de riesgo, e incorporar costos de
+transacci\'on, restricciones sectoriales, cotas de liquidez, control de
+\textit{tracking error}, penalizaci\'on por rotaci\'on y estimadores robustos de
+covarianza.
+
+En s\'intesis, la implementaci\'on construye un experimento Black-Litterman
+completo y comparable con Markowitz y benchmark. Su principal aporte es
+reemplazar retornos esperados hist\'oricos por retornos posteriores que combinan
+equilibrio de mercado y \textit{views}. Los resultados indican que
+Black-Litterman es especialmente valioso en escenarios exigentes, como el
+entrenamiento con pandemia, donde la \textit{view} de desempleo mejora
+fuertemente el Sharpe frente a Markowitz. La conclusi\'on central no es que una
+\textit{view} sea universalmente superior, sino que la calidad, calibraci\'on y
+confianza de las \textit{views} determinan el valor pr\'actico del modelo.
+
+\clearpage
+
+% ============================================================
+\section*{Simulaci\'on Monte Carlo}
+% ============================================================
+
+\subsection*{Resumen}
+
+Como parte de la documentaci\'on t\'ecnica del proyecto FinPUC, se elabor\'o un
+informe consolidado que integra los resultados de los tres notebooks de
+implementaci\'on: Markowitz vs Benchmark, Black-Litterman y Simulaci\'on Monte
+Carlo. El prop\'osito del documento es proveer trazabilidad completa entre los
+datos, c\'alculos, t\'ecnicas de optimizaci\'on, comparaciones y conclusiones
+finales del proyecto.
+
+El informe fue generado el 09 de mayo de 2026 y opera sobre el universo F5 de
+601 activos, benchmark top-20, rebalanceo semestral de 126 d\'ias h\'abiles y
+simulaci\'on Monte Carlo a 260 semanas. En esta etapa, el notebook
+\texttt{p4\_montecarlo\_recomendador\_portafolios.ipynb} transforma los KPIs de
+Markowitz, Black-Litterman y Equiponderado en una evaluaci\'on de cliente y
+empresa. Para cada combinaci\'on de escenario, t\'ecnica, \textit{view} y perfil
+simula trayectorias de riqueza, probabilidad de retiro, aceptaci\'on de
+recomendaciones, utilidad de la empresa y un score final de recomendaci\'on.
+
+\subsection*{Fundamentos metodol\'ogicos}
+
+La Simulaci\'on Monte Carlo usa como insumos el retorno anual base y la
+volatilidad anual de cada estrategia. Estos par\'ametros provienen de los
+experimentos previos y se transforman a frecuencia semanal para simular
+trayectorias de riqueza de un cliente con capital inicial $C_0 = 1\,000$ USD. El
+retiro depende de la p\'erdida relativa frente a la tolerancia del perfil,
+mientras que la aceptaci\'on depende del atractivo riesgo-retorno de la
+recomendaci\'on.
+
+El informe documenta una metodolog\'ia de c\'alculo com\'un para los modelos de
+entrada: estimaci\'on de par\'ametros ($\mu$, $\Sigma$ con \textit{shrinkage}
+$\lambda = 0.20$, \texttt{nearest\_psd}), anualizaci\'on y frontera eficiente.
+La simulaci\'on no reoptimiza portafolios, sino que traduce esos KPIs financieros
+a variables de experiencia de cliente y de resultado para la empresa.
+
+\subsection*{Supuestos del experimento}
+
+Se simulan 5\,000 trayectorias por combinaci\'on durante 260 semanas, equivalentes
+a cinco a\~nos de evaluaci\'on semanal. Cada combinaci\'on se eval\'ua en tres
+escenarios proyectados: desfavorable, neutro y favorable. Los retornos semanales
+se aproximan con distribuci\'on normal, pese a que el an\'alisis distribucional
+muestra colas pesadas. La comisi\'on inicial es $k = 1\%$ sobre el capital
+inicial y, en recomendaciones aceptadas, se cobra sobre una fracci\'on de
+rotaci\'on de 5\% de la riqueza vigente.
+
+El dise\~no opera sobre el mismo universo F5 de 601 activos usado por los
+experimentos de optimizaci\'on, benchmark top-20 y KPIs rebalanceados. Por lo
+tanto, la comparaci\'on final no cambia el universo de acciones, sino la manera
+en que se transforma el desempe\~no hist\'orico de cada t\'ecnica en una
+distribuci\'on de resultados de negocio.
+
+\subsection*{Estructura del notebook}
+
+El documento metodol\'ogico consolidado se organiza en ocho secciones:
+
+\begin{enumerate}
+    \item \textbf{Resumen ejecutivo:} comparaci\'on final de los tres modelos por
+    escenario, con tabla de KPIs y top 12 del ranking.
+    \item \textbf{Datos, universo F5 y dise\~no experimental:} descripci\'on del
+    filtrado (1\,406 a 601 tickers), split \texttt{h7\_f2} y escenarios con/sin
+    pandemia.
+    \item \textbf{Metodolog\'ia de c\'alculo com\'un:} estimaci\'on de par\'ametros
+    ($\mu$, $\Sigma$ con \textit{shrinkage} $\lambda = 0.20$,
+    \texttt{nearest\_psd}), anualizaci\'on y frontera eficiente.
+    \item \textbf{Markowitz vs benchmark:} portafolios por perfil, impacto de la
+    pandemia en Sharpe, validaci\'on robusta por horizonte.
+    \item \textbf{Black-Litterman y matriz de views:} configuraci\'on de las
+    cuatro views (momentum, momentum top-20 6M, momentum top-20/bottom-20 1Y,
+    desempleo), resultados por view y escenario.
+    \item \textbf{Simulaci\'on Monte Carlo y recomendador:} supuestos operativos,
+    promedios por t\'ecnica, ranking completo del recomendador.
+    \item \textbf{Conclusi\'on integrada:} hallazgos principales y recomendaci\'on
+    final.
+    \item \textbf{\'Indice de anexos y tablas de auditor\'ia:} inventario
+    completo de CSVs generados.
+\end{enumerate}
+
+El notebook define funciones de retiro y aceptaci\'on, construye insumos por
+t\'ecnica y perfil desde los CSV de Markowitz y Black-Litterman, ejecuta la
+Simulaci\'on Monte Carlo, resume KPIs por escenario, genera gr\'aficos, calcula el
+ranking recomendador cliente-empresa y exporta conclusiones.
+
+Las salidas principales son:
+\begin{flushleft}
+\footnotesize
+\path|p4_model_inputs_kpis.csv|\\
+\path|p4_montecarlo_summary.csv|\\
+\path|p4_neutral_scenario_summary.csv|\\
+\path|p4_recommendation_ranking.csv|\\
+\path|p4_montecarlo_paths_quantiles.csv|
+\end{flushleft}
+
+El informe documenta un total de 21 archivos CSV generados por los tres
+notebooks, organizados por metodolog\'ia. La
+Tabla~\ref{tab:anexo4_csv_index} presenta el inventario completo.
+
+\begin{table}[H]
+\centering
+\caption{\'Indice de CSVs generados por el proyecto.}
+\label{tab:anexo4_csv_index}
+\footnotesize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}p{0.45\textwidth}lrrl@{}}
+\toprule
+Archivo & Metodolog\'ia & Filas & Cols & Prop\'osito \\
+\midrule
+rebalance\_summary\_h7\_f2\_601activos & Markowitz & 18 & 12 & KPIs rebalanceados \\
+comparison\_sin\_vs\_con\_pandemia\_h7\_f2 & Markowitz & 9 & 21 & Comparaci\'on escenarios \\
+validacion\_robusta\_ventanas\_moviles & Markowitz & 6 & 4 & Sharpe por horizonte \\
+frontier\_segments\_h7\_f2\_601activos & Markowitz & 238 & 24 & Frontera eficiente \\
+heatmap\_sharpe\_train\_test & Markowitz & 7 & 8 & Heatmap splits \\
+\midrule
+bl\_rebalance\_summary\_h7\_f2\_601activos & Black-Litterman & 72 & 14 & KPIs BL rebalanceados \\
+bl\_views\_h7\_f2\_601activos & Black-Litterman & 32 & 36 & Configuraci\'on views \\
+comparison\_three\_models\_kpis\_h7\_f2 & Black-Litterman & 12 & 13 & Comparaci\'on 3 modelos \\
+comparison\_bl\_vs\_markowitz\_h7\_f2 & Black-Litterman & 72 & 19 & Delta BL vs Markowitz \\
+bl\_robust\_validation\_summary & Black-Litterman & 36 & 10 & Validaci\'on robusta BL \\
+\midrule
+p4\_montecarlo\_summary & Simulaci\'on Monte Carlo & 180 & 29 & Resumen completo MC \\
+p4\_neutral\_scenario\_summary & Simulaci\'on Monte Carlo & 60 & 29 & Escenario neutro \\
+p4\_recommendation\_ranking & Simulaci\'on Monte Carlo & 60 & 30 & Ranking recomendador \\
+p4\_model\_inputs\_kpis & Simulaci\'on Monte Carlo & 60 & 13 & Inputs desde modelos \\
+p4\_montecarlo\_paths\_quantiles & Simulaci\'on Monte Carlo & 1\,980 & 13 & Bandas P5--P95 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\subsection*{KPIs utilizados}
+
+Los KPIs de cliente son riqueza terminal media, percentiles 5/50/95, ganancia
+esperada, probabilidad de ganancia, probabilidad de p\'erdida mayor a la
+tolerancia, tasa de retiro y semana promedio de retiro. Los KPIs de empresa son
+ingreso promedio, ingreso mediano, ingreso percentil 95, ingreso como porcentaje
+del capital inicial y tasa de aceptaci\'on de recomendaciones. El ranking final
+usa \texttt{p4\_score}, que combina valor para el cliente y valor para la
+empresa.
+
+En el informe integrado, estos KPIs se conectan con retorno total, retorno
+anual, volatilidad anual, \textit{drawdown}, CVaR y Sharpe de los modelos de
+entrada. Por esta raz\'on, una t\'ecnica con mayor retorno hist\'orico puede perder
+en score si eleva demasiado retiros o dispersi\'on de resultados.
+
+\subsection*{Resultados del experimento pandemia}
+
+La Tabla~\ref{tab:anexo4_comparacion_modelos} presenta la comparaci\'on final de
+modelos por escenario, extra\'ida del informe de metodolog\'ias.
+
+\begin{table}[H]
+\centering
+\caption{Comparaci\'on final de modelos por escenario (mejor portafolio por modelo).}
+\label{tab:anexo4_comparacion_modelos}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}lllrrrrr@{}}
+\toprule
+Escenario & Modelo & Portafolio & Ret. total & Ret. anual & Vol. anual & Drawdown & Sharpe \\
+\midrule
+Sin pandemia & Markowitz & Ideal de mercado & 76,5\% & 32,8\% & 12,3\% & $-$12,6\% & 2,51 \\
+Sin pandemia & BL mom. top20 6m & Neutro & 72,3\% & 31,2\% & 11,9\% & $-$12,9\% & 2,46 \\
+Sin pandemia & Equiponderado & Benchmark & 101,4\% & 41,9\% & 19,5\% & $-$21,9\% & 2,05 \\
+\midrule
+Con pandemia & BL mom. top20 6m & Neutro & 69,5\% & 30,2\% & 11,9\% & $-$11,7\% & 2,38 \\
+Con pandemia & BL desempleo & Arriesgado & 71,9\% & 31,1\% & 12,4\% & $-$13,3\% & 2,36 \\
+Con pandemia & Equiponderado & Benchmark & 101,4\% & 41,9\% & 19,5\% & $-$21,9\% & 2,05 \\
+Con pandemia & Markowitz & Muy conservador & 54,5\% & 24,3\% & 11,0\% & $-$10,2\% & 2,02 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+La Tabla~\ref{tab:anexo4_ranking} presenta el top 10 del ranking en escenario
+neutro.
+
+\begin{table}[H]
+\centering
+\caption{Top 10 ranking de Simulaci\'on Monte Carlo en escenario neutro.}
+\label{tab:anexo4_ranking}
+\footnotesize
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}clllrrrr@{}}
+\toprule
+Rank & Escenario & T\'ecnica & Perfil & Riqueza & Retiro & Utilidad & Score \\
+\midrule
+1 & Con pandemia & BL Mom. Top20 6M & Muy arriesgado & USD 8\,974 & 3,1\% & USD 474 & 9\,417 \\
+2 & Sin pandemia & BL Mom. Top20 6M & Muy arriesgado & USD 7\,753 & 2,0\% & USD 419 & 8\,151 \\
+3 & Con pandemia & BL Momentum & Muy arriesgado & USD 6\,436 & 14,6\% & USD 335 & 6\,625 \\
+4 & Sin pandemia & BL Desempleo & Muy arriesgado & USD 5\,434 & 0,5\% & USD 221 & 5\,650 \\
+5 & Sin pandemia & Markowitz & Muy arriesgado & USD 5\,349 & 2,1\% & USD 215 & 5\,543 \\
+6 & Sin pandemia & BL Momentum & Arriesgado & USD 5\,304 & 10,9\% & USD 320 & 5\,515 \\
+7 & Con pandemia & Equiponderado & Muy arriesgado & USD 5\,280 & 0,0\% & USD 204 & 5\,485 \\
+8 & Con pandemia & BL Mom. Top20 6M & Arriesgado & USD 5\,137 & 0,5\% & USD 312 & 5\,445 \\
+9 & Sin pandemia & Equiponderado & Muy arriesgado & USD 5\,222 & 0,0\% & USD 203 & 5\,425 \\
+10 & Sin pandemia & Equiponderado & Arriesgado & USD 5\,084 & 0,2\% & USD 308 & 5\,390 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+La mejor combinaci\'on es Black-Litterman Momentum Top20 6M con datos de
+pandemia y perfil Muy arriesgado. Su ventaja se explica por alta riqueza
+terminal, tasa de retiro baja para un perfil agresivo y mayor utilidad para la
+empresa.
+
+\subsection*{Rebalanceo}
+
+La Simulaci\'on Monte Carlo no recalcula pesos de portafolio. Recibe KPIs que ya
+incorporan el rebalanceo semestral de Markowitz y Black-Litterman. Por eso, el
+rebalanceo entra de forma indirecta: afecta retornos, volatilidad, drawdown y
+CVaR base, que luego determinan riqueza simulada, retiro y utilidad. Esta
+estructura evita mezclar dos capas de decisi\'on: la optimizaci\'on de pesos queda
+en los modelos financieros y la simulaci\'on se concentra en la evaluaci\'on
+cliente-empresa.
+
+\subsection*{Splits aleatorios}
+
+La Simulaci\'on Monte Carlo no ejecuta splits aleatorios propios. Su robustez
+temporal depende de los insumos previamente validados en Markowitz y
+Black-Litterman. Esta decisi\'on evita duplicar experimentos y mantiene el foco
+en la pregunta de negocio: cu\'al combinaci\'on de t\'ecnica, escenario y perfil
+genera mejor equilibrio cliente-empresa. En consecuencia, la lectura de sus
+resultados debe considerar la evidencia de splits aleatorios y validaci\'on
+robusta reportada para los modelos de entrada.
+
+\subsection*{Evaluaci\'on robusta}
+
+\begin{table}[H]
+\centering
+\caption{Ganadores por escenario proyectado en Simulaci\'on Monte Carlo.}
+\label{tab:anexo4_mc_robusta}
+\small
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llllrrr}
+\toprule
+Escenario & T\'ecnica & View & Perfil & Riqueza & Retiro & Utilidad \\
+\midrule
+Desfavorable & BL Momentum Top20 6M & momentum\_top20\_6m & Muy arriesgado & USD 5\,009 & 8,8\% & USD 327 \\
+Neutro & BL Momentum Top20 6M & momentum\_top20\_6m & Muy arriesgado & USD 8\,974 & 3,1\% & USD 474 \\
+Favorable & BL Momentum Top20 6M & momentum\_top20\_6m & Muy arriesgado & USD 15\,451 & 1,6\% & USD 690 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+La misma t\'ecnica domina en los tres escenarios proyectados, lo que refuerza su
+consistencia dentro del marco de supuestos del notebook. Esta conclusi\'on debe
+leerse con cautela porque los retornos simulados son normales y pueden
+subestimar eventos extremos. Para implementaci\'on comercial, conviene mostrar al
+usuario tres escenarios y no solo el escenario neutro: el riesgo de retiro cambia
+fuertemente cuando el camino simulado atraviesa p\'erdidas tempranas.
+
+\subsection*{Implicancias y conclusiones}
+
+El informe de metodolog\'ias concluye con las siguientes observaciones:
+
+\begin{itemize}
+    \item El benchmark top-20 equiponderado es una referencia fuerte por retorno
+    total, pero su volatilidad y drawdown son mayores que las carteras
+    Black-Litterman ajustadas por riesgo.
+    \item Markowitz aporta una base estable y trazable, especialmente para
+    perfiles conservadores, aunque depende fuertemente de retornos hist\'oricos.
+    \item Black-Litterman Desempleo ofrece un ajuste macro competitivo y en
+    algunos escenarios lidera frente a Markowitz por delta Sharpe.
+    \item Black-Litterman Momentum Top20 6M es la t\'ecnica m\'as fuerte en la
+    Simulaci\'on Monte Carlo y la mejor variante market-cap momentum por Sharpe
+    en ambos escenarios de datos.
+    \item La recomendaci\'on final depende del objetivo: si se prioriza riqueza
+    esperada y score, gana Black-Litterman Momentum Top20 6M; si se prioriza
+    m\'inimo retiro, se deben revisar perfiles menos agresivos o
+    Black-Litterman Desempleo.
+\end{itemize}
+
+La Simulaci\'on Monte Carlo conecta desempe\~no financiero con variables de
+negocio. El resultado principal es que Black-Litterman Momentum Top20 6M domina
+el ranking al combinar alta riqueza esperada, baja tasa de retiro y mayor
+utilidad para la empresa. La principal limitaci\'on es el supuesto normal: para
+la siguiente etapa conviene probar t-Student, Johnson SU u otra distribuci\'on
+con colas pesadas, adem\'as de sensibilizar costos de transacci\'on y reglas de
+retiro basadas en \textit{drawdown}.
+
+El informe final de metodolog\'ias de portafolios se encuentra disponible como
+archivo PDF en el repositorio del proyecto:
+\url{https://github.com/Psacevedo/Capstone.git}. El documento incluye
+16 figuras, 18 tablas y el \'indice completo de 21 CSVs de auditor\'ia.
+
+% ============================================================
+\section*{Conclusi\'on integrada}
+% ============================================================
+
+Los tres notebooks forman una cadena metodol\'ogica. Markowitz define la base y
+el benchmark; Black-Litterman reduce dependencia de medias hist\'oricas mediante
+prior y \textit{views}; Simulaci\'on Monte Carlo traduce los KPIs en una decisi\'on
+cliente-empresa. La recomendaci\'on actual es usar Black-Litterman Momentum Top20
+6M como alternativa principal, mantener el benchmark como referencia exigente y
+usar Markowitz como base de comparaci\'on y diagn\'ostico de sensibilidad.

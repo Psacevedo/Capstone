@@ -1,0 +1,246 @@
+% Select one class
+%\documentclass{pucthesis}		% For DVI
+\documentclass[pdftex,spanish]{pucthesis}	% For pdfLaTeX
+%\documentclass[spanish]{pucthesis}		% For DVI, in spanish
+%\documentclass[pdftex,spanish]{pucthesis}	% For pdfLaTeX, in spanish
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      Nota: si usas español, algunos nombres      %
+%      debes cambiarlos manualmente en este     %
+%        documento. En teoría, nunca deberías       %
+%           modificar el archivo pucthesis.cls              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%
+%   Packages	 %
+%%%%%%%%%
+
+%%%%%%%%%
+%   Packages	 %
+%%%%%%%%%
+
+% Floats
+% For diagrams and flowcharts
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+\usepackage{graphicx}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+\usepackage{subfigure}
+\usepackage{color}
+
+% Math packages
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{adjustbox}
+
+% Closest font to Times New Roman
+\usepackage{times}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{setspace}
+\onehalfspacing
+
+% To make pretty tables
+\usepackage{booktabs}
+\usepackage{multirow}
+
+% To avoid underfull errors in the bibliography
+\usepackage{etoolbox}
+\apptocmd{\sloppy}{\hbadness 10000\relax}{}{}
+
+% To make cites and references
+\usepackage[hidelinks,pdfusetitle,pdfdisplaydoctitle]{hyperref}
+\usepackage[notocbib]{apacite} 
+\usepackage{doi}
+\renewcommand{\doitext}{}
+
+%--------- NEW ENVIRONMENTS --------- You are free to remove or use it
+\newtheorem{definition}{\bf Definition}[chapter]
+\newtheorem{property}{Property}[chapter]
+\newtheorem{claim}{Claim}[chapter]
+\newtheorem{lemma}{\bf Lemma}[chapter]
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{theorem}{\noindent \bf Theorem}[chapter]
+\newtheorem{corollary}{\bf Corollary}[chapter]
+\newtheorem{pf}{Proof}[chapter]
+\newtheorem{example}{\bf Example}[chapter]
+\newtheorem{remark}{Remark}[chapter]
+
+% En caso de que el título sea muy largo, se puede ajustar el espacio
+% antes y después de este en las dos primeras páginas para que quede centrado.
+
+%\makeatletter
+%  \setlength{\beftitle}{105\p@\@plus24\p@}
+%  \setlength{\afttitle}{65\p@}
+%\makeatother
+
+\begin{document}
+
+\mdate{Junio 26, 2026}         % date manuscript changed
+\version{2}                                     % manuscript version #
+
+\title[FINPUC \\ ENTREGA 3 \\ GRUPO 13]
+   {\bf FINPUC \\ ENTREGA 3 \\ GRUPO 13}       
+\author[Integrantes:]{Integrantes:\\
+\textnormal{\small{
+Patricio Andres Acevedo Flores\\
+Benjamín Alonso Cano Araya\\
+Matías Benjamín Catalán Contreras\\
+Gaspar Ten Berg Yunusic\\
+Diego Benjamín Villalobos Michea}
+}
+}
+
+\address{Escuela de Ingenier\'ia\\
+                   Pontificia Universidad Cat\'olica de Chile\\ 
+                   Vicu\~na Mackenna 4860\\
+                  Santiago, Chile\\
+                  {\it Tel.\/} : 56 (2) 354-2000}
+
+
+\advisor                    {\textbf{Profesor Guía:} Agustín Matías Antonio Chiu López}
+\ogrsmember                 {\textbf{Ayudante Tutor:} Juan Enrique Hurtado Browne}
+\date                                 {Junio 2026}
+\copyrightname             {Grupo 13}
+\copyrightyear               {2026}
+
+%%%%%%%%%%%%%%%%%%%%
+%       PRELIMINARIES                              %
+%----------------------------------------------------%
+%      page i & ii: cover page                   %
+%      page iii: dedication                         %
+%%%%%%%%%%%%%%%%%%%%
+
+\NoChapterPageNumber
+\pagenumbering{roman}
+\maketitle
+
+%%%%%%%%%%%%%%%%%%
+%            page v & up ---                     %
+%            Table of contents                   %
+%            List of figures                     %
+%            List of tables                      %
+%%%%%%%%%%%%%%%%%%
+
+\pdfbookmark{\contentsname}{toc}
+\tableofcontents
+\phantomsection \label{listoffigures}
+\listoffigures
+\phantomsection \label{listoftables}
+\listoftables
+\cleardoublepage
+
+%----------------------------------------------------------------------%
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%      page x & xi: ABSTRACT - RESUMEN        %
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\phantomsection \label{abstract}
+\chapter*{ABSTRACT}
+\input{./chapters/abstract.tex}
+\cleardoublepage
+
+\phantomsection \label{resumen}
+\chapter*{RESUMEN}
+\input{./chapters/resumen.tex}
+\cleardoublepage
+
+%%%%%%%%%%%%%
+%   TEXT  OF THESIS     %
+%%%%%%%%%%%%%
+
+\pagenumbering{arabic}
+
+\chapter{Introducción}
+\input{./chapters/introduction.tex}
+
+\chapter{Descripción del problema}
+\input{./chapters/descripcion problema.tex}
+
+\chapter{Metodología}
+\input{./chapters/Metodología}
+
+\chapter{Supuestos}
+\input{./chapters/supuestos}
+
+\chapter{KPIs}
+\input{./chapters/kpis}
+
+\chapter{Caso Base}
+\input{./chapters/casobase}
+
+\chapter{Implementación y Herramientas}
+\input{./chapters/implementacion}
+
+\chapter{Resultados y análisis}
+\input{./chapters/resultados}
+
+  \chapter{Conclusiones}
+\input{./chapters/conclusions.tex}
+
+%%%%%%%%%%%%%
+%       REFERENCES        %
+%%%%%%%%%%%%%
+
+\cleardoublepage
+\phantomsection \label{references}
+\bibliographystyle{apacite}
+\renewcommand{\bibname}{Referencias}
+
+%%%% ACTIVAR SIGUIENTES 3 LINEAS SI POSTGRADO RECHAZA LA BIBLIOGRAFIA
+%\setlength{\bibleftmargin}{0em}
+%\setlength{\bibindent}{0em}
+%\setlength{\bibitemsep}{1em}
+
+
+\bibliography{Thesis}
+
+
+%%%%%%%%%%%%%%%%%%%%
+%   ANEXOS                                   %
+%%%%%%%%%%%%%%%%%%%%
+\cleardoublepage
+\phantomsection\label{anexo:ia}
+\chapter*{Anexo N°1: Declaración de uso de IA en este informe y presentación asociada}
+\input{./chapters/ANEXO1.tex}
+
+\cleardoublepage
+\phantomsection\label{anexo:datos}
+\chapter*{Anexo N°2: Análisis de datos}
+\input{./chapters/ANEXO2.tex}
+
+\cleardoublepage
+\phantomsection\label{anexo:ajuste}
+\chapter*{Anexo N°3: Análisis de ajuste de distribuciones}
+\input{./chapters/ANEXO3.tex}
+
+\cleardoublepage
+\phantomsection\label{anexo:metodologias}
+\chapter*{Anexo N°4: Análisis de metodologías y código relacionado}
+\input{./chapters/ANEXO4.tex}
+
+\cleardoublepage
+\phantomsection\label{anexo:k}
+\chapter*{Anexo N°5: Detalle de la simulación de sensibilidad de $K\%$}
+\input{./chapters/ANEXO5.tex}
+
+\cleardoublepage
+\phantomsection\label{anexo:lambda}
+\chapter*{Anexo N°6: Detalle de la optimización multiobjetivo de $\lambda$}
+\input{./chapters/ANEXO6.tex}
+
+\cleardoublepage
+\phantomsection\label{anexo:calibracion}
+\chapter*{Anexo N°7: Diagnósticos de la calibración secuencial de Black-Litterman}
+\input{./chapters/ANEXO7.tex}
+
+\cleardoublepage
+
+%----------------------------------------------------------------------%
+
+
+\end{document}

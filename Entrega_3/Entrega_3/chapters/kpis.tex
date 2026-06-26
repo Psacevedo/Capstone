@@ -1,0 +1,95 @@
+Los KPIs se definieron para decidir qu\'e combinaci\'on de t\'ecnica,
+\textit{view} y perfil conviene recomendar. 
+
+\begin{itemize}
+    \item \textbf{Retorno total rebalanceado:}
+    $R_{\text{total}} = \prod_t (1 + r_t) - 1$. Mide la ganancia acumulada
+    fuera de muestra. Se usa para comparar el resultado final de cada cartera.
+
+    \item \textbf{Retorno anualizado:}
+    $R_{\text{anual}} = (1 + R_{\text{total}})^{1/T} - 1$. Normaliza el retorno
+    por a\~no y permite comparar horizontes de distinta duraci\'on.
+
+    \item \textbf{Volatilidad anualizada:}
+    $\sigma_{\text{anual}} = \sigma_{\text{diaria}}\sqrt{252}$. Mide la
+    variabilidad del retorno. Sirve para descartar alternativas demasiado
+    inestables para el perfil del cliente.
+
+    \item \textbf{Ratio de Sharpe rebalanceado:}
+    $\text{Sharpe} = (R_{\text{anual}} - R_f)/\sigma_{\text{anual}}$, con
+    $R_f = 0.02$. Resume retorno ajustado por riesgo. Es el principal KPI para
+    comparar eficiencia financiera entre t\'ecnicas.
+
+    \item \textbf{M\'aximo drawdown:} mayor ca\'ida porcentual desde un m\'aximo
+    acumulado de riqueza. Eval\'ua la p\'erdida que el cliente habr\'ia tenido
+    que tolerar, por lo que pesa especialmente en perfiles conservadores.
+
+    \item \textbf{CVaR diario al 95\%:} p\'erdida promedio en el 5\% peor de
+    d\'ias \cite{rockafellar2000}. Se usa para medir riesgo de cola y evitar
+    carteras con p\'erdidas extremas demasiado severas.
+
+    \item \textbf{Riqueza terminal esperada:} valor final promedio desde
+    $C_0 = 1\,000$ USD en las 5\,000 simulaciones Monte Carlo. Traduce el
+    desempe\~no financiero a una cifra monetaria para el cliente.
+
+    \item \textbf{Probabilidad de ganancia:} proporci\'on de simulaciones en
+    que la riqueza terminal supera $C_0$. Indica qu\'e tan probable es que el
+    cliente termine el horizonte con utilidad.
+
+    \item \textbf{Tasa de retiro:} proporci\'on de simulaciones en que el
+    cliente abandona antes del final por superar su tolerancia de p\'erdida.
+    Afecta la decisi\'on porque reduce la continuidad del cliente y las
+    comisiones futuras.
+
+    \item \textbf{Utilidad por comisiones:} ingreso esperado de FinPUC con
+    comisi\'on $k = 1\%$, incluyendo comisi\'on inicial y comisiones por
+    recomendaciones aceptadas. Mide el atractivo de la alternativa para la
+    empresa.
+
+    \item \textbf{Tasa de aceptaci\'on de recomendaciones:} proporci\'on de
+    recomendaciones aceptadas seg\'un $P_2$. Una tasa baja indica que la cartera
+    no supera el umbral de atractivo del perfil, reduciendo rotaci\'on y utilidad.
+
+    \item \textbf{Score P4 con $K$ variable:}
+    \begin{equation}
+    \label{eq:score_p4}
+    \text{Score}_{P4} =
+    \mathbb{E}[\text{Riqueza terminal}]
+    + \mathbb{E}[\text{Utilidad empresa}(K)]
+    - C_0 \cdot \text{Tasa de retiro}(K).
+    \end{equation}
+    Generaliza el Score P4 de la Entrega 2 haciendo expl\'icita la dependencia
+    en $K$ tanto de la utilidad como de la tasa de retiro. Valores altos de
+    $K$ aumentan la utilidad pero tambi\'en la probabilidad de que el cliente
+    abandone.
+
+    \item \textbf{Score multiobjetivo:}
+    \begin{equation}
+    S_\lambda = \lambda \cdot \tilde{f}_1 + (1-\lambda) \cdot \tilde{f}_2,
+    \end{equation}
+    donde $\tilde{f}_1$ y $\tilde{f}_2$ son las versiones normalizadas
+    (min-max) del retorno esperado del cliente y la utilidad de la empresa,
+    respectivamente. Mide el desempe\~no conjunto bajo una prioridad
+    expl\'icita $\lambda$.
+
+    \item \textbf{Mejora de Sharpe $\Delta$Sharpe:} diferencia entre el Sharpe
+    de un portafolio Black-Litterman calibrado y el Sharpe del Markowitz base
+    equivalente, evaluados en el mismo horizonte de test. Un valor positivo
+    indica que la calibraci\'on agrega valor sobre la estimaci\'on hist\'orica
+    pura.
+
+    \item \textbf{Turnover medio:} promedio de $\|w_t - w_{t-1}\|_1 / 2$ a lo
+    largo del horizonte de evaluaci\'on. Mide la fracci\'on del portafolio que
+    se rota en cada rebalanceo; valores altos implican mayores costos
+    operacionales impl\'icitos.
+
+    \item \textbf{N\'umero efectivo de activos:}
+    $N_{\text{eff}} = 1 / \sum_i w_i^2$. Cuantifica la concentraci\'on del
+    portafolio: $N_{\text{eff}} = N$ indica pesos uniformes, mientras que
+    $N_{\text{eff}} \to 1$ indica concentraci\'on en pocos activos.
+
+    \item \textbf{Concentraci\'on sectorial (HHI):}
+    $\text{HHI} = \sum_{s} \left(\sum_{i \in s} w_i\right)^2$,
+    donde $s$ indexa los sectores econ\'omicos. Valores cercanos a 1 indican
+    concentraci\'on en un solo sector; valores bajos indican diversificaci\'on.
+\end{itemize}
