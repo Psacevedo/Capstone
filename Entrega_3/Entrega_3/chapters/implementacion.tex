@@ -1,26 +1,28 @@
 \section{Implementaci\'on y herramientas}
 
-La implementaci\'on se desarroll\'o en Python 3.11 y qued\'o organizada en tres
-notebooks finales, ejecutados en orden:
+La implementaci\'on se desarroll\'o en Python 3.11. Los notebooks de la Entrega
+2 se mantuvieron como antecedente metodol\'ogico, pero la versi\'on final de la
+Entrega 3 qued\'o organizada en scripts reproducibles por iteraci\'on. La
+arquitectura final se apoya en tres bloques:
 
 \begin{enumerate}
-    \item \texttt{markowitz\_vs\_benchmark\_rebalanceo\_pandemia.ipynb}:
-    optimiza carteras Markowitz, calcula el benchmark top-20, aplica rebalanceo
-    semestral y compara escenarios con y sin pandemia.
+    \item \texttt{views\_v1\_plus/}: ejecuta la calibraci\'on independiente de
+    cada \textit{view}, la validaci\'on rolling de tres horizontes y la
+    simulaci\'on P4 limpia con 2\,000 trayectorias por combinaci\'on.
 
-    \item \texttt{black\_litterman.ipynb}: construye portafolios
-    Black-Litterman usando las mismas m\'etricas y perfiles, con views de
-    momentum, desempleo, momentum top-20 a 6 meses y momentum top-20/bottom-20
-    a 1 a\~no.
+    \item \texttt{generar\_informes\_views\_v1\_plus.py}: consolida los
+    resultados de las cuatro \textit{views}, calcula la mejora de Score P4
+    promedio y por mediana frente a Markowitz base, y exporta tablas y figuras
+    comparativas.
 
-    \item \texttt{p4\_montecarlo\_recomendador\_portafolios.ipynb}: usa los
-    KPIs anteriores como insumo y simula 5\,000 trayectorias para las 180
-    combinaciones evaluadas.
+    \item \texttt{08\_panoramas\_retorno/}: toma la \textit{view} ganadora
+    momentum general ya calibrada y re-simula P4 bajo panoramas desfavorable,
+    neutro y favorable, manteniendo fija la volatilidad base.
 \end{enumerate}
 
 El c\'odigo computacional se encuentra disponible en el
 \href{https://github.com/Psacevedo/Capstone.git}{repositorio GitHub del proyecto}.
-El Anexo N°4 documenta la estructura de estos notebooks, los archivos CSV
+El Anexo N°4 documenta la estructura de estos desarrollos computacionales, los archivos CSV
 generados y la relaci\'on entre c\'odigo, supuestos, KPIs y resultados
 experimentales.
 
@@ -30,7 +32,7 @@ simulaci\'on, \textbf{CVXPY} para resolver los problemas de optimizaci\'on,
 \textbf{Matplotlib} para gr\'aficos, y \textbf{Hashlib} para semillas
 deterministas en Monte Carlo.
 
-La trazabilidad se asegura mediante carpetas \texttt{outputs/} por notebook.
+La trazabilidad se asegura mediante carpetas \texttt{outputs/} por m\'odulo.
 Cada etapa exporta CSV con pesos, KPIs, validaciones, rankings o simulaciones,
 y esos archivos son los que alimentan las tablas y figuras del informe. Adem\'as,
 los notebooks incluyen checklists finales que verifican archivos esperados,
@@ -39,32 +41,34 @@ cr\'iticas.
 
 \section{Pipeline de la Entrega 3}
 
-La tercera fase a\~nade cinco bloques computacionales al pipeline, ejecutados
-en el siguiente orden:
+La tercera fase organiza el pipeline en torno a la calibraci\'on independiente
+de cada \textit{view} y a una \'unica regla de abandono. Para cada una de las
+cuatro \textit{views} se ejecuta el script
+\texttt{validacion\_<view>\_v1\_plus.py} (en la carpeta
+\texttt{views\_v1\_plus/}), que internamente:
 
 \begin{enumerate}
-    \item \texttt{calibracion\_secuencial\_bl.py}: ejecuta la calibraci\'on en
-    cinco etapas sobre $\mathcal{H}_1$ con validaci\'on en $\mathcal{H}_2$,
-    congelando la mejor configuraci\'on de hiperpar\'ametros BL.
+    \item \textbf{Calibra} la \textit{view} de forma independiente en cinco
+    etapas sobre $\mathcal{H}_1$, con validaci\'on en $\mathcal{H}_2$,
+    congelando su propia configuraci\'on de hiperpar\'ametros BL.
 
-    \item \texttt{validacion\_3h\_rolling\_bl.py}: aplica validaci\'on rolling
-    de tres horizontes sobre la configuraci\'on congelada, generando m\'etricas
-    de Sharpe, drawdown y din\'amica de portafolio para todas las ventanas.
+    \item \textbf{Valida} con ventanas rolling de tres horizontes, generando
+    m\'etricas de Sharpe, drawdown y din\'amica de portafolio (turnover,
+    $N_{\text{eff}}$, HHI) por ventana, perfil y escenario.
 
-    \item \texttt{simulacion\_comisiones\_k.ipynb}: ejecuta la simulaci\'on de
-    sensibilidad de $K\%$, evaluando 8 valores de comisi\'on $\times$ 4
-    metodolog\'ias $\times$ 5 perfiles con 5\,000 trayectorias Monte Carlo.
-
-    \item \texttt{simulacion\_lambda\_multiobjetivo.ipynb}: eval\'ua 11
-    valores de $\lambda$ bajo el $K$ \'optimo, construyendo la frontera de
-    Pareto cliente vs.\ empresa.
-
-    \item \texttt{generar\_informes\_probabilidad\_abandono.py}: ejecuta la
-    comparaci\'on de tres modelos de abandono (v1, v1$+$, v2) bajo las
-    cuatro familias de \textit{views} con la configuraci\'on BL calibrada.
+    \item \textbf{Simula} la evaluaci\'on econ\'omica P4 en el horizonte de test
+    limpio $\mathcal{H}_3$, con 2\,000 trayectorias por combinaci\'on, abandono
+    semanal (\texttt{views\_v1\_plus}) y utilidad de FinPUC por comisi\'on
+    mensual de 0,5\% sobre el saldo activo administrado.
 \end{enumerate}
 
-Todos los notebooks y scripts utilizan las mismas librer\'ias que la Entrega
-2 (Pandas, NumPy/SciPy, CVXPY, Matplotlib, Hashlib), y los outputs se organizan
-en carpetas \texttt{outputs/} por m\'odulo, manteniendo la trazabilidad del
+Finalmente, \texttt{generar\_informes\_views\_v1\_plus.py} consolida los
+\textit{outputs} de las cuatro \textit{views}, comparando cada metodolog\'ia
+Black-Litterman calibrada contra el caso base Markowitz y produciendo las
+tablas y figuras agregadas (mejora de Sharpe y de Score P4 ---en promedio y
+mediana---, abandono, clientes retenidos y utilidad por saldo).
+
+Todos los scripts utilizan las mismas librer\'ias que la Entrega 2 (Pandas,
+NumPy/SciPy, CVXPY, Matplotlib, Hashlib), y los \textit{outputs} se organizan en
+carpetas \texttt{outputs/} por m\'odulo, manteniendo la trazabilidad del
 proyecto.

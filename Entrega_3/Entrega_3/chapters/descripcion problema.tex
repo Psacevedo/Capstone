@@ -10,27 +10,33 @@ La gesti\'on de inversiones requiere asignar capital entre m\'ultiples activos c
 % ============================================================================
 \section{Ciclo operacional}
 
-El sistema opera en dos escalas temporales. A nivel de optimizaci\'on, los
-pesos del portafolio se recalculan cada semestre (126 d\'ias h\'abiles bursátil) mediante
-rebalanceo: se reestiman los par\'ametros $\mu$ y $\Sigma$ con la ventana
-hist\'orica acumulada hasta ese punto y se resuelve nuevamente el problema de
-optimizaci\'on.
+El sistema opera en dos escalas temporales. En primer lugar, las
+recomendaciones de inversi\'on se actualizan de forma \textbf{semestral}
+(126 d\'ias h\'abiles burs\'atiles). En cada semestre se recalibran los
+par\'ametros $\mu$ y $\Sigma$ con la informaci\'on hist\'orica disponible hasta
+ese punto y se obtiene una nueva recomendaci\'on de portafolio para cada perfil
+de riesgo.
 
-A nivel de simulaci\'on del cliente (Monte Carlo P4), el sistema eval\'ua
-semanalmente durante 260 semanas (5 a\~nos) el comportamiento del
-inversionista. Cada semana, el cliente puede aceptar la recomendaci\'on vigente
-con probabilidad $P_2(x)$ o rechazarla. Si acepta, se ejecuta la
-transacci\'on y la empresa cobra una comisi\'on proporcional $k\% = 1\%$ sobre
-el monto transado. Si la p\'erdida acumulada del cliente supera la tolerancia
-de su perfil, existe una probabilidad $P_1(x)$ de que retire sus fondos de la
-plataforma.
+En segundo lugar, el comportamiento del cliente se eval\'ua \textbf{semanalmente}
+durante el horizonte de simulaci\'on de 260 semanas (5 a\~nos). Esta separaci\'on
+es importante porque el cliente no necesariamente espera hasta el siguiente
+rebalanceo para abandonar la plataforma: si durante las semanas intermedias su
+experiencia acumulada empeora y supera los umbrales definidos por su perfil,
+puede activarse la probabilidad de abandono semanal.
+
+La utilidad de FinPUC se calcula a partir del saldo administrado de los clientes
+que permanecen activos. La empresa no cobra una comisi\'on por rebalanceo ni por
+cada transacci\'on ejecutada; en cambio, cobra una comisi\'on mensual equivalente
+al \textbf{0,5\% del saldo activo administrado}. Por lo tanto, la sostenibilidad
+del negocio depende de dos elementos: que el cliente obtenga buenos retornos y
+que permanezca en la plataforma con saldo administrado.
 
 % ============================================================================
 % 2.3 Perfiles de riesgo
 % ============================================================================
 \section{Perfiles de riesgo}
 
-Se consideran cinco perfiles de riesgo definidos por una volatilidad anual máxima de 8\%, 12\%, 18\%, 28\% y 40\%, correspondientes a perfiles muy conservador, conservador, neutro, arriesgado y muy arriesgado, respectivamente.
+Se consideran cinco perfiles de riesgo definidos por una tolerancia m\'axima de p\'erdida de 0\%, 5\%, 15\%, 30\% y 40\%, correspondientes a perfiles muy conservador, conservador, neutro, arriesgado y muy arriesgado, respectivamente.
 
 % ============================================================================
 % 2.4 Formulación del problema
@@ -45,7 +51,12 @@ del capital a cada una de las $n = 601$ acciones del universo.
 
 \subsection{Objetivos}
 
-El problema busca maximizar simultáneamente el retorno esperado del cliente ($\mu^\top w$) y las utilidades por comisiones generadas por las transacciones aceptadas.
+El objetivo principal del recomendador es \textbf{maximizar el retorno esperado
+del cliente} ($\mu^\top w$). La utilidad de FinPUC no forma parte de la funci\'on
+objetivo: se mide \emph{a posteriori} como consecuencia del saldo activo
+administrado de los clientes que permanecen en la plataforma. Esta separaci\'on
+evita que el sistema recomiende portafolios que sacrifiquen el retorno del
+cliente para inflar artificialmente la utilidad de la empresa.
     
 \subsection{Restricciones}
 \begin{itemize}
@@ -127,49 +138,28 @@ correlaciones de estr\'es y volatilidad extrema. Cualquier diferencia en
 resultados entre ambos escenarios se interpreta como efecto de la
 informaci\'on usada para calibrar, no como diferencias de mercado futuro.
 
-\subsection{Problema de negocio: comisi\'on \'optima y balance cliente-empresa}\label{sec:problema_negocio}
+\subsection{Problema de negocio: retorno del cliente y sostenibilidad por saldo administrado}\label{sec:problema_negocio}
 
-La Entrega 2 del proyecto fij\'o la comisi\'on en $K = 1\%$ sobre el monto
-transado y evalu\'o las alternativas mediante un Score P4 que suma linealmente
-riqueza del cliente y utilidad de la empresa, ponderando ambas con igual peso.
-Esta formulaci\'on deja dos preguntas abiertas que la presente fase aborda.
+La fase actual del proyecto busca determinar qu\'e metodolog\'ia de
+recomendaci\'on entrega el mejor desempe\~no para el cliente bajo distintos
+perfiles de riesgo. El objetivo principal es maximizar el retorno esperado del
+cliente, considerando que una mejor experiencia de inversi\'on deber\'ia reducir
+la probabilidad de abandono y aumentar el saldo administrado activo en la
+plataforma.
 
-En primer lugar, la tasa de comisi\'on $K\%$ determina simult\'aneamente la
-utilidad de FinPUC y la riqueza neta del cliente. Un $K$ alto genera m\'as
-ingresos por transacci\'on, pero reduce el capital invertido y puede elevar la
-tasa de retiro si el cliente percibe que la plataforma es demasiado costosa.
-Un $K$ bajo favorece al cliente pero compromete la sostenibilidad financiera
-de la plataforma. La pregunta central es: ¿cu\'al es el valor de $K$ que
-maximiza el Score P4, balanceando riqueza del cliente, utilidad de la empresa y
-retenci\'on?
+A diferencia de versiones anteriores, la utilidad de FinPUC no se modela como
+una comisi\'on por transacci\'on ni como una comisi\'on de rebalanceo. La empresa
+obtiene ingresos mediante una comisi\'on mensual fija equivalente al 0,5\% del
+saldo activo administrado. Por esta raz\'on, la utilidad de FinPUC depende
+directamente de la capacidad del sistema para mantener clientes activos y con
+saldos mayores en el tiempo.
 
-En segundo lugar, el Score P4 original asigna el mismo peso a la riqueza del
-cliente y a la utilidad de la empresa. En la pr\'actica, FinPUC podr\'ia
-priorizar uno u otro objetivo seg\'un su estrategia de negocio. Para
-formalizar esta decisi\'on, se introduce un par\'ametro de balance
-$\lambda \in [0,1]$ que pondera:
-\begin{equation}
-\text{Score}_{\lambda} = \lambda \cdot f_1(w) + (1-\lambda) \cdot f_2(w),
-\end{equation}
-donde $f_1(w)$ es el retorno esperado del cliente (normalizado) y $f_2(w)$ es
-la utilidad esperada de FinPUC (normalizada). Con $\lambda = 1$, la plataforma
-optimiza exclusivamente el retorno del cliente; con $\lambda = 0$, solo su
-propia utilidad. La pregunta es: ¿qu\'e valor de $\lambda$ entrega el mejor
-desempe\~no conjunto seg\'un el Score P4?
+El problema central es entonces: ¿qu\'e metodolog\'ia de recomendaci\'on
+maximiza el retorno del cliente, mantiene controlada la probabilidad de abandono
+semanal y permite sostener una mayor base de saldo activo administrado?
 
-La respuesta a ambas preguntas requiere (a) calibrar el modelo Black-Litterman
-para que las proyecciones de Monte Carlo reflejen la mejor configuraci\'on
-posible de hiperpar\'ametros, (b) evaluar la sensibilidad del Score P4 a $K$ y
-$\lambda$ bajo esa configuraci\'on, y (c) comparar distintas
-\textit{views} y modelos de abandono para asegurar que la recomendaci\'on final
-es robusta a la elecci\'on de estos componentes.
-
-\subsection{Riesgos y limitaciones de los datos}
-
-\begin{itemize}
-    \item Posible sesgo de supervivencia por exigir historia larga y alta capitalización.
-    \item Sobrerrepresentación del sector financiero en el universo final.
-    \item Tratamiento alternativo del periodo 2020--2022 mediante escenarios con y sin pandemia.
-    \item Diferencias entre retornos usados en filtrado y análisis final.
-    \item Pérdida de observaciones por uso de \texttt{join="inner"}.
-\end{itemize}
+Para responder esta pregunta se comparan el caso base \textbf{Markowitz} y las
+metodolog\'ias basadas en Black-Litterman con \textit{views} calibradas de forma
+independiente. La comparaci\'on se realiza por perfil de riesgo, considerando
+retorno, riqueza terminal, abandono semanal y utilidad acumulada para FinPUC por
+saldo administrado activo.

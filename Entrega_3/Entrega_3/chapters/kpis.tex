@@ -29,7 +29,7 @@ Los KPIs se definieron para decidir qu\'e combinaci\'on de t\'ecnica,
     carteras con p\'erdidas extremas demasiado severas.
 
     \item \textbf{Riqueza terminal esperada:} valor final promedio desde
-    $C_0 = 1\,000$ USD en las 5\,000 simulaciones Monte Carlo. Traduce el
+    $C_0 = 1\,000$ USD en las 2\,000 simulaciones Monte Carlo por combinaci\'on. Traduce el
     desempe\~no financiero a una cifra monetaria para el cliente.
 
     \item \textbf{Probabilidad de ganancia:} proporci\'on de simulaciones en
@@ -41,36 +41,65 @@ Los KPIs se definieron para decidir qu\'e combinaci\'on de t\'ecnica,
     Afecta la decisi\'on porque reduce la continuidad del cliente y las
     comisiones futuras.
 
-    \item \textbf{Utilidad por comisiones:} ingreso esperado de FinPUC con
-    comisi\'on $k = 1\%$, incluyendo comisi\'on inicial y comisiones por
-    recomendaciones aceptadas. Mide el atractivo de la alternativa para la
-    empresa.
+    \item \textbf{Utilidad de FinPUC por saldo administrado:} ingreso esperado
+    de la empresa, calculado como una comisi\'on mensual de 0,5\% sobre el saldo
+    activo administrado de los clientes que permanecen en la plataforma. No
+    incluye comisiones por transacci\'on ni por rebalanceo. Mide el atractivo de
+    la alternativa para la empresa como consecuencia de la retenci\'on.
 
-    \item \textbf{Tasa de aceptaci\'on de recomendaciones:} proporci\'on de
-    recomendaciones aceptadas seg\'un $P_2$. Una tasa baja indica que la cartera
-    no supera el umbral de atractivo del perfil, reduciendo rotaci\'on y utilidad.
+    \item \textbf{Clientes retenidos / saldo activo administrado:} n\'umero de
+    clientes que permanecen activos al final del horizonte y saldo agregado bajo
+    administraci\'on. Como la comisi\'on se cobra sobre el saldo activo, una
+    mayor retenci\'on se traduce directamente en mayor utilidad para FinPUC.
 
-    \item \textbf{Score P4 con $K$ variable:}
+    \item \textbf{Score P4:}
     \begin{equation}
     \label{eq:score_p4}
-    \text{Score}_{P4} =
-    \mathbb{E}[\text{Riqueza terminal}]
-    + \mathbb{E}[\text{Utilidad empresa}(K)]
-    - C_0 \cdot \text{Tasa de retiro}(K).
+    \text{ScoreP4}_{v,m,i}
+    =
+    \bar{W}_{v,m,i}
+    +
+    \bar{U}_{v,m,i}
+    -
+    C_0 r_{v,m,i}.
     \end{equation}
-    Generaliza el Score P4 de la Entrega 2 haciendo expl\'icita la dependencia
-    en $K$ tanto de la utilidad como de la tasa de retiro. Valores altos de
-    $K$ aumentan la utilidad pero tambi\'en la probabilidad de que el cliente
-    abandone.
+    Para cada \textit{view} $v$, modelo $m$ y combinaci\'on
+    $i=(s,p)$ de escenario hist\'orico y perfil de riesgo, $\bar{W}_{v,m,i}$
+    corresponde a la riqueza terminal media del cliente, $\bar{U}_{v,m,i}$ a
+    la utilidad media acumulada de FinPUC y $r_{v,m,i}$ a la tasa de abandono.
+    Este \'indice resume riqueza del cliente, utilidad por saldo administrado y
+    penalizaci\'on por retiro ($C_0$ por cada cliente que abandona). La utilidad
+    de FinPUC entra como resultado \emph{ex post}; no forma parte del
+    optimizador de portafolios.
 
-    \item \textbf{Score multiobjetivo:}
+    Para comparar cada \textit{view} Black-Litterman contra Markowitz base se
+    calcula, en la misma combinaci\'on escenario--perfil, la mejora relativa:
     \begin{equation}
-    S_\lambda = \lambda \cdot \tilde{f}_1 + (1-\lambda) \cdot \tilde{f}_2,
+    \label{eq:delta_score_p4}
+    \Delta_{v,i}
+    =
+    \frac{
+    \text{ScoreP4}_{v,BL,i}
+    -
+    \text{ScoreP4}_{v,MK,i}
+    }{
+    |\text{ScoreP4}_{v,MK,i}|
+    }.
     \end{equation}
-    donde $\tilde{f}_1$ y $\tilde{f}_2$ son las versiones normalizadas
-    (min-max) del retorno esperado del cliente y la utilidad de la empresa,
-    respectivamente. Mide el desempe\~no conjunto bajo una prioridad
-    expl\'icita $\lambda$.
+    La m\'etrica final robusta de cada \textit{view} se obtiene como la mediana
+    de estas mejoras relativas:
+    \begin{equation}
+    \label{eq:score_p4_mediana}
+    \text{ScoreMediana}_{v}
+    =
+    \operatorname{mediana}_{i \in S \times P}
+    \left(\Delta_{v,i}\right).
+    \end{equation}
+    La mediana mide el desempe\~no t\'ipico de la \textit{view} frente a
+    Markowitz y reduce el efecto de observaciones extremas, especialmente
+    perfiles muy arriesgados en escenarios con pandemia. Por ello, el informe
+    reporta el Score P4 promedio como medida de potencial econ\'omico y el
+    Score P4 por mediana como criterio principal de robustez comparativa.
 
     \item \textbf{Mejora de Sharpe $\Delta$Sharpe:} diferencia entre el Sharpe
     de un portafolio Black-Litterman calibrado y el Sharpe del Markowitz base

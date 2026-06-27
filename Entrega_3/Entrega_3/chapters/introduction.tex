@@ -16,15 +16,14 @@ del curso Taller de Investigaci\'on Operativa (ICS2122) de la Pontificia
 Universidad Cat\'olica de Chile. La fase anterior estableci\'o las tres capas
 metodol\'ogicas (Markowitz, Black-Litterman con cuatro variantes de
 \textit{views} y simulaci\'on Monte Carlo), valid\'o su desempe\~no fuera de
-muestra, y dej\'o identificadas dos preguntas de negocio abiertas: (1) la
-comisi\'on $K = 1\%$ se fij\'o como supuesto sin evidencia de optimalidad, y
-(2) el trade-off entre retorno del cliente y utilidad de la empresa se
-resolvi\'o impl\'icitamente en el Score P4 sin un par\'ametro expl\'icito de
-balance. La presente fase aborda ambas preguntas mediante calibraci\'on
-secuencial del modelo Black-Litterman, optimizaci\'on del porcentaje de
-comisi\'on $K\%$, determinaci\'on del par\'ametro multiobjetivo $\lambda$, y
-comparaci\'on sistem\'atica de \textit{views} y modelos de abandono bajo un
-protocolo de validaci\'on de tres horizontes.
+muestra. La presente fase redefine el problema de negocio en torno a un objetivo
+\'unico: maximizar el retorno esperado del cliente, midiendo la utilidad de
+FinPUC \emph{a posteriori} como consecuencia del saldo activo administrado, sobre
+el que se cobra una comisi\'on mensual fija de 0,5\%. Para responder cu\'al
+metodolog\'ia logra mejor este objetivo, esta fase calibra de forma independiente
+cada \textit{view} del modelo Black-Litterman, las compara contra el caso base
+Markowitz bajo un \'unico modelo de abandono semanal, y eval\'ua el resultado por
+perfil de riesgo mediante un protocolo de validaci\'on de tres horizontes.
 
 El sistema opera en dos escalas temporales complementarias. A nivel de
 optimizaci\'on, los pesos del portafolio se recalculan cada semestre (126

@@ -39,8 +39,10 @@ implementaci\'on pr\'actica del modelo, destacando su capacidad para generar
 portafolios intuitivamente razonables sin restricciones artificiales de peso.
 Idzorek \cite{idzorek2005} extendi\'o el marco proponiendo m\'etodos para
 calibrar la confianza de cada \textit{view}, problema que en FinPUC se aborda
-fijando $c = 0.50$ para las \textit{views} de momentum y $c = 0.35$ para la
-de desempleo.
+mediante calibraci\'on secuencial independiente. La configuraci\'on final
+congela una confianza espec\'ifica por familia de \textit{view}: momentum
+general, momentum top/bottom 1Y y momentum top market-cap 6M quedan con
+$c=0.80$, mientras que desempleo macro queda con $c=0.50$.
 
 \subsection{Estimaci\'on de covarianzas y medidas de riesgo}
 
@@ -69,9 +71,9 @@ Rossi \cite{dacunto2019} documentaron c\'omo la automatizaci\'on ha
 democratizado el acceso a estrategias de inversi\'on, permitiendo
 recomendaciones personalizadas a bajo costo operacional. FinPUC se enmarca en
 esta l\'inea, con la particularidad de que incorpora expl\'icitamente el
-comportamiento del cliente (funciones $P_1$ y $P_2$) y la utilidad de la
-empresa (comisiones $k\%$) como variables del modelo, lo que va m\'as all\'a
-de la optimizaci\'on financiera pura.
+comportamiento del cliente (probabilidad de abandono semanal) y la utilidad de la
+empresa (comisi\'on mensual sobre el saldo administrado) como variables del
+modelo, lo que va m\'as all\'a de la optimizaci\'on financiera pura.
 
 \subsection{Fortalezas y debilidades de la metodolog\'ia seleccionada}
 
@@ -79,9 +81,9 @@ La combinaci\'on de Black-Litterman con Monte Carlo resulta adecuada para el pro
 
 Otra fortaleza es que el modelo permite incorporar \textit{views} de forma controlada. En vez de reemplazar completamente el prior de mercado, las se\~nales de momentum, desempleo o capitalizaci\'on ajustan los retornos esperados seg\'un su nivel de confianza. Luego, Monte Carlo traduce esos portafolios a escenarios desfavorable, neutro y favorable, permitiendo medir riqueza terminal, retiro del cliente y utilidad para FinPUC sin depender solo de una m\'etrica financiera.
 
-La principal debilidad es que la calidad del resultado depende directamente de la calidad de las \textit{views}. En particular, la view de desempleo se modela con un supuesto fijo y no con una serie macro observada, lo que limita su validez predictiva. Adem\'as, par\'ametros como $\tau = 0.05$ y la matriz $\Omega = P\tau\Sigma P^\top / c$ requieren sensibilidad adicional, porque cambios en la confianza asignada a las views pueden modificar el ranking final.
+La principal debilidad es que la calidad del resultado depende directamente de la calidad de las \textit{views}. En particular, la view de desempleo se modela con un supuesto fijo y no con una serie macro observada, lo que limita su validez predictiva. Adem\'as, par\'ametros como $\tau$, $q_{\text{scale}}$ y la matriz $\Omega = P\tau\Sigma P^\top / c$ requieren calibraci\'on y sensibilidad, porque cambios en la confianza asignada a las views pueden modificar el ranking final.
 
-Finalmente, la simulaci\'on Monte Carlo asume retornos normales, aunque el an\'alisis distribucional rechaza normalidad en todos los activos. Esto puede subestimar eventos extremos y generar tasas de retiro demasiado optimistas. Tambi\'en queda pendiente incorporar costos de transacci\'on en la optimizaci\'on, ya que actualmente aparecen solo como comisiones en P4. Sin esa penalizaci\'on, algunas carteras podr\'ian verse atractivas en el modelo pero ser menos eficientes en una implementaci\'on real con turnover alto.
+Finalmente, la simulaci\'on Monte Carlo asume retornos normales, aunque el an\'alisis distribucional rechaza normalidad en todos los activos. Esto puede subestimar eventos extremos y generar tasas de retiro demasiado optimistas. Adem\'as, los costos de transacci\'on no se incorporan como penalizaci\'on dentro de la optimizaci\'on; por ahora se discuten a trav\'es de m\'etricas operacionales como turnover. Sin esa penalizaci\'on, algunas carteras podr\'ian verse atractivas en el modelo pero ser menos eficientes en una implementaci\'on real con rotaci\'on alta.
 
 
 % ============================================================================
@@ -96,11 +98,10 @@ segunda extiende Markowitz con el modelo Black-Litterman, que incorpora un
 prior de equilibrio de mercado y \textit{views} cuantitativas. La tercera capa
 es una simulaci\'on Monte Carlo que traduce las m\'etricas financieras de las
 capas anteriores en proyecciones de riqueza del cliente y utilidad de la
-empresa. Adicionalmente, un benchmark equiponderado funciona como caso base
-independiente de par\'ametros estimados. En total, el sistema compara seis
-t\'ecnicas: Equiponderado, Markowitz, y cuatro variantes de Black-Litterman
-(momentum general, momentum por capitalizaci\'on a 6 meses, momentum por
-capitalizaci\'on a 1 a\~no, y desempleo macro).
+empresa. En total, el sistema compara cinco metodolog\'ias: Markowitz como caso
+base, y cuatro variantes de Black-Litterman (momentum general, momentum por
+capitalizaci\'on a 6 meses, momentum por capitalizaci\'on a 1 a\~no, y desempleo
+macro).
 
 % ============================================================================
 % 4.2 Estimación de parámetros
@@ -221,7 +222,8 @@ $\Omega \in \mathbb{R}^{k \times k}$, el retorno esperado posterior es:
 \left(P\,\tau\,\Sigma\, P^\top + \Omega\right)^{-1}
 (Q - P\,\pi)
 \end{equation}
-con $\tau = 0.05$. La covarianza posterior se calcula como:
+donde $\tau$ controla la incertidumbre del prior y se calibra de forma
+independiente por \textit{view}. La covarianza posterior se calcula como:
 \begin{equation}
 \Sigma_{\text{BL}} = (1+\tau)\,\Sigma
 - \tau^2\,\Sigma\, P^\top
@@ -250,10 +252,10 @@ Tabla~\ref{tab:views_config} resume su configuraci\'on.
 \toprule
 View & Tipo & Lookback & Long & Short & Confianza & Universo \\
 \midrule
-Momentum & Endógena & 252 días & 20 & 20 & 0.50 & 601 activos \\
-Momentum Top20 6M & Market-cap & 126 días & 10 & 10 & 0.50 & Top 20 \\
-Momentum Top20-Bottom20 1Y & Market-cap & 252 días & 20 & 20 & 0.50 & Top 40 \\
-Desempleo & Macro asumida & 1\,764 días & 466 & 135 & 0.35 & 601 activos \\
+Momentum & Endógena & 252 días & 20 & 20 & 0.80 & 601 activos \\
+Momentum Top20 6M & Market-cap & 126 días & 10 & 10 & 0.80 & Top 20 \\
+Momentum Top20-Bottom20 1Y & Market-cap & 252 días & 20 & 20 & 0.80 & Top 40 \\
+Desempleo & Macro asumida & 1\,764 días & 466 & 135 & 0.50 & 601 activos \\
 \bottomrule
 \end{tabular}}
 \end{table*}
@@ -278,7 +280,7 @@ Financial Services, Basic Materials, Real Estate, Energy) sobre defensivos
 (Healthcare, Consumer Defensive, Utilities, Communication Services). La
 se\~nal es proporcional a la diferencia entre ambas tasas, escalada por
 $\beta_{\text{macro}} = 1.0$ y convertida a retorno diario dividiendo por
-252. La confianza se fija en $c = 0.35$, menor que la de momentum, reflejando
+252. La confianza calibrada queda en $c = 0.50$, menor que la de momentum, reflejando
 que es un supuesto y no una observaci\'on.
 
 \subsubsection{Calibraci\'on de $\Omega$}
@@ -303,47 +305,105 @@ comportamiento completo del sistema recomendador durante 260 semanas (5
 a\~nos), incorporando las decisiones del cliente mediante funciones
 log\'isticas.
 
-\subsection{Funciones de comportamiento del cliente}
+\subsection{Funci\'on de abandono del cliente}
 
-La probabilidad de retiro ante p\'erdidas se modela como:
+El comportamiento del cliente se modela \'unicamente mediante una probabilidad
+de \textbf{abandono semanal}, correspondiente al modelo implementado en
+\texttt{views\_v1\_plus}. Sea $x_t = \max(C_0 - W_t,\, 0)/C_0$ la p\'erdida
+acumulada respecto al capital inicial en la semana $t$ y $\hat{x}$ la tolerancia
+de p\'erdida del perfil. La probabilidad conductual de abandono es:
 \begin{equation}
-P_1(x_1) = \frac{1}{1 + \exp\left(-s\,(x_1 - \hat{x}_1)\right)}
+p_{\text{ab}}(x_t) =
+\begin{cases}
+\dfrac{1}{1 + \exp\!\left(-(x_t - \hat{x})\right)}, & x_t > \hat{x},\\[2mm]
+0, & x_t \leq \hat{x}.
+\end{cases}
 \end{equation}
-donde $x_1 = (C_0 - W_t) / C_0$ es la p\'erdida actual respecto al capital
-inicial, $\hat{x}_1$ es la tolerancia m\'axima del perfil, y $s = 20$ es la
-sensibilidad log\'istica. $P_1$ se activa \'unicamente cuando
-$x_1 > \hat{x}_1$; en caso contrario, la probabilidad de retiro es cero.
+A esta regla se le superpone una restricci\'on de ruina: si la riqueza llega a
+cero ($W_t \leq 0$), el abandono es forzoso. La probabilidad efectiva de
+abandono semanal es entonces:
+\begin{equation}
+p_{\text{abandono}}(x_t) =
+\begin{cases}
+1, & W_t \leq 0,\\
+p_{\text{ab}}(x_t), & W_t > 0.
+\end{cases}
+\end{equation}
 
-La probabilidad de aceptaci\'on de una recomendaci\'on es:
+La aceptaci\'on de recomendaciones s\'i se modela mediante una probabilidad
+log\'istica que compara el retorno anual proyectado con la tolerancia de p\'erdida
+del perfil:
 \begin{equation}
-P_2(x_2) = \frac{1}{1 + \exp\left(-s\,(x_2 - \hat{x}_2)\right)}
+p_{\text{act}} =
+\frac{1}{1+\exp[-(R_{\text{proyectado}}-\hat{x})]}.
 \end{equation}
-donde $x_2$ es la tasa de retorno ofrecida en la recomendaci\'on y
-$\hat{x}_2$ es el umbral de tolerancia al riesgo del perfil.
+Esta probabilidad determina si el cliente adopta la recomendaci\'on inicial y se
+mantiene como probabilidad de aceptaci\'on del rebalanceo cuando se eval\'uan los
+panoramas proyectados. Una vez activo, el cliente permanece en la plataforma
+mientras no se gatille el evento de abandono semanal. Los clientes que no se
+activan no aportan saldo administrado. La probabilidad de abandono debe
+interpretarse como una variable de retenci\'on: a menor abandono, mayor es el
+saldo activo administrado y, por lo tanto, mayor la utilidad esperada de FinPUC.
 
 \subsection{Estructura de la simulaci\'on}
 
-Para cada combinaci\'on de escenario de datos (con/sin pandemia), t\'ecnica
-(6 alternativas), perfil de riesgo (5 niveles) y escenario proyectado
-(desfavorable, neutro, favorable), se ejecutan $N = 5\,000$ simulaciones
-independientes. En total, esto genera $2 \times 6 \times 5 \times 3 = 180$
-combinaciones, cada una con 5\,000 trayectorias.
+Para cada combinaci\'on de escenario de datos (con/sin pandemia), metodolog\'ia
+(Markowitz base y las cuatro \textit{views} de Black-Litterman calibradas) y
+perfil de riesgo (5 niveles), se ejecutan $N = 2\,000$ trayectorias
+independientes de 260 semanas. Cada metodolog\'ia se simula con los KPIs
+provenientes de su propia configuraci\'on calibrada, dentro del protocolo de
+tres horizontes descrito m\'as adelante.
 
-Cada simulaci\'on opera semana a semana. Primero, el cliente decide si acepta la recomendaci\'on inicial mediante $P_2$; si la acepta, invierte $C_0 = 1\,000$ USD y paga una comisi\'on inicial de $k = 1\%$. Luego, en cada semana se simula el retorno del portafolio como $r_{\text{sem}} \sim \mathcal{N}(\mu_{\text{sem}}, \sigma_{\text{sem}}^2)$, calibrado a partir de los KPIs anualizados de los modelos anteriores. Tambi\'en se ofrece una nueva recomendaci\'on semanal: si el cliente la acepta, nuevamente seg\'un $P_2$, se cobra una comisi\'on de $1\%$ sobre el 5\% de la riqueza actual, que representa la fracci\'on de rotaci\'on asumida. Finalmente, si la p\'erdida acumulada respecto de $C_0$ supera la tolerancia definida para el perfil, se eval\'ua el retiro mediante $P_1$. Cuando el cliente retira, la trayectoria se detiene y la riqueza terminal corresponde al valor disponible en ese momento.
+Cada simulaci\'on opera semana a semana. El cliente inicia con
+$C_0 = 1\,000$ USD y se activa mediante $p_{\text{act}}$; en cada semana se
+simula el retorno del portafolio como $r_{\text{sem}} \sim
+\mathcal{N}(\mu_{\text{sem}}, \sigma_{\text{sem}}^2)$, calibrado a partir de los
+KPIs anualizados de la metodolog\'ia. Sobre el saldo activo administrado, FinPUC
+percibe una comisi\'on equivalente al 0,5\% mensual; en la implementaci\'on
+semanal esto se acumula con una tasa semanal equivalente
+$k_{\text{sem}} = 0{,}005 \times 12/52$, de modo que la utilidad de la empresa
+proviene exclusivamente del saldo administrado y no de transacciones o
+rebalanceos. Finalmente, se eval\'ua el abandono semanal seg\'un
+$p_{\text{abandono}}(x_t)$. Cuando el cliente abandona, deja de aportar saldo
+administrado, su trayectoria se detiene y la riqueza terminal corresponde al
+valor disponible en ese momento.
 
 
 \subsection{Escenarios proyectados}
 
-Los tres escenarios se calibran a partir del retorno anualizado base
-$R_{\text{base}}$ y la volatilidad anualizada $\sigma_{\text{base}}$ de cada
-t\'ecnica:
+Los tres panoramas proyectados de retorno se usan como an\'alisis de
+sensibilidad de la simulaci\'on P4, no como una nueva calibraci\'on de
+Black-Litterman ni como un nuevo escenario hist\'orico. Para cada t\'ecnica se
+parte del retorno anualizado base $R_{\text{base}}$ y de la volatilidad
+anualizada $\sigma_{\text{base}}$ ya observados en el test limpio:
 \begin{align}
 R_{\text{favorable}} &= R_{\text{base}} + 0.5\,\sigma_{\text{base}} \\
 R_{\text{neutro}} &= R_{\text{base}} \\
 R_{\text{desfavorable}} &= R_{\text{base}} - 0.5\,\sigma_{\text{base}}
 \end{align}
 Esto genera un abanico sim\'etrico de $\pm 0.5\sigma$ alrededor del caso
-base.
+base. La volatilidad proyectada se mantiene fija:
+\begin{equation}
+\sigma_{\text{proyectada}} = \sigma_{\text{base}}.
+\end{equation}
+
+En cada panorama, la simulaci\'on semanal utiliza el retorno proyectado para
+calibrar la media semanal:
+\begin{equation}
+\mu_{\text{sem}} = (1+R_{\text{proyectado}})^{1/52}-1,
+\qquad
+\sigma_{\text{sem}} = \frac{\sigma_{\text{base}}}{\sqrt{52}}.
+\end{equation}
+La activaci\'on inicial del cliente tambi\'en usa el retorno proyectado, de modo
+que una mayor recompensa esperada aumenta la disposici\'on a aceptar el riesgo
+del portafolio:
+\begin{equation}
+p_{\text{act}} =
+\frac{1}{1+\exp[-(R_{\text{proyectado}}-\hat{x})]}.
+\end{equation}
+La probabilidad de abandono semanal, la restricci\'on de ruina y la comisi\'on
+de FinPUC sobre saldo administrado permanecen sin cambios frente a la
+simulaci\'on base.
 
 \subsection{Reproducibilidad}
 
@@ -422,35 +482,41 @@ dentro de $\mathcal{H}_1$ y validada en $\mathcal{H}_2$ antes de congelar la
 decisi\'on y avanzar. Las etapas son:
 
 \begin{enumerate}
-    \item \textbf{Stage 1 --- Familia de \textit{view}:} Se prueban cuatro
-    familias (desempleo macro, momentum general, momentum top/bottom 1Y,
-    momentum top market-cap 6M). Para cada una se ejecuta Black-Litterman con
-    configuraci\'on base y se selecciona la familia con mayor score de
-    calibraci\'on. El ganador en $\mathcal{H}_1$ fue desempleo macro, con
-    Sharpe medio 0.854 y delta Sharpe 0.159.
+    \item \textbf{Stage 1 --- Calibraci\'on independiente de \textit{views}:}
+    En esta etapa no se selecciona una \'unica familia de \textit{view}
+    ganadora. En cambio, se calibra cada \textit{view} de forma independiente
+    para que cada metodolog\'ia sea evaluada bajo su mejor configuraci\'on
+    posible. Las \textit{views} consideradas son momentum general, desempleo
+    macro y momentum por capitalizaci\'on de mercado. Cada \textit{view}
+    conserva su mejor configuraci\'on propia y pasa as\'i a la etapa de
+    simulaci\'on, de modo que la comparaci\'on final no depende de una
+    selecci\'on prematura, sino de un contraste directo entre metodolog\'ias
+    calibradas bajo el mismo protocolo experimental.
 
-    \item \textbf{Stage 2 --- Estructura de $P$:} Sobre la familia ganadora,
-    se prueban combinaciones de par\'ametros de la matriz de selecci\'on $P$:
-    tasa de desempleo asumida ($U \in \{3\%, 4\%, 5\%\}$) y sensibilidad
-    sectorial ($\beta \in \{1.0, 1.5, 2.0\}$). El ganador fue
-    $U = 4\%$ con $\beta = 1.5$.
+    \item \textbf{Stage 2 --- Estructura de $P$:} Para cada \textit{view} se
+    prueban combinaciones de los par\'ametros de la matriz de selecci\'on $P$
+    propios de su familia (p.\ ej.\ tasa de desempleo asumida y sensibilidad
+    sectorial $\beta$ en la \textit{view} macro; \textit{lookback} y tama\~no
+    \textit{long}/\textit{short} en las de momentum).
 
     \item \textbf{Stage 3 --- Intensidad de $Q$:} Se escala el vector de
     expectativas $Q$ mediante un factor $q_{\text{scale}} \in \{0.5, 1.0, 1.5,
-    2.0\}$. El valor \'optimo fue $q_{\text{scale}} = 1.5$.
+    2.0\}$.
 
     \item \textbf{Stage 4 --- Confianza $\Omega$:} Se prueba la confianza
     $c \in \{0.25, 0.35, 0.50, 0.75, 1.00\}$ en la calibraci\'on de $\Omega$.
     Con mayor $c$, menor es la incertidumbre asignada a la \textit{view} y
-    mayor su influencia en $\mu_{\text{BL}}$. El ganador fue $c = 0.50$.
+    mayor su influencia en $\mu_{\text{BL}}$.
 
     \item \textbf{Stage 5 --- Par\'ametro $\tau$:} Se eval\'ua
-    $\tau \in \{0.05, 0.10, 0.20, 0.50, 1.00\}$. El valor $\tau = 0.20$
-    result\'o \'optimo.
+    $\tau \in \{0.01, 0.05, 0.10, 0.20, 0.50, 1.00\}$.
 \end{enumerate}
 
-La configuraci\'on congelada resultante es: \textit{view} de desempleo macro,
-$U = 4\%$, $\beta = 1.5$, $q_{\text{scale}} = 1.5$, $c = 0.50$, $\tau = 0.20$.
+Cada \textit{view} se congela con su propia configuraci\'on calibrada de forma
+independiente; estas configuraciones se reportan por \textit{view} en el cap\'itulo
+de Resultados. As\'i, no existe una \'unica configuraci\'on global, sino una por
+metodolog\'ia, lo que evita imponer la estructura \'optima de una \textit{view}
+sobre las dem\'as.
 
 \subsection{Mecanismo de puntuaci\'on}
 
@@ -486,113 +552,49 @@ permiten evaluar si la mejora financiera de BL es operacionalmente sostenible
 o viene acompa\~nada de rotaci\'on y concentraci\'on excesivas.
 
 % ============================================================================
-% 4.10 Simulación de sensibilidad de K% (Entrega 3)
+% 4.10 Métricas de desempeño económico (Entrega 3)
 % ============================================================================
-\section{Simulaci\'on de sensibilidad de la comisi\'on $K\%$}
+\section{M\'etricas de desempe\~no econ\'omico}
 
-\subsection{Objetivo}
+En esta versi\'on del modelo no se utiliza una optimizaci\'on multiobjetivo ni
+una b\'usqueda de comisi\'on \'optima. La metodolog\'ia recomendada se
+selecciona a partir del desempe\~no del cliente, medido principalmente por
+retorno esperado y riqueza terminal. La utilidad de FinPUC se calcula como una
+m\'etrica econ\'omica posterior, asociada al saldo activo administrado de los
+clientes que no abandonan la plataforma, aplicando una comisi\'on mensual de
+0,5\% sobre dicho saldo.
 
-El objetivo es determinar el valor de la comisi\'on $K\%$ que maximiza el
-Score P4 del recomendador, entendiendo c\'omo afecta simult\'aneamente la
-riqueza del cliente, la utilidad de FinPUC y la tasa de retiro.
-
-\subsection{Dise\~no experimental}
-
-Se eval\'uan 8 valores de comisi\'on: $K \in \{0.25\%, 0.5\%, 0.75\%,
-1\%, 1.5\%, 2\%, 3\%, 5\%\}$. Para cada $K$, se ejecuta la simulaci\'on Monte
-Carlo completa: 5\,000 trayectorias $\times$ 260 semanas $\times$ 5 perfiles
-$\times$ 4 metodolog\'ias (Equiponderado, Markowitz, M\'inima Varianza, BL
-Momentum General calibrado). Los retornos semanales se simulan como normales
-i.i.d.\ con media y volatilidad provenientes de los KPIs de la Entrega 2,
-usando el escenario proyectado neutro (sin shift $\pm 0.5\sigma$).
-
-La comisi\'on se aplica en dos momentos: (a) comisi\'on inicial de $K\%$ sobre
-$C_0 = 1\,000$ USD al aceptar la primera recomendaci\'on, y (b) comisi\'on de
-$K\%$ sobre el 5\% de la riqueza actual en cada recomendaci\'on aceptada
-posteriormente, donde el 5\% representa la fracci\'on de rotaci\'on asumida.
-
-\subsection{M\'etricas}
-
-Para cada combinaci\'on $(K, \text{metodolog\'ia}, \text{perfil})$ se calculan:
-riqueza terminal media, tasa de retiro media, utilidad empresa media, y el
-Score P4 definido en la Ecuaci\'on~(\ref{eq:score_p4}). El $K$ \'optimo es
-aquel que maximiza el Score P4 promedio sobre todas las metodolog\'ias y
-perfiles.
+El an\'alisis separa entonces dos dimensiones: (a) el objetivo de
+recomendaci\'on, que es maximizar el retorno del cliente, y (b) la m\'etrica de
+negocio, que estima la utilidad de FinPUC a partir del saldo activo
+administrado. Esta separaci\'on evita que el modelo recomiende portafolios que
+sacrifiquen el retorno del cliente para aumentar artificialmente la utilidad de
+la empresa. La comisi\'on se mantiene fija en 0,5\% mensual sobre el saldo
+activo y est\'a definida ex\'ogenamente para esta fase, por lo que no se
+eval\'uan escenarios alternativos de comisi\'on.
 
 % ============================================================================
-% 4.11 Optimización multiobjetivo de λ (Entrega 3)
+% 4.11 Comparación de modelos de abandono y views (Entrega 3)
 % ============================================================================
-\section{Optimizaci\'on multiobjetivo de $\lambda$}
+\section{Comparaci\'on de \textit{views} bajo un \'unico modelo de abandono}
 
-\subsection{Objetivo}
+\subsection{Modelo de probabilidad de abandono}
 
-Determinar el par\'ametro de balance $\lambda \in [0,1]$ que optimiza el
-desempe\~no conjunto del recomendador, ponderando expl\'icitamente el retorno
-del cliente y la utilidad de la empresa.
-
-\subsection{Formulaci\'on}
-
-Para cada $\lambda$, se define el score compuesto:
-\begin{equation}
-\label{eq:lambda_score}
-S_\lambda(w) = \lambda \cdot f_1(w) + (1-\lambda) \cdot f_2(w),
-\end{equation}
-donde $f_1(w) = \mathbb{E}[w^\top r]$ es el retorno esperado anualizado del
-portafolio y $f_2(w) \propto K \cdot P_2(\text{return}) \cdot
-(1 - P_1(\text{loss}))$ es la utilidad esperada de FinPUC. Ambas funciones se
-normalizan mediante \textit{min-max scaling} al rango $[0,1]$ antes de
-combinar, usando los valores m\'inimos y m\'aximos observados en todo el
-experimento.
-
-\subsection{Dise\~no experimental}
-
-Se eval\'uan 11 valores de $\lambda$ en grilla discreta:
-$\lambda \in \{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0\}$.
-Cada $\lambda$ se prueba con el $K$ \'optimo determinado en la secci\'on
-anterior y con la metodolog\'ia de mejor Score P4. Para cada $\lambda$, se
-ejecuta Monte Carlo con 5\,000 trayectorias y se calcula el Score P4
-resultante, la riqueza terminal y la utilidad empresa.
-
-Los resultados se presentan como una frontera de Pareto cliente vs.\ empresa,
-donde cada $\lambda$ define un punto en el espacio $\big(f_1(w),
-f_2(w)\big)$. El $\lambda$ \'optimo es aquel que maximiza el Score P4
-observado, y se compara con el $\lambda$ que maximiza un score ponderado que
-asigna igual importancia a riqueza y utilidad normalizadas.
-
-% ============================================================================
-% 4.12 Comparación de modelos de abandono y views (Entrega 3)
-% ============================================================================
-\section{Comparaci\'on de modelos de abandono y \textit{views}}
-
-\subsection{Modelos de probabilidad de abandono}
-
-Se comparan tres versiones del modelo de abandono:
-
-\begin{itemize}
-    \item \textbf{v1:} Modelo base con activaci\'on de $P_1$ por tolerancia de
-    p\'erdida del perfil y $P_2$ por umbral de retorno ofrecido, con
-    sensibilidad $s = 20$.
-
-    \item \textbf{v1$+$:} Extiende v1 incorporando una restricci\'on de ruina
-    homog\'enea para todas las simulaciones: si la riqueza del cliente cae por
-    debajo del 10\% de $C_0$, el abandono es forzoso. Esto homogeniza el
-    tratamiento de escenarios extremos entre \textit{views} y permite aislar
-    el efecto de la calibraci\'on de la \textit{view} de diferencias en la
-    regla de abandono.
-
-    \item \textbf{v2:} Reemplaza el gatillo de p\'erdida respecto a $C_0$ por
-    \textit{drawdown} respecto al m\'aximo hist\'orico de riqueza,
-    representando mejor la percepci\'on de p\'erdida del cliente.
-\end{itemize}
-
-Los tres modelos se eval\'uan bajo el mismo protocolo de validaci\'on de tres
-horizontes, y se comparan en t\'erminos de tasa de retiro, riqueza terminal y
-estabilidad del ranking P4 entre \textit{views}.
+El an\'alisis utiliza un \'unico modelo de probabilidad de abandono semanal,
+correspondiente a la implementaci\'on definida en \texttt{views\_v1\_plus} y
+detallada en la Secci\'on~4.5. No se comparan modelos alternativos de abandono:
+se mantiene una \'unica regla consistente para todas las metodolog\'ias
+evaluadas, de modo que las diferencias de resultado provengan de la
+\textit{view} calibrada y no de reglas de comportamiento distintas. Este modelo
+se aplica semanalmente durante las 260 semanas; si el cliente abandona, deja de
+aportar saldo administrado y, desde ese momento, FinPUC deja de percibir la
+comisi\'on mensual asociada a ese cliente.
 
 \subsection{Comparaci\'on de \textit{views}}
 
-Las cuatro familias de \textit{views} se comparan bajo el modelo de abandono
-v1$+$ y la configuraci\'on BL calibrada:
+Las cuatro familias de \textit{views} se comparan bajo el modelo \'unico de
+abandono semanal y, cada una, con su propia configuraci\'on BL calibrada de
+forma independiente:
 
 \begin{itemize}
     \item \textbf{Desempleo macro:} tasa de desempleo asumida de 4\% frente a

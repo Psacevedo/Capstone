@@ -41,6 +41,13 @@
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{setspace}
+\usepackage{geometry}
+\geometry{
+  top=3 cm,
+  bottom=2.5 cm,
+  left=3cm,
+  right=3cm
+}
 \onehalfspacing
 
 % To make pretty tables
@@ -162,22 +169,22 @@ Diego Benjamín Villalobos Michea}
 \input{./chapters/descripcion problema.tex}
 
 \chapter{Metodología}
-\input{./chapters/Metodología}
+\input{./chapters/Metodología.tex}
 
 \chapter{Supuestos}
-\input{./chapters/supuestos}
+\input{./chapters/supuestos.tex}
 
 \chapter{KPIs}
-\input{./chapters/kpis}
+\input{./chapters/kpis.tex}
 
 \chapter{Caso Base}
-\input{./chapters/casobase}
+\input{./chapters/casobase.tex}
 
 \chapter{Implementación y Herramientas}
-\input{./chapters/implementacion}
+\input{./chapters/implementacion.tex}
 
 \chapter{Resultados y análisis}
-\input{./chapters/resultados}
+\input{./chapters/resultados.tex}
 
   \chapter{Conclusiones}
 \input{./chapters/conclusions.tex}
@@ -224,18 +231,8 @@ Diego Benjamín Villalobos Michea}
 \input{./chapters/ANEXO4.tex}
 
 \cleardoublepage
-\phantomsection\label{anexo:k}
-\chapter*{Anexo N°5: Detalle de la simulación de sensibilidad de $K\%$}
-\input{./chapters/ANEXO5.tex}
-
-\cleardoublepage
-\phantomsection\label{anexo:lambda}
-\chapter*{Anexo N°6: Detalle de la optimización multiobjetivo de $\lambda$}
-\input{./chapters/ANEXO6.tex}
-
-\cleardoublepage
 \phantomsection\label{anexo:calibracion}
-\chapter*{Anexo N°7: Diagnósticos de la calibración secuencial de Black-Litterman}
+\chapter*{Anexo N°5: Diagnósticos de la calibración independiente de Black-Litterman}
 \input{./chapters/ANEXO7.tex}
 
 \cleardoublepage
