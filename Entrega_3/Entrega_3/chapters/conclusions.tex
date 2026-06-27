@@ -1,86 +1,91 @@
 \section{Conclusiones principales}
 
-El proyecto implement\'o y calibr\'o un sistema recomendador de inversiones
-para FinPUC en tres capas metodol\'ogicas (Markowitz, Black-Litterman,
-Monte Carlo P4) y, en esta tercera fase, abord\'o dos preguntas de negocio que
-la Entrega 2 dej\'o abiertas: la determinaci\'on de la comisi\'on \'optima
-$K\%$ y la calibraci\'on expl\'icita del balance $\lambda$ entre retorno del
-cliente y utilidad de la empresa.
+El proyecto implement\'o y calibr\'o un sistema recomendador de inversiones para
+FinPUC en tres capas metodol\'ogicas (Markowitz, Black-Litterman, Monte Carlo
+P4). En esta fase, el objetivo se redefini\'o de forma clara: maximizar el
+retorno esperado del cliente, tratando la utilidad de FinPUC como una
+consecuencia \emph{ex post} del saldo activo administrado, sujeto a una
+comisi\'on mensual de 0,5\% sobre dicho saldo.
 
-\subsection{Calibraci\'on de Black-Litterman}
+El an\'alisis permite concluir que la metodolog\'ia \textbf{Black-Litterman con
+\textit{view} de momentum general calibrada} es la alternativa m\'as conveniente
+para los perfiles \textbf{Arriesgado} y \textbf{Muy arriesgado}, ya que mejora
+el retorno del cliente frente al caso base \textbf{Markowitz} ---con una mejora
+de Score P4 de 85.7\% en promedio (la versi\'on mediana queda pendiente de
+re-ejecuci\'on) y de Sharpe de 5.2\%--- y mantiene una tasa de abandono semanal
+aceptable. Desde la perspectiva del cliente, genera mayor riqueza terminal
+esperada; desde la de FinPUC, la mejora tambi\'en es favorable porque un mayor
+saldo activo administrado se traduce en mayor utilidad por la comisi\'on mensual,
+sin introducir comisiones por transacci\'on ni por rebalanceo.
 
-La calibraci\'on secuencial en cinco etapas sobre tres horizontes estrictamente
-separados permiti\'o seleccionar hiperpar\'ametros sin contaminar el per\'iodo
-de evaluaci\'on. La configuraci\'on congelada (\textit{view} desempleo macro,
-$U=4\%$, $\beta=1.5$, $q_{\text{scale}}=1.5$, $c=0.50$, $\tau=0.20$) entrega
-una mejora de Sharpe de hasta 23.1\% en test P4 limpio para perfiles agresivos
-con pandemia, y es recomendada sobre Markowitz base en el 100\% de las ventanas
-de test. La elecci\'on de la familia de \textit{view} (Stage 1) result\'o ser
-la decisi\'on de mayor impacto en todo el pipeline de calibraci\'on.
+\subsection{Calibraci\'on independiente de \textit{views}}
+
+La calibraci\'on secuencial en cinco etapas se realiz\'o de forma independiente
+para cada \textit{view}, sobre tres horizontes estrictamente separados, evitando
+contaminar el per\'iodo de evaluaci\'on. Cada metodolog\'ia llega a la
+simulaci\'on con su propia configuraci\'on congelada (por ejemplo, momentum
+general con $c=0.80$ y $\tau=0.01$; desempleo macro con $c=0.50$ y $\tau=0.20$),
+de modo que la comparaci\'on final contrasta metodolog\'ias en su mejor versi\'on
+y no depende de una selecci\'on prematura de \textit{view}.
 
 \subsection{Comparaci\'on de \textit{views}}
 
-Entre las cuatro familias evaluadas bajo el modelo de abandono v1$+$, momentum
+Entre las cuatro familias evaluadas bajo el modelo \'unico de abandono, momentum
 general domina en t\'erminos econ\'omicos con una mejora de +85.7\% en Score P4
-frente a Markowitz base y +5.2\% en Sharpe. Sin embargo, esta ventaja conlleva
-mayor turnover (34.6\%), mayor concentraci\'on sectorial (HHI 0.261) y menor
-n\'umero efectivo de activos (94.2). Desempleo macro ofrece la mejor estabilidad
-operacional (turnover 7.3\%, HHI 0.157, $N_{\text{eff}}$ 194.3) pero retrocede
-en Score P4 ($-$10.4\%). Las \textit{views} basadas en capitalizaci\'on de
-mercado muestran deterioro tanto en Sharpe como en Score P4. La recomendaci\'on
-final prioriza momentum general como \textit{view} base, con desempleo macro
-como alternativa defensiva.
+frente a Markowitz base y +5.2\% en Sharpe. Esta ventaja conlleva mayor turnover
+(34.6\%) y concentraci\'on sectorial (HHI 0.261). Desempleo macro ofrece la mejor
+estabilidad operacional (turnover 7.3\%, HHI 0.157) pero retrocede en Score P4
+($-$10.4\%). Las \textit{views} basadas en capitalizaci\'on de mercado muestran
+deterioro tanto en Sharpe como en Score P4. La recomendaci\'on final prioriza
+momentum general como \textit{view} base, con desempleo macro como alternativa
+defensiva para perfiles conservadores.
 
-\subsection{Par\'ametros de negocio}
+\subsection{Abandono y utilidad por saldo}
 
-El an\'alisis de sensibilidad de $K\%$ muestra que el Score P4 crece
-mon\'otonamente con $K$ en el rango evaluado, alcanzando su m\'aximo en
-$K = 5.0\%$ (Score P4 = 1\,874 promedio, USD 1\,810 de riqueza, 31.6\% de
-retiro, USD 380 de utilidad). La tasa de retiro se mantiene estable en torno a
-31.5\% independientemente de $K$, porque los retornos esperados de los
-portafolios son suficientemente altos para absorber la comisi\'on sin
-incrementar significativamente la probabilidad de abandono. El $\lambda$
-\'optimo que maximiza el Score P4 es 0.7, aunque el Score P4 es
-pr\'acticamente insensible a $\lambda$ (rango de solo 13 puntos entre 1\,869 y
-1\,882). La mejor combinaci\'on individual es Markowitz en perfil Muy
-arriesgado con $K=5.0\%$ y $\lambda=0.5$, alcanzando un Score P4 de 3\,026.
+El abandono semanal es marginal una vez que el cliente est\'a invertido: la
+retenci\'on se ubica en torno a 850--870 clientes activos de cada 1\,000 al final
+del horizonte. La utilidad de FinPUC sigue directamente al saldo administrado, de
+modo que las metodolog\'ias que generan mayor riqueza terminal y sostienen la
+retenci\'on producen tambi\'en mayor utilidad (USD~412 para momentum general
+frente a USD~251 de Markowitz base).
 
 \subsection{Validaci\'on y robustez}
 
-La validaci\'on rolling de tres horizontes muestra que BL calibrado agrega
-m\'as valor en perfiles agresivos y escenarios con pandemia, donde la
+La validaci\'on rolling de tres horizontes muestra que Black-Litterman calibrado
+agrega m\'as valor en perfiles agresivos y escenarios con pandemia, donde la
 estimaci\'on hist\'orica de Markowitz es menos confiable. En perfiles
 conservadores y sin pandemia, la mejora es marginal, lo que es consistente con
-que el prior de equilibrio ya est\'a cerca de la soluci\'on \'optima cuando
-los datos son estables. La separaci\'on estricta de horizontes
-$\mathcal{H}_1|\mathcal{H}_2|\mathcal{H}_3$ es una fortaleza metodol\'ogica
-central que deber\'ia mantenerse en cualquier iteraci\'on futura del modelo.
+que el prior de equilibrio ya est\'a cerca de la soluci\'on \'optima cuando los
+datos son estables. La separaci\'on estricta de horizontes
+$\mathcal{H}_1\,|\,\mathcal{H}_2\,|\,\mathcal{H}_3$ es una fortaleza
+metodol\'ogica central que deber\'ia mantenerse en cualquier iteraci\'on futura.
 
 \subsection{Limitaciones}
 
-Las principales limitaciones identificadas son: (a) los KPIs de
-retorno/volatilidad usados en Monte Carlo son fijos y no se re-optimizan para
-cada $K$ o $\lambda$; (b) la distribuci\'on normal subestima eventos extremos,
-lo que probablemente produce estimaciones optimistas de riqueza terminal y tasas
-de retiro; (c) $K$ y $\lambda$ se optimizan secuencialmente, no conjuntamente;
-(d) $\lambda$ se eval\'ua en grilla discreta de 11 puntos; (e) la \textit{view}
-de desempleo usa una tasa fija en lugar de series macroecon\'omicas observadas;
-y (f) el turnover del 5\% es un supuesto no calibrado con datos reales.
+Las principales limitaciones son: (a) los KPIs de retorno/volatilidad usados en
+Monte Carlo son fijos y no se re-optimizan dentro de la simulaci\'on; (b) la
+distribuci\'on normal de los retornos semanales subestima eventos extremos, lo
+que probablemente produce estimaciones optimistas de riqueza terminal; (c) el
+Score P4 se reporta por ahora en su versi\'on promedio, sensible a la cola
+derecha de la riqueza, quedando pendiente la versi\'on mediana; (d) la activaci\'on
+inicial del cliente y la comisi\'on de 0,5\% mensual son supuestos no calibrados
+con datos reales; y (e) la \textit{view} de desempleo usa una tasa fija en lugar
+de series macroecon\'omicas observadas.
 
 \subsection{Trabajo futuro}
 
-Las extensiones prioritarias son: optimizaci\'on conjunta de $K$ y $\lambda$,
-reemplazo de normalidad por t-Student o Johnson SU en Monte Carlo,
-sensibilidad de $s \in \{5, 10, 20, 50\}$, incorporaci\'on de \textit{drawdown}
-como gatillo de $P_1$ (modelo v2), \textit{views} macro con datos observados
-(BLS/FRED), penalizaci\'on de rotaci\'on en la optimizaci\'on, y escenarios
-proyectados asim\'etricos.
+Las extensiones prioritarias son: re-ejecutar la evaluaci\'on econ\'omica con el
+Score P4 basado en mediana, reemplazar la normalidad por t-Student o Johnson SU
+en Monte Carlo, incorporar \textit{drawdown} respecto al m\'aximo de riqueza como
+gatillo de abandono, usar series macro observadas (BLS/FRED) para la \textit{view}
+de desempleo, y penalizar la rotaci\'on en la optimizaci\'on para contener el
+turnover de momentum general.
 
 \section{Carta Gantt: avance y fases restantes}
 
 La Tabla~\ref{tab:plan_trabajo_futuro} resume la Carta Gantt de trabajo
-posterior a esta entrega, diferenciando avance ya completado y tareas
-pendientes para la fase final del proyecto.
+posterior a esta entrega, diferenciando avance ya completado y tareas pendientes
+para la fase final del proyecto.
 
 \begin{table*}[h]
 \centering
@@ -91,28 +96,28 @@ pendientes para la fase final del proyecto.
 \toprule
 Fase & Periodo & Avance actual & Trabajo futuro \\
 \midrule
-Calibraci\'on BL y validaci\'on &
+Calibraci\'on independiente y validaci\'on &
 12 mayo -- 19 junio 2026 &
-Calibraci\'on secuencial 5 etapas, validaci\'on rolling 3 horizontes, comparaci\'on de 4 \textit{views} y 3 modelos de abandono ya implementados. &
-Consolidar resultados de la optimizaci\'on de $K\%$ y $\lambda$, integrar figuras de sensibilidad y completar el ranking final del recomendador. \\
+Calibraci\'on secuencial por \textit{view}, validaci\'on rolling de tres horizontes y comparaci\'on de las cuatro \textit{views} bajo un \'unico modelo de abandono ya implementados. &
+Consolidar la comparaci\'on con el Score P4 mediana y cerrar el ranking final del recomendador. \\
 \addlinespace
 
-Optimizaci\'on de par\'ametros de negocio &
+Modelo de negocio por saldo administrado &
 12 mayo -- 19 junio 2026 &
-Notebooks de sensibilidad de $K\%$ y $\lambda$ implementados y ejecutados. &
-Extraer tablas de resultados, validar convergencia de Monte Carlo y documentar el $K$ y $\lambda$ \'optimos en el informe final. \\
+Comisi\'on de 0,5\% mensual sobre saldo activo y utilidad por retenci\'on implementadas y simuladas. &
+Re-ejecutar la evaluaci\'on econ\'omica con el dataset completo y validar la convergencia de Monte Carlo. \\
 \addlinespace
 
 Mejoras del modelo &
 19 -- 26 junio 2026 &
-Se identificaron limitaciones en normalidad de Monte Carlo, costos de transacci\'on y medici\'on de p\'erdidas. &
-Incorporar distribuciones no normales, modelar costos de transacci\'on como restricci\'on de rotaci\'on y evaluar \textit{drawdown} como criterio de retiro. \\
+Se identificaron limitaciones en normalidad de Monte Carlo, medici\'on de p\'erdidas y robustez del Score P4. &
+Incorporar distribuciones no normales, \textit{drawdown} como gatillo de abandono y Score P4 mediana como m\'etrica principal. \\
 \addlinespace
 
 Cierre del proyecto &
 13 -- 26 junio 2026 &
 Informe 3 en redacci\'on y principales resultados ya consolidados. &
-Preparar la presentaci\'on final, redactar el informe final, documentar el modelo definitivo, ordenar el repositorio GitHub y realizar correcciones finales antes de la entrega del 26 de junio de 2026. \\
+Preparar la presentaci\'on final, documentar el modelo definitivo, ordenar el repositorio GitHub y realizar correcciones finales antes de la entrega. \\
 \bottomrule
 \end{tabular}
 \end{table*}

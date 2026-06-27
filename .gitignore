@@ -60,3 +60,17 @@ Thumbs.db
 
 # ── Project specific ──────────────────────────────────────────────────────────
 .claude/settings.local.json
+
+# ── LaTeX compilation artifacts ───────────────────────────────────────────────
+*.aux
+*.bbl
+*.blg
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.tdo
+*.synctex.gz
+*.fdb_latexmk
+*.fls

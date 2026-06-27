@@ -1,34 +1,28 @@
-This report documents the development, calibration, and business optimization of
-an investment recommendation system for FinPUC, a fictitious financial advisory
+This report documents the development, calibration, and business evaluation of an
+investment recommendation system for FinPUC, a fictitious financial advisory
 platform that generates personalized portfolios for clients in the US stock
-market. The system serves five risk profiles and pursues a dual objective:
-maximizing client expected returns and maximizing firm revenue from transaction
-fees.
+market. The system serves five risk profiles and pursues a single objective:
+maximizing the client's expected return. The firm's revenue is measured
+afterwards, as a consequence of the active managed balance, through a fixed
+monthly fee of 0.5\% on that balance, with no transaction or rebalancing fees.
 
-The investment universe comprises 601 stocks filtered from 1,406 tickers.
-Three methodological layers were implemented over two iterations. First,
-Markowitz mean-variance optimization and four Black-Litterman view variants
-were evaluated as baselines. Then, a sequential calibration framework over
-three temporal horizons (calibration, validation, and clean test) was designed
-to tune the Black-Litterman hyperparameters ($\tau$, $\Omega$, $P$, $Q$)
-without contaminating the evaluation period. A business-parameter layer was
-added to optimize the commission rate $K\% \in \{0.25\%, \dots, 5\%\}$ and the
-multi-objective balance $\lambda \in [0,1]$ between client return and firm
-utility, using 5,000 Monte Carlo trajectories over 260 weeks. Four view
-families and three abandonment probability models (v1, v1$+$, v2) were compared
-under identical validation protocols.
+The investment universe comprises 601 stocks filtered from 1,406 tickers. Three
+methodological layers were implemented: Markowitz mean-variance optimization as
+the base case, four Black-Litterman view families calibrated independently, and a
+Monte Carlo layer that simulates client behavior. Each view is tuned over a
+three-horizon sequential protocol (calibration, validation, and clean test) to
+avoid contaminating the evaluation period. Client behavior is modeled with a
+single weekly abandonment probability; recommendations are issued semiannually
+while abandonment is evaluated weekly.
 
-The sequential calibration converges to an unemployment-macro view with $\tau =
-0.2$ and $\Omega$ confidence of 0.5, yielding a 3\% Sharpe improvement in
-aggressive profiles with pandemic data. Among the views, general momentum
-delivers the largest economic gain ($+85.7\%$ P4 score vs.\ Markowitz base,
-$+5.2\%$ Sharpe) albeit with elevated turnover (34.6\%), while the
-unemployment-macro view provides superior operational stability (7.3\%
-turnover, HHI 0.157). The optimal commission rate and balance parameter are
-identified via sensitivity and Pareto-frontier analysis, and the v1$+$
-abandonment model with homogeneous ruin constraints is selected as the
-recommended configuration for the final recommender.
+Among the calibrated views, general momentum delivers the largest economic gain
+($+85.7\%$ P4 score and $+5.2\%$ Sharpe versus the Markowitz base, average
+figures), albeit with elevated turnover (34.6\%) and sector concentration
+(HHI 0.261), while the unemployment-macro view provides superior operational
+stability (7.3\% turnover, HHI 0.157). The recommended methodology is
+Black-Litterman with the general-momentum view for aggressive profiles, with the
+unemployment-macro view as a defensive alternative for conservative profiles.
 
 \textbf{Keywords:} portfolio optimization, Markowitz, Black-Litterman
-calibration, Monte Carlo simulation, recommender system, multi-objective
-optimization, commission sensitivity, rolling validation, CVXPY.
+calibration, Monte Carlo simulation, recommender system, weekly abandonment,
+managed-balance fee, rolling validation, CVXPY.

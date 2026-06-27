@@ -1,51 +1,53 @@
-\section{Diagn\'osticos de la calibraci\'on secuencial de Black-Litterman}
+\section{Diagn\'osticos de la calibraci\'on independiente de Black-Litterman}
 
-La calibraci\'on secuencial se implementa en \texttt{calibracion\_secuencial\_bl.py}
-y se valida mediante \texttt{validacion\_3h\_rolling\_bl.py}. A continuaci\'on
-se detallan los diagn\'osticos de cada etapa.
+La calibraci\'on se implementa dentro de cada script
+\texttt{validacion\_<view>\_v1\_plus.py} y se consolida con
+\texttt{generar\_informes\_views\_v1\_plus.py}. A diferencia de versiones
+anteriores, no se selecciona una \'unica familia de \textit{view} ganadora: cada
+\textit{view} se calibra de forma independiente y pasa a la etapa de simulaci\'on
+con su mejor configuraci\'on propia.
 
-\subsection{Stage 1: Selecci\'on de familia de \textit{view}}
+\subsection{Etapas de calibraci\'on}
 
-Se evaluaron cuatro familias: desempleo macro, momentum general, momentum
-top/bottom 1Y y momentum top market-cap 6M. Para cada una se ejecut\'o
-Black-Litterman con configuraci\'on base y se midi\'o el Sharpe medio y delta
-Sharpe en $\mathcal{H}_1$. La familia ganadora fue desempleo macro con Sharpe
-medio 0.854 y delta Sharpe 0.159.
+Para cada \textit{view} se recorren cinco etapas secuenciales sobre el horizonte
+$\mathcal{H}_1$, validadas en $\mathcal{H}_2$: (1) configuraci\'on base de la
+familia; (2) estructura de la matriz $P$ propia de la familia; (3) intensidad del
+vector $Q$ mediante $q_{\text{scale}} \in \{0.5, 1.0, 1.5, 2.0\}$;
+(4) confianza $c \in \{0.25, 0.35, 0.50, 0.75, 1.00\}$ en $\Omega$; y
+(5) par\'ametro $\tau \in \{0.05, 0.10, 0.20, 0.50, 1.00\}$. En cada etapa, la
+configuraci\'on con mayor score robusto fuera de muestra avanza y se congela.
 
-\subsection{Stage 2: Estructura de $P$}
+\subsection{Configuraciones congeladas por \textit{view}}
 
-Se probaron 9 combinaciones de tasa de desempleo asumida
-$U \in \{3\%, 4\%, 5\%\}$ y sensibilidad sectorial
-$\beta \in \{1.0, 1.5, 2.0\}$. La combinaci\'on ganadora fue $U = 4\%$ con
-$\beta = 1.5$, reflejando un escenario de desempleo moderadamente bajo con
-respuesta sectorial intermedia.
+La Tabla~\ref{tab:anexo_configs} reporta la configuraci\'on congelada de cada
+\textit{view}. El valor de $\tau = 0.20$ en la mayor\'ia de las \textit{views} es
+mayor que el te\'orico sugerido por la literatura ($\tau \approx 1/T$), lo que es
+consistente con el uso de $\tau$ como hiperpar\'ametro de calibraci\'on m\'as que
+como estimaci\'on puntual de la incertidumbre del prior.
 
-\subsection{Stage 3: Intensidad de $Q$}
+\begin{table}[h]
+\centering
+\caption{Configuraci\'on congelada por \textit{view} (calibraci\'on independiente).}
+\label{tab:anexo_configs}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+\textit{View} & Familia & $q_{\text{scale}}$ & $c$ & $\tau$ \\
+\midrule
+Momentum general & momentum & 1.5 & 0.80 & 0.01 \\
+Desempleo macro & unemployment & 1.5 & 0.50 & 0.20 \\
+Mom.\ top/bottom 1Y & marketcap mom. & 1.5 & 0.80 & 0.20 \\
+Mom.\ top market-cap 6M & marketcap mom. & 1.5 & 0.80 & 0.20 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-Se escal\'o el vector $Q$ por factores $q_{\text{scale}} \in \{0.5, 1.0, 1.5,
-2.0\}$. El factor 1.5 result\'o \'optimo, indicando que amplificar
-moderadamente la se\~nal macroecon\'omica mejora el desempe\~no fuera de
-muestra sin introducir inestabilidad excesiva.
+\subsection{Validaci\'on rolling}
 
-\subsection{Stage 4: Confianza $\Omega$}
-
-La confianza $c \in \{0.25, 0.35, 0.50, 0.75, 1.00\}$ controla la
-incertidumbre asignada a la \textit{view}. Con $c = 0.50$, la matriz $\Omega$
-refleja una incertidumbre intermedia: ni tan alta que diluya la \textit{view},
-ni tan baja que ignore el prior de equilibrio.
-
-\subsection{Stage 5: Par\'ametro $\tau$}
-
-El par\'ametro $\tau \in \{0.05, 0.10, 0.20, 0.50, 1.00\}$ escala la
-incertidumbre del prior. El valor \'optimo $\tau = 0.20$ es mayor que el
-valor te\'orico sugerido por la literatura ($\tau \approx 1/T \approx 0.0004$
-para 2\,500 observaciones), lo que es consistente con la pr\'actica de usar
-$\tau$ como un hiperpar\'ametro de calibraci\'on m\'as que como una
-estimaci\'on puntual de la incertidumbre del prior.
-
-\subsection{Resultados de la validaci\'on rolling}
-
-La validaci\'on rolling utiliz\'o 10 ventanas de calibraci\'on en el escenario
-con pandemia y 3 en el escenario sin pandemia. Los resultados completos por
-ventana y perfil se encuentran en
-\texttt{05\_Validacion\_modelo/outputs/resumen\_ejecucion\_3h.md}.
+La validaci\'on rolling utiliza, en el escenario con pandemia, 10 ventanas de
+calibraci\'on, 3 de validaci\'on y 4 de test limpio P4; en el escenario sin
+pandemia, 3, 1 y 1 respectivamente. Cada ventana ejecuta el pipeline completo
+(calibraci\'on en $\mathcal{H}_1$, validaci\'on en $\mathcal{H}_2$ y simulaci\'on
+P4 en $\mathcal{H}_3$). Los resultados completos por ventana y perfil se
+encuentran en los archivos
+\texttt{views\_v1\_plus/<view>\_v1\_plus/outputs/resumen\_ejecucion\_3h.md}.

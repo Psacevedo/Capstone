@@ -1,4 +1,4 @@
-\textbf{Datos y mercado.} Se asume que los precios de cierre y dividendos de los CSV representan adecuadamente la informaci\'on disponible para cada activo, por lo que el retorno total incorpora reinversi\'on impl\'icita de dividendos. La matriz de retornos se construye con \texttt{join="inner"}, suponiendo que eliminar fechas no comunes no introduce un sesgo relevante. La metadata de capitalizaci\'on de mercado se considera suficiente para construir el benchmark y los pesos de equilibrio de Black-Litterman, aunque puede existir sesgo de supervivencia. Las carteras son \textit{long-only}, cumplen $w_i \geq 0$ y $\sum w_i = 1$, no usan apalancamiento y permiten divisibilidad perfecta de acciones. La optimizaci\'on omite costos de transacci\'on, impuestos, \textit{spreads} bid-ask, restricciones de liquidez, impacto de mercado y \textit{slippage}; en Monte Carlo, estos costos se aproximan con una comisi\'on de $k = 1\%$ sobre transacciones. La tasa libre de riesgo se mantiene constante en $R_f = 2\%$ anual.
+\textbf{Datos y mercado.} Se asume que los precios de cierre y dividendos de los CSV representan adecuadamente la informaci\'on disponible para cada activo, por lo que el retorno total incorpora reinversi\'on impl\'icita de dividendos. La matriz de retornos se construye con \texttt{join="inner"}, suponiendo que eliminar fechas no comunes no introduce un sesgo relevante. La metadata de capitalizaci\'on de mercado se considera suficiente para construir el benchmark y los pesos de equilibrio de Black-Litterman, aunque puede existir sesgo de supervivencia. Las carteras son \textit{long-only}, cumplen $w_i \geq 0$ y $\sum w_i = 1$, no usan apalancamiento y permiten divisibilidad perfecta de acciones. La optimizaci\'on omite costos de transacci\'on, impuestos, \textit{spreads} bid-ask, restricciones de liquidez, impacto de mercado y \textit{slippage}. La utilidad de FinPUC se modela como una comisi\'on mensual de 0,5\% sobre el saldo activo administrado, sin comisiones por transacci\'on ni por rebalanceo. La tasa libre de riesgo se mantiene constante en $R_f = 2\%$ anual.
 
 \textbf{Supuestos estad\'isticos.} Los retornos hist\'oricos se usan como informaci\'on para estimar retornos y riesgos futuros, bajo estabilidad temporal parcial de $\mu$ y $\Sigma$. Para estabilizar la covarianza muestral se aplica \textit{shrinkage} de 20\%: $\Sigma_{\text{shrink}} = (1-\lambda)\Sigma + \lambda \cdot \text{diag}(\Sigma)$, con $\lambda = 0.20$. La anualizaci\'on considera 252 d\'ias h\'abiles y escala la volatilidad por $\sqrt{252}$. En la simulaci\'on Monte Carlo, los retornos semanales se aproximan mediante $\mathcal{N}(\mu_{\text{sem}},\, \sigma_{\text{sem}}^2)$, aun cuando el an\'alisis distribucional muestra colas pesadas y curtosis elevada en los retornos diarios.
 
@@ -6,7 +6,7 @@
 
 \textbf{Experimento pandemia.} La comparaci\'on entre escenarios ``con pandemia'' y ``sin pandemia'' mantiene fijo el per\'iodo futuro fuera de muestra. Por ello, las diferencias se interpretan como efecto de la informaci\'on utilizada para calibrar los modelos, no como cambios en el mercado futuro. La base sin pandemia excluye las observaciones de 2020--2022, mientras que la base con pandemia las conserva.
 
-\textbf{Simulaci\'on Monte Carlo (P4).} Cada cliente inicia con $C_0 = 1\,000$ USD. La comisi\'on es $k = 1\%$, aplicada sobre $C_0$ al inicio y sobre el 5\% de la riqueza actual en cada recomendaci\'on aceptada, como fracci\'on de rotaci\'on asumida. La p\'erdida se mide respecto de $C_0$ y no del m\'aximo hist\'orico de riqueza, de modo que una ca\'ida posterior a una ganancia no activa $P_1$ mientras la riqueza siga sobre el capital inicial. La sensibilidad log\'istica $s = 20$ escala las diferencias decimales de $P_1$ y $P_2$; para el perfil muy conservador, con tolerancia 0\%, cualquier p\'erdida genera una probabilidad de retiro cercana a 1. Los escenarios proyectados se definen como $R_{\text{base}} \pm 0.5\,\sigma$, formando un abanico sim\'etrico; aunque los retornos reales pueden presentar asimetr\'ia negativa, esta aproximaci\'on es suficiente para el objetivo acad\'emico. Se ejecutan 5\,000 simulaciones por combinaci\'on, cantidad considerada adecuada para estabilizar riqueza terminal, tasa de retiro y utilidad de la empresa.
+\textbf{Simulaci\'on Monte Carlo (P4).} Cada cliente inicia con $C_0 = 1\,000$ USD. La utilidad de FinPUC proviene exclusivamente de una comisi\'on mensual de 0,5\% sobre el saldo activo administrado, acumulada en la implementaci\'on semanal con tasa equivalente $k_{\text{sem}} = 0{,}005 \times 12/52$; no hay comisiones por transacci\'on ni por rebalanceo. El comportamiento del cliente se reduce a una probabilidad de abandono semanal (modelo \texttt{views\_v1\_plus}): la p\'erdida se mide respecto de $C_0$ y la probabilidad conductual sigue una log\'istica sin reescalar, $1/(1+\exp(-(x_t-\hat{x})))$, activa solo cuando la p\'erdida supera la tolerancia $\hat{x}$ del perfil; adem\'as, si la riqueza llega a cero, el abandono es forzoso (restricci\'on de ruina). Para el perfil muy conservador, con tolerancia 0\%, cualquier p\'erdida genera probabilidad de abandono positiva. No se modela una probabilidad separada de aceptaci\'on de recomendaciones; la activaci\'on inicial del cliente se trata como mec\'anica de entrada. Se ejecutan 2\,000 trayectorias por combinaci\'on, cantidad considerada adecuada para estabilizar riqueza terminal, tasa de abandono y utilidad de la empresa.
 
 \textbf{Sensibilidad.} El impacto de los supuestos se eval\'ua mediante tres ejercicios: comparaci\'on del entrenamiento con y sin pandemia, midiendo el delta de Sharpe por portafolio y t\'ecnica; validaci\'on con 70 splits aleatorios y 18 ventanas m\'oviles robustas, con horizontes desde h2\_f7 hasta h7\_f2; y proyecciones Monte Carlo desfavorable, neutra y favorable, modificando el retorno esperado en $\pm 0.5\sigma$ para observar cambios en riqueza terminal, tasa de retiro y utilidad de la empresa.
 
@@ -22,16 +22,18 @@ La Tabla~\ref{tab:supuestos_e3} resume los supuestos espec\'ificos de la tercera
 \toprule
 Supuesto & Valor \\
 \midrule
-Valores de $K$ evaluados & 0.25\%, 0.5\%, 0.75\%, 1\%, 1.5\%, 2\%, 3\%, 5\% \\
-Valores de $\lambda$ evaluados & 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 \\
-$K$ usado en optimizaci\'on de $\lambda$ & Valor \'optimo del an\'alisis de sensibilidad \\
-Normalizaci\'on de $f_1$ y $f_2$ & Min-max scaling al rango $[0,1]$ \\
-Metodolog\'ia para $\lambda$ & La de mejor Score P4 del an\'alisis de $K$ \\
-$P_1$ y $P_2$ en v1$+$ & Log\'isticas con $s=20$, $P_1$ activa solo si p\'erdida $>$ tolerancia \\
-Restricci\'on de ruina en v1$+$ & Abandono forzoso si riqueza $< 10\%$ de $C_0$ \\
-Configuraci\'on BL congelada & \textit{View} desempleo, $U=4\%$, $\beta=1.5$, $q_{\text{scale}}=1.5$, $c=0.50$, $\tau=0.20$ \\
-Turnover por recomendaci\'on & 5\% de la riqueza actual \\
-Retornos semanales en Monte Carlo & Normales i.i.d.\ con KPIs de Entrega 2 \\
+Caso base & Markowitz (no equiponderado) \\
+Objetivo de recomendaci\'on & Maximizar el retorno esperado del cliente \\
+Comisi\'on de FinPUC & 0,5\% mensual sobre el saldo activo administrado \\
+Tasa semanal equivalente & $k_{\text{sem}} = 0{,}005 \times 12/52$ \\
+Frecuencia de recomendaci\'on / abandono & Semestral / semanal \\
+Modelo de abandono & \'Unico, \texttt{views\_v1\_plus} (log\'istica de umbral + ruina) \\
+Probabilidad de abandono & $1/(1+\exp(-(x_t-\hat{x})))$ si $x_t>\hat{x}$; $0$ si no \\
+Restricci\'on de ruina & Abandono forzoso si riqueza $\leq 0$ \\
+Aceptaci\'on de recomendaci\'on & No se modela; activaci\'on inicial como mec\'anica de entrada \\
+Calibraci\'on BL & Independiente por \textit{view} (config propia por metodolog\'ia) \\
+Retornos semanales en Monte Carlo & Normales i.i.d.\ con KPIs calibrados por metodolog\'ia \\
+Trayectorias por combinaci\'on & 2\,000 \\
 Horizontes de validaci\'on & $\mathcal{H}_1$ calibraci\'on, $\mathcal{H}_2$ validaci\'on, $\mathcal{H}_3$ test limpio P4 \\
 \bottomrule
 \end{tabular}

@@ -311,7 +311,7 @@ def p4_interpretation(p4: pd.DataFrame, view_label: str) -> str:
     bl = p4[p4["modelo"] == "BL calibrado"]
     if bl.empty:
         return ""
-    best = bl.sort_values("p4_score_mean", ascending=False).iloc[0]
+    best = bl.sort_values("p4_score_median", ascending=False).iloc[0]
     abandon_col = "mean_monthly_abandon_probability"
     if abandon_col not in bl.columns:
         abandon_col = "mean_semiannual_abandon_probability"
@@ -488,12 +488,14 @@ def view_summary_table(rows: Iterable[Dict[str, object]], caption: str, label: s
         [
             ("view", "View", "text"),
             ("sharpe_improvement_mean", "Mejora Sharpe", "pct"),
-            ("p4_score_improvement", "Mejora P4 vs MK", "pct"),
+            ("p4_score_improvement_median", "Mejora P4 mediana vs MK", "pct"),
+            ("p4_score_improvement", "Mejora P4 prom. vs MK", "pct"),
             ("pct_recomendado", "BL recomendado", "pct"),
             ("turnover_bl", "Turnover BL", "pct"),
             ("sector_hhi_bl", "HHI sector BL", "num3"),
             ("final_clients_bl", "Clientes finales BL", "int"),
-            ("terminal_wealth_bl", "Riqueza BL", "money"),
+            ("terminal_wealth_median_bl", "Riqueza mediana BL", "money"),
+            ("terminal_wealth_bl", "Riqueza prom. BL", "money"),
             ("final_loss_bl", "Perdida final BL", "pct"),
             ("company_revenue_bl", "Utilidad BL", "money"),
         ],
@@ -503,7 +505,7 @@ def view_summary_table(rows: Iterable[Dict[str, object]], caption: str, label: s
 
 
 def comparative_diagnosis(summary_rows: List[Dict[str, object]]) -> str:
-    ordered = sorted(summary_rows, key=lambda row: row["p4_score_improvement"], reverse=True)
+    ordered = sorted(summary_rows, key=lambda row: row["p4_score_improvement_median"], reverse=True)
     best = ordered[0]
     pieces = []
     for row in summary_rows:
@@ -513,10 +515,10 @@ def comparative_diagnosis(summary_rows: List[Dict[str, object]]) -> str:
             strengths.append(f"mejora de Sharpe de {fmt_pct(row['sharpe_improvement_mean'])}")
         else:
             weaknesses.append(f"deterioro de Sharpe de {fmt_pct(row['sharpe_improvement_mean'])}")
-        if row["p4_score_improvement"] > 0:
-            strengths.append(f"mejora P4 frente a Markowitz de {fmt_pct(row['p4_score_improvement'])}")
+        if row["p4_score_improvement_median"] > 0:
+            strengths.append(f"mejora P4 mediana frente a Markowitz de {fmt_pct(row['p4_score_improvement_median'])}")
         else:
-            weaknesses.append(f"retroceso P4 frente a Markowitz de {fmt_pct(row['p4_score_improvement'])}")
+            weaknesses.append(f"retroceso P4 mediana frente a Markowitz de {fmt_pct(row['p4_score_improvement_median'])}")
         if row["turnover_bl"] <= 0.10:
             strengths.append(f"turnover bajo de {fmt_pct(row['turnover_bl'])}")
         else:
@@ -532,8 +534,9 @@ def comparative_diagnosis(summary_rows: List[Dict[str, object]]) -> str:
         )
     recommendation = (
         f"\\paragraph{{Recomendacion final.}} Bajo el criterio conjunto de desempeno fuera de muestra y evaluacion economica P4, "
-        f"la mejor view para calibrar Black--Litterman es {tex_escape(best['view'])}. En promedio, esta alternativa mejora el score P4 "
-        f"en {fmt_pct(best['p4_score_improvement'])} respecto de Markowitz y aumenta el Sharpe en {fmt_pct(best['sharpe_improvement_mean'])}. "
+        f"la mejor view para calibrar Black--Litterman es {tex_escape(best['view'])}. Esta alternativa mejora el score P4 mediana "
+        f"en {fmt_pct(best['p4_score_improvement_median'])} respecto de Markowitz (mejora P4 promedio de {fmt_pct(best['p4_score_improvement'])}) "
+        f"y aumenta el Sharpe en {fmt_pct(best['sharpe_improvement_mean'])}. "
         "La recomendacion debe comunicarse con una salvedad tecnica: su ventaja economica viene acompanada de mayor rotacion y concentracion que la view macro, por lo que exige monitoreo operacional mas estricto."
     )
     return "\n\n".join(pieces + [recommendation])
@@ -556,6 +559,9 @@ def write_comparative_report(all_data: Dict[str, Dict[str, pd.DataFrame]]) -> No
         p4_score_improvement = float(
             ((matched["p4_score_mean_bl"] - matched["p4_score_mean_mk"]) / matched["p4_score_mean_mk"].abs()).mean()
         )
+        p4_score_improvement_median = float(
+            ((matched["p4_score_median_bl"] - matched["p4_score_median_mk"]) / matched["p4_score_median_mk"].abs()).mean()
+        )
         dyn_bl = dyn[dyn["modelo"] == "BL calibrado"]
         monthly_bl = monthly_final[monthly_final["modelo"] == "BL calibrado"]
         summary_rows.append(
@@ -563,11 +569,13 @@ def write_comparative_report(all_data: Dict[str, Dict[str, pd.DataFrame]]) -> No
                 "view": label,
                 "sharpe_improvement_mean": comparison["mejora_pct_sharpe_mean"].mean(),
                 "p4_score_improvement": p4_score_improvement,
+                "p4_score_improvement_median": p4_score_improvement_median,
                 "pct_recomendado": comparison["pct_recomendado"].mean(),
                 "turnover_bl": dyn_bl["turnover_mean"].mean(),
                 "sector_hhi_bl": dyn_bl["sector_hhi_mean"].mean(),
                 "final_clients_bl": bl["final_active_clients_mean"].mean(),
                 "terminal_wealth_bl": bl["terminal_wealth_mean"].mean(),
+                "terminal_wealth_median_bl": bl["terminal_wealth_median"].mean(),
                 "final_loss_bl": monthly_bl["mean_active_loss"].mean(),
                 "company_revenue_bl": bl["company_revenue_mean"].mean(),
             }

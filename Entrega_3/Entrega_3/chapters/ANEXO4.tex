@@ -1,11 +1,19 @@
 Este anexo consolida la documentaci\'on metodol\'ogica y de c\'odigo de los tres
-notebooks principales de la entrega: Markowitz vs Benchmark, Black-Litterman y
-Simulaci\'on Monte Carlo. La reorganizaci\'on mantiene la informaci\'on sustantiva
-de los anexos metodol\'ogicos originales, pero la presenta en un solo anexo y con
-la misma estructura para cada t\'ecnica: resumen, fundamentos metodol\'ogicos,
-supuestos del experimento, estructura del notebook, KPIs utilizados, resultados
-del experimento pandemia, rebalanceo, splits aleatorios, evaluaci\'on robusta e
-implicancias y conclusiones.
+notebooks principales de la primera iteraci\'on del proyecto: Markowitz vs
+Benchmark, Black-Litterman y Simulaci\'on Monte Carlo. La reorganizaci\'on
+mantiene la informaci\'on sustantiva de los anexos metodol\'ogicos originales,
+pero la presenta en un solo anexo y con la misma estructura para cada t\'ecnica:
+resumen, fundamentos metodol\'ogicos, supuestos del experimento, estructura del
+notebook, KPIs utilizados, resultados del experimento pandemia, rebalanceo,
+splits aleatorios, evaluaci\'on robusta e implicancias y conclusiones.
+
+\medskip
+\noindent\textbf{Nota de contexto.} El benchmark equiponderado top-20 que
+aparece en este anexo corresponde a una referencia metodol\'ogica de la primera
+iteraci\'on y se conserva solo como documentaci\'on hist\'orica del an\'alisis
+realizado en su momento. En la versi\'on actual del modelo, el caso base es
+\textbf{Markowitz} y el equiponderado ya no se considera una alternativa de
+recomendaci\'on ni una l\'inea base oficial.
 
 % ============================================================
 \section*{Markowitz vs Benchmark}
@@ -254,7 +262,6 @@ Conservador & 67,8\% & 2,425 & 55,5\% & 1,972 & $-$12,3\% & $-$0,453 \\
 Neutro & 82,9\% & 2,413 & 60,5\% & 1,756 & $-$22,5\% & $-$0,657 \\
 Arriesgado & 91,6\% & 1,733 & 58,4\% & 1,167 & $-$33,2\% & $-$0,566 \\
 Muy arriesgado & 102,7\% & 1,412 & 44,0\% & 0,549 & $-$58,7\% & $-$0,863 \\
-Benchmark & 101,4\% & 2,052 & 101,4\% & 2,052 & $-$0,0\% & $-$0,000 \\
 \texttt{b\_teorico} & 104,5\% & 1,515 & 56,7\% & 0,966 & $-$47,8\% & $-$0,548 \\
 M\'inima varianza & 56,6\% & 2,110 & 54,6\% & 2,016 & $-$2,0\% & $-$0,094 \\
 Ideal de mercado & 76,5\% & 2,507 & 59,5\% & 1,399 & $-$16,9\% & $-$1,108 \\
@@ -264,12 +271,12 @@ Ideal de mercado & 76,5\% & 2,507 & 59,5\% & 1,399 & $-$16,9\% & $-$1,108 \\
 \end{table}
 
 Sin pandemia, el mejor portafolio es Ideal de mercado, con Sharpe 2,507 y
-retorno total de 76,5\%. Con pandemia, el mejor resultado corresponde al
-Benchmark, con Sharpe 2,052 y retorno de 101,4\%. Incluir el periodo
-2020--2022 deteriora casi todos los portafolios optimizados, especialmente
-aquellos m\'as agresivos o dependientes de estimaciones de retorno esperado. El
-Benchmark permanece invariante porque su regla no utiliza $\mu$ ni $\Sigma$,
-sino una selecci\'on top-20 equiponderada.
+retorno total de 76,5\%. Con pandemia, el Sharpe de los portafolios optimizados
+se deteriora: incluir el periodo 2020--2022 afecta casi todos los portafolios,
+especialmente aquellos m\'as agresivos o dependientes de estimaciones de retorno
+esperado. Los portafolios de menor varianza (Muy conservador, M\'inima varianza)
+son los m\'as robustos a la inclusi\'on de la pandemia, al depender menos de la
+estimaci\'on de $\mu$.
 
 \begin{table}[H]
 \centering
@@ -334,9 +341,8 @@ Puntos de frontera & 1\,392 \\
 \end{table}
 
 El mejor split promedio global es \texttt{h5\_f2}, con Sharpe futuro promedio de
-2,34. Para el Benchmark, el mejor horizonte particular es \texttt{h6\_f2}, con
-Sharpe futuro medio de 2,615. Esta sensibilidad muestra que las conclusiones no
-deben depender de un \'unico split.
+2,34. Esta sensibilidad muestra que las conclusiones no deben depender de un
+\'unico split.
 
 \begin{table}[H]
 \centering
@@ -347,7 +353,6 @@ deben depender de un \'unico split.
 \toprule
 Portafolio & Sharpe medio & Desv. est. Sharpe \\
 \midrule
-Benchmark & 2,057 & 0,381 \\
 M\'inima varianza & 1,940 & 0,250 \\
 Muy conservador & 1,885 & 0,288 \\
 Conservador & 1,799 & 0,334 \\
@@ -359,9 +364,8 @@ Muy arriesgado & 1,625 & 0,458 \\
 \end{tabular}
 \end{table}
 
-En promedio, el Benchmark supera a los portafolios Markowitz. M\'inima varianza
-aparece como la versi\'on Markowitz m\'as robusta, ya que combina buen Sharpe con
-baja variabilidad.
+Entre los portafolios Markowitz, M\'inima varianza aparece como la versi\'on m\'as
+robusta, ya que combina buen Sharpe con baja variabilidad.
 
 \subsection*{Evaluaci\'on robusta}
 
@@ -400,11 +404,10 @@ La primera implicancia es que Markowitz es altamente sensible a la estimaci\'on
 de retornos esperados. La matriz de covarianzas importa, pero $\mu$ suele ser
 m\'as ruidoso; por eso los perfiles agresivos, que explotan diferencias
 peque\~nas entre activos, son los que m\'as se deterioran al incluir pandemia. En
-segundo lugar, el Benchmark top-20 equiponderado es una l\'inea base exigente:
-diversifica en empresas grandes sin depender de par\'ametros estimados, por lo
-que obliga a justificar cualquier superioridad de Markowitz con evidencia fuera
-de muestra. En tercer lugar, M\'inima varianza cumple un rol defensivo relevante,
-porque no maximiza retorno esperado y depende menos de predicciones individuales.
+segundo lugar, cualquier superioridad de Markowitz debe justificarse con
+evidencia fuera de muestra y no solo en entrenamiento. En tercer lugar,
+M\'inima varianza cumple un rol defensivo relevante, porque no maximiza retorno
+esperado y depende menos de predicciones individuales.
 
 El rebalanceo semestral debe interpretarse como un \textit{trade-off}.
 Actualizar pesos permite incorporar informaci\'on reciente, pero puede amplificar
@@ -415,16 +418,15 @@ conjunto de datos usado para entrenar, por lo que el resultado mide c\'omo los
 datos de estr\'es modifican la percepci\'on estimada de riesgo-retorno.
 
 En s\'intesis, el notebook implementa una comparaci\'on metodol\'ogicamente
-completa entre Markowitz y benchmark, incorporando escenarios de pandemia,
+completa entre las variantes de Markowitz, incorporando escenarios de pandemia,
 rebalanceo y validaci\'on por m\'ultiples splits. La principal conclusi\'on es que
 no basta con reportar el portafolio de mayor Sharpe en un \'unico periodo: se
-debe contrastar con benchmarks simples, evaluar robustez temporal y separar
-desempe\~no te\'orico de desempe\~no realizado. El caso \texttt{h7\_f2} queda
-justificado por la validaci\'on robusta, mientras que \texttt{h5\_f2} y
-\texttt{h6\_f2} deben reportarse como sensibilidad favorable. Para la entrega,
-conviene presentar Benchmark y M\'inima varianza como l\'ineas base obligatorias,
-usar \texttt{h7\_f2} como escenario principal y evitar afirmar superioridad de
-Markowitz sin evidencia fuera de muestra.
+debe evaluar robustez temporal y separar desempe\~no te\'orico de desempe\~no
+realizado. El caso \texttt{h7\_f2} queda justificado por la validaci\'on robusta,
+mientras que \texttt{h5\_f2} y \texttt{h6\_f2} deben reportarse como sensibilidad
+favorable. Para la entrega, conviene presentar M\'inima varianza como l\'inea
+base defensiva, usar \texttt{h7\_f2} como escenario principal y evitar afirmar
+superioridad de Markowitz sin evidencia fuera de muestra.
 
 \clearpage
 
@@ -726,7 +728,7 @@ Con pandemia & Momentum & Conservador & 56,4\% & 11,2\% & $-$10,3\% & 2,06 \\
 
 \begin{table}[H]
 \centering
-\caption{Comparaci\'on final entre equiponderado, Markowitz y Black-Litterman.}
+\caption{Comparaci\'on final entre Markowitz y Black-Litterman.}
 \label{tab:anexo4_bl_comparacion_final}
 \scriptsize
 \begin{adjustbox}{max width=\textwidth}
@@ -734,11 +736,9 @@ Con pandemia & Momentum & Conservador & 56,4\% & 11,2\% & $-$10,3\% & 2,06 \\
 \toprule
 Escenario & Modelo & \textit{View} & Portafolio & Ret. total & Vol. anual & Drawdown & CVaR 95\% & Sharpe \\
 \midrule
-Con pandemia & Equiponderado & No aplica & Benchmark & 101,4\% & 19,5\% & $-$21,9\% & 2,79\% & 2,05 \\
 Con pandemia & Markowitz & Hist\'orico & Muy conservador & 54,5\% & 11,0\% & $-$10,2\% & 1,50\% & 2,02 \\
 Con pandemia & Black-Litterman & Desempleo & Arriesgado & 71,9\% & 12,4\% & $-$13,3\% & 1,71\% & 2,36 \\
 Con pandemia & Black-Litterman & Momentum & Conservador & 56,4\% & 11,2\% & $-$10,3\% & 1,47\% & 2,06 \\
-Sin pandemia & Equiponderado & No aplica & Benchmark & 101,4\% & 19,5\% & $-$21,9\% & 2,79\% & 2,05 \\
 Sin pandemia & Markowitz & Hist\'orico & Ideal de mercado & 76,5\% & 12,3\% & $-$12,6\% & 1,67\% & 2,51 \\
 Sin pandemia & Black-Litterman & Desempleo & Neutro & 63,1\% & 10,5\% & $-$10,4\% & 1,41\% & 2,44 \\
 Sin pandemia & Black-Litterman & Momentum & Muy conservador & 64,0\% & 10,9\% & $-$10,1\% & 1,45\% & 2,38 \\
@@ -848,11 +848,9 @@ c\'iclica, su menor $Q$ y menor confianza producen ajustes m\'as moderados.
 Momentum, en cambio, entrega una se\~nal m\'as intensa y puede capturar retornos
 altos, pero tambi\'en expone a reversals y mayor volatilidad.
 
-El benchmark equiponderado top-20 obtiene retornos totales elevados, aunque con
-volatilidad y \textit{drawdown} superiores. Su Sharpe es competitivo, pero no
-domina siempre, lo que muestra que un benchmark simple puede ser dif\'icil de
-superar en retorno bruto mientras los modelos optimizados pueden mejorar la
-relaci\'on retorno-riesgo. Las diferencias entre \texttt{sin\_pandemia} y
+Los portafolios optimizados mejoran la relaci\'on retorno-riesgo respecto de las
+estimaciones hist\'oricas puras, aunque a costa de mayor dependencia de $\mu$ en
+los perfiles agresivos. Las diferencias entre \texttt{sin\_pandemia} y
 \texttt{con\_pandemia} deben entenderse como una prueba de robustez: incluir
 shocks hist\'oricos cambia la frontera eficiente y las estimaciones de riesgo, no
 necesariamente el mercado futuro evaluado.
@@ -878,7 +876,7 @@ transacci\'on, restricciones sectoriales, cotas de liquidez, control de
 covarianza.
 
 En s\'intesis, la implementaci\'on construye un experimento Black-Litterman
-completo y comparable con Markowitz y benchmark. Su principal aporte es
+completo y comparable con el caso base Markowitz. Su principal aporte es
 reemplazar retornos esperados hist\'oricos por retornos posteriores que combinan
 equilibrio de mercado y \textit{views}. Los resultados indican que
 Black-Litterman es especialmente valioso en escenarios exigentes, como el
@@ -906,8 +904,7 @@ El informe fue generado el 09 de mayo de 2026 y opera sobre el universo F5 de
 601 activos, benchmark top-20, rebalanceo semestral de 126 d\'ias h\'abiles y
 simulaci\'on Monte Carlo a 260 semanas. En esta etapa, el notebook
 \texttt{p4\_montecarlo\_recomendador\_portafolios.ipynb} transforma los KPIs de
-Markowitz, Black-Litterman y Equiponderado en una evaluaci\'on de cliente y
-empresa. Para cada combinaci\'on de escenario, t\'ecnica, \textit{view} y perfil
+Markowitz y Black-Litterman en una evaluaci\'on de cliente y empresa. Para cada combinaci\'on de escenario, t\'ecnica, \textit{view} y perfil
 simula trayectorias de riqueza, probabilidad de retiro, aceptaci\'on de
 recomendaciones, utilidad de la empresa y un score final de recomendaci\'on.
 
@@ -1052,11 +1049,9 @@ Escenario & Modelo & Portafolio & Ret. total & Ret. anual & Vol. anual & Drawdow
 \midrule
 Sin pandemia & Markowitz & Ideal de mercado & 76,5\% & 32,8\% & 12,3\% & $-$12,6\% & 2,51 \\
 Sin pandemia & BL mom. top20 6m & Neutro & 72,3\% & 31,2\% & 11,9\% & $-$12,9\% & 2,46 \\
-Sin pandemia & Equiponderado & Benchmark & 101,4\% & 41,9\% & 19,5\% & $-$21,9\% & 2,05 \\
 \midrule
 Con pandemia & BL mom. top20 6m & Neutro & 69,5\% & 30,2\% & 11,9\% & $-$11,7\% & 2,38 \\
 Con pandemia & BL desempleo & Arriesgado & 71,9\% & 31,1\% & 12,4\% & $-$13,3\% & 2,36 \\
-Con pandemia & Equiponderado & Benchmark & 101,4\% & 41,9\% & 19,5\% & $-$21,9\% & 2,05 \\
 Con pandemia & Markowitz & Muy conservador & 54,5\% & 24,3\% & 11,0\% & $-$10,2\% & 2,02 \\
 \bottomrule
 \end{tabular}
@@ -1082,10 +1077,7 @@ Rank & Escenario & T\'ecnica & Perfil & Riqueza & Retiro & Utilidad & Score \\
 4 & Sin pandemia & BL Desempleo & Muy arriesgado & USD 5\,434 & 0,5\% & USD 221 & 5\,650 \\
 5 & Sin pandemia & Markowitz & Muy arriesgado & USD 5\,349 & 2,1\% & USD 215 & 5\,543 \\
 6 & Sin pandemia & BL Momentum & Arriesgado & USD 5\,304 & 10,9\% & USD 320 & 5\,515 \\
-7 & Con pandemia & Equiponderado & Muy arriesgado & USD 5\,280 & 0,0\% & USD 204 & 5\,485 \\
-8 & Con pandemia & BL Mom. Top20 6M & Arriesgado & USD 5\,137 & 0,5\% & USD 312 & 5\,445 \\
-9 & Sin pandemia & Equiponderado & Muy arriesgado & USD 5\,222 & 0,0\% & USD 203 & 5\,425 \\
-10 & Sin pandemia & Equiponderado & Arriesgado & USD 5\,084 & 0,2\% & USD 308 & 5\,390 \\
+7 & Con pandemia & BL Mom. Top20 6M & Arriesgado & USD 5\,137 & 0,5\% & USD 312 & 5\,445 \\
 \bottomrule
 \end{tabular}
 \end{adjustbox}
@@ -1148,9 +1140,6 @@ fuertemente cuando el camino simulado atraviesa p\'erdidas tempranas.
 El informe de metodolog\'ias concluye con las siguientes observaciones:
 
 \begin{itemize}
-    \item El benchmark top-20 equiponderado es una referencia fuerte por retorno
-    total, pero su volatilidad y drawdown son mayores que las carteras
-    Black-Litterman ajustadas por riesgo.
     \item Markowitz aporta una base estable y trazable, especialmente para
     perfiles conservadores, aunque depende fuertemente de retornos hist\'oricos.
     \item Black-Litterman Desempleo ofrece un ajuste macro competitivo y en
@@ -1181,9 +1170,9 @@ archivo PDF en el repositorio del proyecto:
 \section*{Conclusi\'on integrada}
 % ============================================================
 
-Los tres notebooks forman una cadena metodol\'ogica. Markowitz define la base y
-el benchmark; Black-Litterman reduce dependencia de medias hist\'oricas mediante
+Los tres notebooks forman una cadena metodol\'ogica. Markowitz define la base de
+comparaci\'on; Black-Litterman reduce dependencia de medias hist\'oricas mediante
 prior y \textit{views}; Simulaci\'on Monte Carlo traduce los KPIs en una decisi\'on
-cliente-empresa. La recomendaci\'on actual es usar Black-Litterman Momentum Top20
-6M como alternativa principal, mantener el benchmark como referencia exigente y
-usar Markowitz como base de comparaci\'on y diagn\'ostico de sensibilidad.
+cliente-empresa. La recomendaci\'on de esta primera iteraci\'on es usar
+Black-Litterman como alternativa principal y Markowitz como caso base de
+comparaci\'on y diagn\'ostico de sensibilidad.

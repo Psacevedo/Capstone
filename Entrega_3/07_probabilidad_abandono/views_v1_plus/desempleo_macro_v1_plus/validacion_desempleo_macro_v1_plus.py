@@ -855,10 +855,15 @@ def simulate_p4_clean(metrics_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFr
                 "mean_semiannual_abandon_probability": float(semiannual_withdraw_probability),
                 "max_semiannual_abandon_probability": float(max_semiannual_withdraw_probability),
                 "terminal_wealth_mean": float(wealth.mean()),
+                "terminal_wealth_median": float(np.median(wealth)),
                 "prob_profit": float((wealth > base.INITIAL_CAPITAL).mean()),
                 "withdrawal_rate": float(withdrawn.mean()),
                 "company_revenue_mean": float(company.mean()),
+                "company_revenue_median": float(np.median(company)),
                 "p4_score": float(wealth.mean() + company.mean() - base.INITIAL_CAPITAL * withdrawn.mean()),
+                "p4_score_median": float(
+                    np.median(wealth + company - base.INITIAL_CAPITAL * withdrawn.astype(float))
+                ),
             }
         )
     p4 = pd.DataFrame(rows).sort_values("p4_score", ascending=False)
@@ -1082,13 +1087,16 @@ def summarize_p4(p4: pd.DataFrame, out_path: Path) -> pd.DataFrame:
             mean_semiannual_abandon_probability=("mean_semiannual_abandon_probability", "mean"),
             max_semiannual_abandon_probability=("max_semiannual_abandon_probability", "max"),
             terminal_wealth_mean=("terminal_wealth_mean", "mean"),
+            terminal_wealth_median=("terminal_wealth_median", "mean"),
             terminal_wealth_p10=("terminal_wealth_mean", pctile_10),
             prob_profit_mean=("prob_profit", "mean"),
             withdrawal_rate_mean=("withdrawal_rate", "mean"),
             company_revenue_mean=("company_revenue_mean", "mean"),
+            company_revenue_median=("company_revenue_median", "mean"),
             p4_score_mean=("p4_score", "mean"),
+            p4_score_median=("p4_score_median", "mean"),
         )
-        .sort_values("p4_score_mean", ascending=False)
+        .sort_values("p4_score_median", ascending=False)
     )
     summary.to_csv(out_path, index=False)
     return summary
