@@ -1,0 +1,1382 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{hyperref}
+\geometry{margin=2.3cm}
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+
+\title{Informe de resultados: panoramas proyectados de retorno}
+\author{FinPUC}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Panoramas proyectados de retorno}
+Esta iteracion mantiene congelada la calibracion ganadora de la view Momentum general y no vuelve a estimar los parametros de Black--Litterman. El objetivo es aislar el efecto de la proyeccion de retorno esperada dentro de la simulacion economica P4. Para cada combinacion de modelo, escenario historico y perfil de riesgo se construyen tres panoramas simetricos en torno al retorno anual base:
+\begin{align}
+R_{favorable} &= R_{base} + 0.5\sigma_{base},\\
+R_{neutro} &= R_{base},\\
+R_{desfavorable} &= R_{base} - 0.5\sigma_{base}.
+\end{align}
+La volatilidad anual se mantiene fija en $\sigma_{base}$, por lo que los panoramas representan cambios en la media proyectada y no nuevos escenarios historicos. En terminos computacionales, la simulacion semanal utiliza:
+\begin{align}
+\mu_{sem} &= (1+R_{proyectado})^{1/52}-1,\\
+\sigma_{sem} &= \frac{\sigma_{base}}{\sqrt{52}}.
+\end{align}
+La probabilidad de aceptacion del portafolio y de sus rebalanceos tambien usa el retorno proyectado:
+\begin{equation}
+P_2 = \frac{1}{1+\exp\left[-(R_{proyectado}-\widehat{x}_2)\right]},
+\end{equation}
+donde $\widehat{x}_2$ corresponde a la tolerancia de perdida del perfil. La probabilidad de abandono conserva la especificacion de la version v1 plus, basada en perdida contra capital inicial, abandono semanal y restriccion de ruina. La utilidad de la empresa se calcula ex--post como una comision mensual de 0,5\% sobre el saldo administrado activo.
+
+\section{Analisis de resultados fuera de muestra}
+La Tabla~\ref{tab:p4-panoramas-resumen} resume la evaluacion P4 para los tres panoramas. El panorama neutro permite comparar conceptualmente contra la simulacion base, mientras que los panoramas favorable y desfavorable muestran la sensibilidad de riqueza, abandono, clientes activos y utilidad de empresa ante desplazamientos de media esperada.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llllrrrrr}
+\toprule
+Modelo & Escenario & Perfil & Panorama & Riqueza & Utilidad & Score P4 & Abandono & Clientes finales \\
+\midrule
+Black-Litterman calibrado & sin pandemia & Muy conservador & Desfavorable & 1.203,198 & 77,73 & 900,424 & 38.0\% & 304 \\
+Black-Litterman calibrado & sin pandemia & Muy conservador & Neutro & 1.432,726 & 122,21 & 1.214,432 & 34.1\% & 429 \\
+Black-Litterman calibrado & sin pandemia & Muy conservador & Favorable & 1.735,484 & 170,81 & 1.611,792 & 29.4\% & 532 \\
+Black-Litterman calibrado & sin pandemia & Conservador & Desfavorable & 1.567,518 & 201,21 & 1.622,732 & 14.6\% & 802 \\
+Black-Litterman calibrado & sin pandemia & Conservador & Neutro & 1.884,870 & 243,93 & 2.035,299 & 9.3\% & 874 \\
+Black-Litterman calibrado & sin pandemia & Conservador & Favorable & 2.431,166 & 323,61 & 2.697,777 & 5.7\% & 1.011 \\
+Black-Litterman calibrado & sin pandemia & Neutro & Desfavorable & 1.696,164 & 235,30 & 1.888,468 & 4.3\% & 936 \\
+Black-Litterman calibrado & sin pandemia & Neutro & Neutro & 2.251,118 & 314,26 & 2.547,376 & 1.8\% & 1.070 \\
+Black-Litterman calibrado & sin pandemia & Neutro & Favorable & 2.919,192 & 382,63 & 3.292,825 & 0.9\% & 1.086 \\
+Black-Litterman calibrado & sin pandemia & Arriesgado & Desfavorable & 1.477,188 & 196,63 & 1.588,819 & 8.5\% & 774 \\
+Black-Litterman calibrado & sin pandemia & Arriesgado & Neutro & 2.271,310 & 306,14 & 2.549,446 & 2.8\% & 972 \\
+Black-Litterman calibrado & sin pandemia & Arriesgado & Favorable & 3.373,537 & 408,54 & 3.770,576 & 1.1\% & 995 \\
+Black-Litterman calibrado & sin pandemia & Muy arriesgado & Desfavorable & 1.077,734 & 121,50 & 991,730 & 20.8\% & 448 \\
+Black-Litterman calibrado & sin pandemia & Muy arriesgado & Neutro & 1.743,828 & 225,79 & 1.877,114 & 9.2\% & 741 \\
+Black-Litterman calibrado & sin pandemia & Muy arriesgado & Favorable & 2.887,040 & 362,20 & 3.211,239 & 3.8\% & 918 \\
+Black-Litterman calibrado & con pandemia & Muy conservador & Desfavorable & 1.247,767 & 88,85 & 965,113 & 37.1\% & 344 \\
+Black-Litterman calibrado & con pandemia & Muy conservador & Neutro & 1.454,016 & 128,64 & 1.253,155 & 33.0\% & 453 \\
+Black-Litterman calibrado & con pandemia & Muy conservador & Favorable & 1.762,030 & 175,03 & 1.630,935 & 30.6\% & 539 \\
+Black-Litterman calibrado & con pandemia & Conservador & Desfavorable & 1.824,039 & 238,87 & 1.961,657 & 10.1\% & 870 \\
+Black-Litterman calibrado & con pandemia & Conservador & Neutro & 2.287,425 & 303,74 & 2.518,666 & 7.2\% & 976 \\
+Black-Litterman calibrado & con pandemia & Conservador & Favorable & 2.891,932 & 376,38 & 3.223,559 & 4.5\% & 1.055 \\
+Black-Litterman calibrado & con pandemia & Neutro & Desfavorable & 2.394,500 & 316,52 & 2.668,642 & 4.2\% & 990 \\
+Black-Litterman calibrado & con pandemia & Neutro & Neutro & 3.304,326 & 417,89 & 3.698,468 & 2.4\% & 1.073 \\
+Black-Litterman calibrado & con pandemia & Neutro & Favorable & 4.537,348 & 535,50 & 5.061,226 & 1.2\% & 1.127 \\
+Black-Litterman calibrado & con pandemia & Arriesgado & Desfavorable & 3.823,202 & 440,65 & 4.197,231 & 6.7\% & 912 \\
+Black-Litterman calibrado & con pandemia & Arriesgado & Neutro & 6.756,339 & 700,46 & 7.424,296 & 3.2\% & 1.070 \\
+Black-Litterman calibrado & con pandemia & Arriesgado & Favorable & 11.310,659 & 1.064,68 & 12.358,091 & 1.7\% & 1.202 \\
+Black-Litterman calibrado & con pandemia & Muy arriesgado & Desfavorable & 8.164,281 & 770,82 & 8.820,355 & 11.5\% & 862 \\
+Black-Litterman calibrado & con pandemia & Muy arriesgado & Neutro & 16.900,835 & 1.355,42 & 18.187,259 & 6.9\% & 1.040 \\
+Black-Litterman calibrado & con pandemia & Muy arriesgado & Favorable & 31.364,900 & 2.308,88 & 33.641,401 & 3.2\% & 1.238 \\
+Markowitz base & sin pandemia & Muy conservador & Desfavorable & 1.202,701 & 78,86 & 892,058 & 39.0\% & 312 \\
+Markowitz base & sin pandemia & Muy conservador & Neutro & 1.398,582 & 117,28 & 1.172,360 & 34.4\% & 416 \\
+Markowitz base & sin pandemia & Muy conservador & Favorable & 1.675,314 & 160,92 & 1.513,729 & 32.2\% & 508 \\
+Markowitz base & sin pandemia & Conservador & Desfavorable & 1.478,692 & 183,85 & 1.516,038 & 14.6\% & 761 \\
+Markowitz base & sin pandemia & Conservador & Neutro & 1.826,811 & 246,82 & 1.995,131 & 7.8\% & 924 \\
+Markowitz base & sin pandemia & Conservador & Favorable & 2.348,368 & 319,84 & 2.605,212 & 6.3\% & 1.036 \\
+Markowitz base & sin pandemia & Neutro & Desfavorable & 1.636,818 & 231,73 & 1.845,047 & 2.4\% & 972 \\
+Markowitz base & sin pandemia & Neutro & Neutro & 2.053,506 & 282,62 & 2.332,623 & 0.4\% & 1.017 \\
+Markowitz base & sin pandemia & Neutro & Favorable & 2.592,518 & 348,87 & 2.939,888 & 0.1\% & 1.076 \\
+Markowitz base & sin pandemia & Arriesgado & Desfavorable & 1.723,379 & 235,83 & 1.950,707 & 0.9\% & 949 \\
+Markowitz base & sin pandemia & Arriesgado & Neutro & 2.245,666 & 298,16 & 2.541,323 & 0.2\% & 982 \\
+Markowitz base & sin pandemia & Arriesgado & Favorable & 3.103,296 & 390,52 & 3.493,814 & 0.0\% & 1.041 \\
+Markowitz base & sin pandemia & Muy arriesgado & Desfavorable & 1.663,406 & 220,38 & 1.849,284 & 3.5\% & 844 \\
+Markowitz base & sin pandemia & Muy arriesgado & Neutro & 2.580,665 & 322,61 & 2.890,772 & 1.2\% & 932 \\
+Markowitz base & sin pandemia & Muy arriesgado & Favorable & 4.070,565 & 483,99 & 4.552,559 & 0.2\% & 1.025 \\
+Markowitz base & con pandemia & Muy conservador & Desfavorable & 1.182,135 & 78,42 & 871,805 & 38.9\% & 324 \\
+Markowitz base & con pandemia & Muy conservador & Neutro & 1.343,482 & 110,95 & 1.107,677 & 34.7\% & 417 \\
+Markowitz base & con pandemia & Muy conservador & Favorable & 1.579,136 & 150,70 & 1.427,834 & 30.2\% & 510 \\
+Markowitz base & con pandemia & Conservador & Desfavorable & 1.455,377 & 189,47 & 1.529,600 & 11.5\% & 822 \\
+Markowitz base & con pandemia & Conservador & Neutro & 1.770,833 & 242,74 & 1.943,946 & 7.0\% & 941 \\
+Markowitz base & con pandemia & Conservador & Favorable & 2.148,277 & 292,56 & 2.392,208 & 4.9\% & 1.008 \\
+Markowitz base & con pandemia & Neutro & Desfavorable & 1.627,263 & 231,37 & 1.845,382 & 1.3\% & 982 \\
+Markowitz base & con pandemia & Neutro & Neutro & 2.005,104 & 281,27 & 2.282,128 & 0.4\% & 1.042 \\
+Markowitz base & con pandemia & Neutro & Favorable & 2.441,563 & 330,11 & 2.770,420 & 0.1\% & 1.061 \\
+Markowitz base & con pandemia & Arriesgado & Desfavorable & 1.645,469 & 223,65 & 1.849,115 & 2.0\% & 909 \\
+Markowitz base & con pandemia & Arriesgado & Neutro & 2.244,682 & 296,67 & 2.537,351 & 0.4\% & 984 \\
+Markowitz base & con pandemia & Arriesgado & Favorable & 3.028,484 & 381,29 & 3.409,025 & 0.1\% & 1.025 \\
+Markowitz base & con pandemia & Muy arriesgado & Desfavorable & 1.464,365 & 185,33 & 1.556,191 & 9.3\% & 695 \\
+Markowitz base & con pandemia & Muy arriesgado & Neutro & 2.304,232 & 294,13 & 2.567,234 & 3.1\% & 883 \\
+Markowitz base & con pandemia & Muy arriesgado & Favorable & 3.924,642 & 459,87 & 4.375,512 & 0.9\% & 1.007 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Resumen P4 por modelo, escenario historico, perfil de riesgo y panorama proyectado de retorno.}
+\label{tab:p4-panoramas-resumen}
+\end{table}
+
+La Tabla~\ref{tab:mejor-panorama-score} sintetiza cual panorama maximiza el Score P4 dentro de cada combinacion de modelo, escenario y perfil. Esta lectura no reemplaza la comparacion metodologica entre Markowitz y Black--Litterman; sirve para observar si la recomendacion economica es robusta cuando se tensiona el retorno esperado.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llllrrrr}
+\toprule
+Modelo & Escenario & Perfil & Mejor panorama & Retorno proyectado & Riqueza & Score P4 & Abandono \\
+\midrule
+Black-Litterman calibrado & sin pandemia & Muy conservador & Favorable & 0,296 & 1.735,484 & 1.611,792 & 29.4\% \\
+Black-Litterman calibrado & sin pandemia & Conservador & Favorable & 0,307 & 2.431,166 & 2.697,777 & 5.7\% \\
+Black-Litterman calibrado & sin pandemia & Neutro & Favorable & 0,350 & 2.919,192 & 3.292,825 & 0.9\% \\
+Black-Litterman calibrado & sin pandemia & Arriesgado & Favorable & 0,413 & 3.373,537 & 3.770,576 & 1.1\% \\
+Black-Litterman calibrado & sin pandemia & Muy arriesgado & Favorable & 0,386 & 2.887,040 & 3.211,239 & 3.8\% \\
+Black-Litterman calibrado & con pandemia & Muy conservador & Favorable & 0,296 & 1.762,030 & 1.630,935 & 30.6\% \\
+Black-Litterman calibrado & con pandemia & Conservador & Favorable & 0,351 & 2.891,932 & 3.223,559 & 4.5\% \\
+Black-Litterman calibrado & con pandemia & Neutro & Favorable & 0,480 & 4.537,348 & 5.061,226 & 1.2\% \\
+Black-Litterman calibrado & con pandemia & Arriesgado & Favorable & 0,753 & 11.310,659 & 12.358,091 & 1.7\% \\
+Black-Litterman calibrado & con pandemia & Muy arriesgado & Favorable & 1,046 & 31.364,900 & 33.641,401 & 3.2\% \\
+Markowitz base & sin pandemia & Muy conservador & Favorable & 0,287 & 1.675,314 & 1.513,729 & 32.2\% \\
+Markowitz base & sin pandemia & Conservador & Favorable & 0,289 & 2.348,368 & 2.605,212 & 6.3\% \\
+Markowitz base & sin pandemia & Neutro & Favorable & 0,315 & 2.592,518 & 2.939,888 & 0.1\% \\
+Markowitz base & sin pandemia & Arriesgado & Favorable & 0,379 & 3.103,296 & 3.493,814 & 0.0\% \\
+Markowitz base & sin pandemia & Muy arriesgado & Favorable & 0,476 & 4.070,565 & 4.552,559 & 0.2\% \\
+Markowitz base & con pandemia & Muy conservador & Favorable & 0,258 & 1.579,136 & 1.427,834 & 30.2\% \\
+Markowitz base & con pandemia & Conservador & Favorable & 0,265 & 2.148,277 & 2.392,208 & 4.9\% \\
+Markowitz base & con pandemia & Neutro & Favorable & 0,299 & 2.441,563 & 2.770,420 & 0.1\% \\
+Markowitz base & con pandemia & Arriesgado & Favorable & 0,375 & 3.028,484 & 3.409,025 & 0.1\% \\
+Markowitz base & con pandemia & Muy arriesgado & Favorable & 0,453 & 3.924,642 & 4.375,512 & 0.9\% \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Panorama con mayor Score P4 dentro de cada combinacion modelo--escenario--perfil.}
+\label{tab:mejor-panorama-score}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_terminal_wealth_mean_bl_calibrado_sin_pandemia.png}
+\caption{Riqueza terminal por perfil y panorama para Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:final-barras_terminal_wealth_mean_bl_calibrado_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_company_revenue_mean_bl_calibrado_sin_pandemia.png}
+\caption{Utilidad empresa por perfil y panorama para Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:final-barras_company_revenue_mean_bl_calibrado_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_p4_score_mean_bl_calibrado_sin_pandemia.png}
+\caption{Score P4 por perfil y panorama para Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:final-barras_p4_score_mean_bl_calibrado_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_withdrawal_rate_mean_bl_calibrado_sin_pandemia.png}
+\caption{Tasa de abandono por perfil y panorama para Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:final-barras_withdrawal_rate_mean_bl_calibrado_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_final_active_clients_mean_bl_calibrado_sin_pandemia.png}
+\caption{Clientes finales por perfil y panorama para Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:final-barras_final_active_clients_mean_bl_calibrado_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_terminal_wealth_mean_bl_calibrado_con_pandemia.png}
+\caption{Riqueza terminal por perfil y panorama para Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:final-barras_terminal_wealth_mean_bl_calibrado_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_company_revenue_mean_bl_calibrado_con_pandemia.png}
+\caption{Utilidad empresa por perfil y panorama para Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:final-barras_company_revenue_mean_bl_calibrado_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_p4_score_mean_bl_calibrado_con_pandemia.png}
+\caption{Score P4 por perfil y panorama para Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:final-barras_p4_score_mean_bl_calibrado_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_withdrawal_rate_mean_bl_calibrado_con_pandemia.png}
+\caption{Tasa de abandono por perfil y panorama para Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:final-barras_withdrawal_rate_mean_bl_calibrado_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_final_active_clients_mean_bl_calibrado_con_pandemia.png}
+\caption{Clientes finales por perfil y panorama para Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:final-barras_final_active_clients_mean_bl_calibrado_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_terminal_wealth_mean_markowitz_base_sin_pandemia.png}
+\caption{Riqueza terminal por perfil y panorama para Markowitz base, escenario sin pandemia.}
+\label{fig:final-barras_terminal_wealth_mean_markowitz_base_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_company_revenue_mean_markowitz_base_sin_pandemia.png}
+\caption{Utilidad empresa por perfil y panorama para Markowitz base, escenario sin pandemia.}
+\label{fig:final-barras_company_revenue_mean_markowitz_base_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_p4_score_mean_markowitz_base_sin_pandemia.png}
+\caption{Score P4 por perfil y panorama para Markowitz base, escenario sin pandemia.}
+\label{fig:final-barras_p4_score_mean_markowitz_base_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_withdrawal_rate_mean_markowitz_base_sin_pandemia.png}
+\caption{Tasa de abandono por perfil y panorama para Markowitz base, escenario sin pandemia.}
+\label{fig:final-barras_withdrawal_rate_mean_markowitz_base_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_final_active_clients_mean_markowitz_base_sin_pandemia.png}
+\caption{Clientes finales por perfil y panorama para Markowitz base, escenario sin pandemia.}
+\label{fig:final-barras_final_active_clients_mean_markowitz_base_sin_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_terminal_wealth_mean_markowitz_base_con_pandemia.png}
+\caption{Riqueza terminal por perfil y panorama para Markowitz base, escenario con pandemia.}
+\label{fig:final-barras_terminal_wealth_mean_markowitz_base_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_company_revenue_mean_markowitz_base_con_pandemia.png}
+\caption{Utilidad empresa por perfil y panorama para Markowitz base, escenario con pandemia.}
+\label{fig:final-barras_company_revenue_mean_markowitz_base_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_p4_score_mean_markowitz_base_con_pandemia.png}
+\caption{Score P4 por perfil y panorama para Markowitz base, escenario con pandemia.}
+\label{fig:final-barras_p4_score_mean_markowitz_base_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_withdrawal_rate_mean_markowitz_base_con_pandemia.png}
+\caption{Tasa de abandono por perfil y panorama para Markowitz base, escenario con pandemia.}
+\label{fig:final-barras_withdrawal_rate_mean_markowitz_base_con_pandemia}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/barras_final_active_clients_mean_markowitz_base_con_pandemia.png}
+\caption{Clientes finales por perfil y panorama para Markowitz base, escenario con pandemia.}
+\label{fig:final-barras_final_active_clients_mean_markowitz_base_con_pandemia}
+\end{figure}
+
+\section{Resultados de la dinamica de portafolio}
+Las figuras siguientes muestran la evolucion de riqueza, perdida y utilidad acumulada. La separacion por modelo, escenario historico y perfil permite evaluar si el cambio de panorama altera solo el nivel esperado de los resultados o tambien modifica la trayectoria temporal del sistema. Esta distincion es relevante porque el abandono ocurre semanalmente, mientras que el rebalanceo se propone semestralmente.
+
+\subsection{Riqueza semanal, mensual y semestral}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_con_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_con_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_con_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_con_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_con_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_con_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_sin_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_sin_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_sin_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_sin_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_sin_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_sin_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_con_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_con_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_con_pandemia_conservador.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_con_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_con_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_con_pandemia_neutro.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semanal_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semanal para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semanal_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_mensual_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia mensual para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_mensual_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_riqueza_semestral_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Riqueza de clientes con frecuencia semestral para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:riqueza-linea_riqueza_semestral_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+
+\subsection{Perdida semanal, mensual y semestral}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_con_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_con_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_con_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_con_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_con_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_con_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_sin_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_sin_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_sin_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_sin_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_sin_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_sin_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_con_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_con_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_con_pandemia_conservador.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_con_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_con_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_con_pandemia_neutro.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semanal_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semanal para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semanal_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_mensual_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia mensual para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_mensual_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_perdida_semestral_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Perdida de clientes con frecuencia semestral para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:perdida-linea_perdida_semestral_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+
+\subsection{Utilidad acumulada semanal, mensual y semestral}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_sin_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Muy conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_sin_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Conservador, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_sin_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Neutro, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_sin_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_sin_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Muy arriesgado, Black-Litterman calibrado, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_con_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Muy conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_con_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_con_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_con_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Conservador, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_con_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_con_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_con_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Neutro, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_con_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_bl_calibrado_con_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Muy arriesgado, Black-Litterman calibrado, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_bl_calibrado_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_sin_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Muy conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_sin_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_sin_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_sin_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_sin_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Conservador, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_sin_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_sin_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_sin_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_sin_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Neutro, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_sin_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_sin_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_sin_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_sin_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Muy arriesgado, Markowitz base, escenario sin pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_sin_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_con_pandemia_muy_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Muy conservador, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_con_pandemia_muy_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_con_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_con_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_con_pandemia_conservador.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Conservador, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_con_pandemia_conservador}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_con_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_con_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_con_pandemia_neutro.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Neutro, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_con_pandemia_neutro}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_con_pandemia_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_con_pandemia_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semanal_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semanal para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semanal_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_mensual_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia mensual para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_mensual_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figuras/linea_utilidad_semestral_markowitz_base_con_pandemia_muy_arriesgado.png}
+\caption{Utilidad acumulada de empresa con frecuencia semestral para el perfil Muy arriesgado, Markowitz base, escenario con pandemia.}
+\label{fig:utilidad-linea_utilidad_semestral_markowitz_base_con_pandemia_muy_arriesgado}
+\end{figure}
+
+\section{Evaluacion economica Monte Carlo P4 en Horizonte Limpio}
+La evaluacion economica se mantiene estrictamente en el Horizonte 3. Los panoramas no recalibran la view ni reescriben el conjunto historico; solo modifican el retorno esperado utilizado en la simulacion Monte Carlo. Por ello, la utilidad de empresa sigue siendo una medicion posterior al proceso de inversion: depende del saldo administrado de los clientes que permanecen activos, no de comisiones por aceptar recomendaciones o rebalanceos.
+
+En el panorama desfavorable se espera una reduccion simultanea de riqueza terminal, aceptacion del riesgo y utilidad acumulada. En el panorama favorable, el aumento de retorno proyectado eleva la probabilidad de aceptacion y reduce la friccion economica asociada a abandono, especialmente en perfiles con mayor tolerancia a perdida. La comparacion contra el panorama neutro permite separar el desempeno de la metodologia de asignacion del efecto mecanico de desplazar la media esperada.
+
+\section{Discusion de robustez}
+La extension con panoramas proyectados agrega una prueba de sensibilidad sobre la capa P4 sin alterar la calibracion de Black--Litterman. Esto es metodologicamente importante porque evita transformar un ejercicio de estres economico en una nueva busqueda de parametros. Bajo esta arquitectura, los escenarios historicos \texttt{sin\_pandemia} y \texttt{con\_pandemia} siguen midiendo regimenes de mercado distintos, mientras que los panoramas \texttt{desfavorable}, \texttt{neutro} y \texttt{favorable} exploran variaciones controladas en la expectativa de retorno.
+
+La robustez debe interpretarse como estabilidad relativa: un modelo robusto no necesariamente domina en todas las combinaciones, pero conserva trayectorias economicamente defendibles cuando se reduce el retorno proyectado y aprovecha de forma consistente el panorama favorable sin depender de supuestos de comision por rebalanceo.
+
+\section{Conclusiones}
+La iteracion de panoramas de retorno completa la validacion economica de Momentum general al mostrar como cambia el desempeno P4 ante un abanico simetrico de retorno esperado. La configuracion conserva la calibracion ganadora de Black--Litterman y agrega una lectura mas transparente para la defensa: los resultados no dependen de un unico retorno puntual, sino que pueden observarse bajo un caso desfavorable, uno neutro y uno favorable.
+
+Para la recomendacion final, el panorama neutro debe mantenerse como caso central de comparacion metodologica. Los panoramas favorable y desfavorable deben presentarse como sensibilidad economica: si Black--Litterman conserva mejores niveles de riqueza ajustada por abandono y utilidad ex--post frente a Markowitz, entonces la recomendacion de Momentum general se fortalece; si algun perfil cambia de modelo recomendado, ese cambio debe leerse como una condicion de sensibilidad y no como una recalibracion de la view.
+
+\end{document}
